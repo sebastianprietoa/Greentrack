@@ -2681,6 +2681,79 @@ def mis_envios():
     return render_template("mis_envios.html", envios=envios)
 
 
+# ================= API GHG GLOBAL (ADMIN) =================
+@app.route("/api/admin/emisiones-por-empresa")
+def api_admin_emisiones_por_empresa():
+    if session.get('es_admin') != 1:
+        return jsonify({"error": "No autorizado"}), 401
+
+    conn = None
+    try:
+        anio = request.args.get('anio')
+        anio = anio.strip() if anio else None
+        filtro_anio = "WHERE SUBSTRING(fecha::text,1,4) = %s" if anio else ""
+
+        query = f"""
+            WITH base AS (
+                SELECT
+                    empresa,
+                    SUBSTRING(fecha::text,1,4) AS anio,
+                    CASE
+                        WHEN fuente IN ('Combustión Fija','Combustible Móvil','Combustión Estacionaria','Refrigerantes','Fugas de Refrigerantes') THEN 'Alcance 1'
+                        WHEN fuente = 'Electricidad' THEN 'Alcance 2'
+                        WHEN fuente = 'Residuos' THEN 'Alcance 3'
+                        ELSE COALESCE(alcance,'')
+                    END AS alcance_calc,
+                    COALESCE(emision, 0) AS emision,
+                    COALESCE(emision_ubicacion, 0) AS emision_ubicacion
+                FROM registros
+                {filtro_anio}
+            )
+            SELECT
+                empresa,
+                anio,
+                ROUND(COALESCE(SUM(CASE WHEN alcance_calc = 'Alcance 1' THEN emision ELSE 0 END), 0)::numeric, 2) AS alcance_1_kgco2e,
+                ROUND(COALESCE(SUM(CASE WHEN alcance_calc = 'Alcance 2' THEN emision ELSE 0 END), 0)::numeric, 2) AS alcance_2_mercado_kgco2e,
+                ROUND(COALESCE(SUM(CASE WHEN alcance_calc = 'Alcance 2' THEN emision_ubicacion ELSE 0 END), 0)::numeric, 2) AS alcance_2_ubicacion_kgco2e,
+                ROUND(COALESCE(SUM(CASE WHEN alcance_calc = 'Alcance 3' THEN emision ELSE 0 END), 0)::numeric, 2) AS alcance_3_kgco2e,
+                ROUND((
+                    COALESCE(SUM(CASE WHEN alcance_calc = 'Alcance 1' THEN emision ELSE 0 END), 0)
+                    + COALESCE(SUM(CASE WHEN alcance_calc = 'Alcance 2' THEN emision ELSE 0 END), 0)
+                    + COALESCE(SUM(CASE WHEN alcance_calc = 'Alcance 3' THEN emision ELSE 0 END), 0)
+                )::numeric, 2) AS total_ghg_kgco2e
+            FROM base
+            GROUP BY empresa, anio
+            ORDER BY empresa, anio
+        """
+
+        conn = get_db()
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        if anio:
+            cursor.execute(query, (anio,))
+        else:
+            cursor.execute(query)
+
+        filas = cursor.fetchall()
+        respuesta = []
+        for fila in filas:
+            respuesta.append({
+                "empresa": fila["empresa"],
+                "anio": str(fila["anio"] or ""),
+                "alcance_1_kgco2e": round(float(fila["alcance_1_kgco2e"] or 0), 2),
+                "alcance_2_mercado_kgco2e": round(float(fila["alcance_2_mercado_kgco2e"] or 0), 2),
+                "alcance_2_ubicacion_kgco2e": round(float(fila["alcance_2_ubicacion_kgco2e"] or 0), 2),
+                "alcance_3_kgco2e": round(float(fila["alcance_3_kgco2e"] or 0), 2),
+                "total_ghg_kgco2e": round(float(fila["total_ghg_kgco2e"] or 0), 2),
+            })
+
+        return jsonify(respuesta)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if conn:
+            conn.close()
+
+
 # ================= EXPORTACIÓN GHG GLOBAL (ADMIN) =================
 @app.route("/admin/exportar_ghg_global")
 def admin_exportar_ghg_global():
