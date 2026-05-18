@@ -1,0 +1,280 @@
+{% extends "base.html" %}
+
+{% block title %}Gestión de Vehículos - GreenTrack{% endblock %}
+
+{% block content %}
+<div style="max-width: 1200px; margin: 0 auto;">
+    <div style="margin-bottom: 2rem;">
+        <h1 style="color: #111827; display: flex; align-items: center; gap: 10px;">
+            <i class="fas fa-car"></i> Gestión de Vehículos
+        </h1>
+        <p style="color: #6B7280;">Administre los vehículos propios de la empresa</p>
+    </div>
+
+    <!-- Pregunta inicial -->
+    <div id="preguntaInicial" style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 2rem;">
+        <h2 style="margin-bottom: 1rem; color: #374151;">
+            <i class="fas fa-question-circle"></i> Configuración Inicial
+        </h2>
+        <div style="margin-bottom: 1.5rem;">
+            <p style="color: #6B7280; margin-bottom: 1rem;">
+                <strong>1.</strong> ¿La empresa cuenta con vehículos propios o paga combustible de vehículos propios?
+                <br><small>Incluye automóviles, camionetas, tractores y cualquier tipo de vehículo que controle la empresa.</small>
+            </p>
+            <div style="display: flex; gap: 1rem;">
+                <button id="btnSiVehiculos" style="background: #10B981; color: white; border: none; padding: 10px 24px; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                    <i class="fas fa-check"></i> Sí, tenemos vehículos
+                </button>
+                <button id="btnNoVehiculos" style="background: #6B7280; color: white; border: none; padding: 10px 24px; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                    <i class="fas fa-times"></i> No tenemos vehículos
+                </button>
+            </div>
+        </div>
+        
+        <div id="infoNoVehiculos" style="display: none; background: #F0F9FF; padding: 1rem; border-radius: 8px; margin-top: 1rem;">
+            <p style="color: #1E40AF; margin: 0;">
+                <i class="fas fa-info-circle"></i> Si la empresa no cuenta con vehículos propios, no es necesario completar esta sección. 
+                Los combustibles se registrarán en la sección de <strong>Combustibles Fuentes Fijas</strong>.
+            </p>
+        </div>
+    </div>
+
+    <!-- Gestión de Vehículos (se muestra si responden "Sí") -->
+    <div id="gestionVehiculos" style="display: none; background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <h2 style="color: #374151; margin: 0;">
+                <i class="fas fa-list"></i> Vehículos Registrados
+            </h2>
+            <button id="btnAgregarVehiculo" style="background: #3B82F6; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                <i class="fas fa-plus"></i> Agregar Vehículo
+            </button>
+        </div>
+
+        <!-- Formulario para agregar vehículo -->
+        <form id="formVehiculo" style="display: none; background: #F9FAFB; padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem;">
+            <h3 style="margin-bottom: 1rem; color: #374151;">
+                <i class="fas fa-car-side"></i> Nuevo Vehículo
+            </h3>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+                <div>
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #374151;">Patente *</label>
+                    <input type="text" id="patente" name="patente" required 
+                           style="width: 100%; padding: 10px 14px; border: 2px solid #E5E7EB; border-radius: 8px; font-size: 1rem; text-transform: uppercase;">
+                </div>
+                
+                <div>
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #374151;">Tipo de Vehículo</label>
+                    <select id="tipo" name="tipo" style="width: 100%; padding: 10px 14px; border: 2px solid #E5E7EB; border-radius: 8px; font-size: 1rem;">
+                        <option value="">Seleccionar</option>
+                        <option value="automovil">Automóvil</option>
+                        <option value="camioneta">Camioneta</option>
+                        <option value="camion">Camión</option>
+                        <option value="tractor">Tractor</option>
+                        <option value="maquinaria">Maquinaria</option>
+                        <option value="otro">Otro</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #374151;">Marca</label>
+                    <input type="text" id="marca" name="marca" 
+                           style="width: 100%; padding: 10px 14px; border: 2px solid #E5E7EB; border-radius: 8px; font-size: 1rem;">
+                </div>
+                
+                <div>
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #374151;">Modelo</label>
+                    <input type="text" id="modelo" name="modelo" 
+                           style="width: 100%; padding: 10px 14px; border: 2px solid #E5E7EB; border-radius: 8px; font-size: 1rem;">
+                </div>
+                
+                <div>
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #374151;">Año</label>
+                    <input type="number" id="anio" name="anio" min="1900" max="2025" 
+                           style="width: 100%; padding: 10px 14px; border: 2px solid #E5E7EB; border-radius: 8px; font-size: 1rem;">
+                </div>
+            </div>
+            
+            <div style="display: flex; gap: 1rem;">
+                <button type="submit" style="background: #10B981; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                    <i class="fas fa-save"></i> Guardar Vehículo
+                </button>
+                <button type="button" id="btnCancelarVehiculo" style="background: #6B7280; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                    Cancelar
+                </button>
+            </div>
+        </form>
+
+        <!-- Lista de vehículos -->
+        <div id="listaVehiculos">
+            <p style="color: #6B7280; text-align: center; padding: 2rem;" id="mensajeSinVehiculos">
+                No hay vehículos registrados. Haga clic en "Agregar Vehículo" para comenzar.
+            </p>
+            <!-- Los vehículos se cargarán aquí dinámicamente -->
+        </div>
+
+        <!-- Botón para continuar a registro de consumo -->
+        <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #E5E7EB; text-align: center;">
+            <a href="{{ url_for('combustible_movil') }}" id="btnContinuar" 
+               style="background: #10B981; color: white; padding: 12px 30px; border-radius: 8px; text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 10px;">
+                <i class="fas fa-gas-pump"></i> Continuar a Registro de Combustible
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+// Pregunta inicial
+document.getElementById('btnSiVehiculos').addEventListener('click', function() {
+    document.getElementById('gestionVehiculos').style.display = 'block';
+    document.getElementById('preguntaInicial').style.display = 'none';
+    // Guardar configuración en la base de datos
+    guardarConfiguracionVehiculos(true);
+});
+
+document.getElementById('btnNoVehiculos').addEventListener('click', function() {
+    document.getElementById('infoNoVehiculos').style.display = 'block';
+    // Redirigir a combustibles fijos después de 3 segundos
+    setTimeout(() => {
+        window.location.href = "{{ url_for('combustible_movil') }}";
+    }, 3000);
+});
+
+// Mostrar/ocultar formulario de vehículo
+document.getElementById('btnAgregarVehiculo').addEventListener('click', function() {
+    document.getElementById('formVehiculo').style.display = 'block';
+});
+
+document.getElementById('btnCancelarVehiculo').addEventListener('click', function() {
+    document.getElementById('formVehiculo').style.display = 'none';
+    document.getElementById('formVehiculo').reset();
+});
+
+// Guardar vehículo
+document.getElementById('formVehiculo').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const patente = document.getElementById('patente').value.trim().toUpperCase();
+    const tipo = document.getElementById('tipo').value;
+    const marca = document.getElementById('marca').value;
+    const modelo = document.getElementById('modelo').value;
+    const anio = document.getElementById('anio').value;
+    
+    // Validar patente
+    if (!patente) {
+        alert('La patente es obligatoria');
+        return;
+    }
+    
+    // Enviar datos al servidor
+    fetch('/api/vehiculos', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            patente: patente,
+            tipo: tipo,
+            marca: marca,
+            modelo: modelo,
+            anio: anio
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Agregar vehículo a la lista
+            agregarVehiculoALista(data.vehiculo);
+            // Limpiar formulario
+            document.getElementById('formVehiculo').reset();
+            document.getElementById('formVehiculo').style.display = 'none';
+        } else {
+            alert('Error: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error al guardar el vehículo');
+    });
+});
+
+function agregarVehiculoALista(vehiculo) {
+    const mensaje = document.getElementById('mensajeSinVehiculos');
+    if (mensaje) mensaje.style.display = 'none';
+    
+    const lista = document.getElementById('listaVehiculos');
+    
+    const vehiculoDiv = document.createElement('div');
+    vehiculoDiv.className = 'vehiculo-card';
+    vehiculoDiv.style.cssText = `
+        background: #F9FAFB;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        border-left: 4px solid #3B82F6;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    `;
+    
+    vehiculoDiv.innerHTML = `
+        <div>
+            <h4 style="margin: 0 0 0.25rem 0; color: #374151;">
+                ${vehiculo.patente} 
+                ${vehiculo.tipo ? `<span style="background: #E5E7EB; color: #6B7280; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem; margin-left: 8px;">${vehiculo.tipo}</span>` : ''}
+            </h4>
+            <p style="margin: 0; color: #6B7280; font-size: 0.9rem;">
+                ${vehiculo.marca || ''} ${vehiculo.modelo || ''} ${vehiculo.anio || ''}
+            </p>
+        </div>
+        <div>
+            <button class="btn-editar" style="background: #F59E0B; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; margin-right: 8px;">
+                <i class="fas fa-edit"></i>
+            </button>
+            <button class="btn-eliminar" style="background: #EF4444; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer;">
+                <i class="fas fa-trash"></i>
+            </button>
+        </div>
+    `;
+    
+    lista.appendChild(vehiculoDiv);
+}
+
+async function guardarConfiguracionVehiculos(tieneVehiculos) {
+    try {
+        const response = await fetch('/api/configuracion/vehiculos', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                tiene_vehiculos: tieneVehiculos
+            })
+        });
+        return await response.json();
+    } catch (error) {
+        console.error('Error:', error);
+    }
+}
+</script>
+
+<style>
+@media (max-width: 768px) {
+    .form-row {
+        grid-template-columns: 1fr !important;
+    }
+    
+    .vehiculo-card {
+        flex-direction: column;
+        align-items: flex-start !important;
+        gap: 1rem;
+    }
+}
+
+input:focus, select:focus {
+    outline: none;
+    border-color: #10B981 !important;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+}
+</style>
+{% endblock %}

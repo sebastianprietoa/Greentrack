@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+
+{% block title %}Configuración - EcoTrack{% endblock %}
+
+{% block content %}
+<div style="max-width: 1000px; margin: 0 auto;">
+    <div style="margin-bottom: 2rem;">
+        <a href="{{ url_for('dashboard') }}" style="display: inline-flex; align-items: center; gap: 8px; color: #10B981; text-decoration: none; font-weight: 500;">
+            <i class="fas fa-arrow-left"></i> Volver al Dashboard
+        </a>
+    </div>
+    
+    <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+        <h1 style="margin-bottom: 0.5rem; color: #111827; display: flex; align-items: center; gap: 10px;">
+            <i class="fas fa-cog" style="color: #10B981;"></i> Configuración de la Empresa
+        </h1>
+        <p style="color: #6B7280; margin-bottom: 2rem;">Complete la información de configuración de su empresa</p>
+        
+        <form method="POST">
+            <!-- Energéticos Consumidos -->
+            <div style="margin-bottom: 2.5rem;">
+                <h2 style="margin-bottom: 1.5rem; color: #374151; padding-bottom: 0.5rem; border-bottom: 2px solid #E5E7EB;">
+                    <i class="fas fa-bolt"></i> Energéticos Consumidos
+                </h2>
+                <p style="color: #6B7280; margin-bottom: 1.5rem;">Seleccione los energéticos que consume su empresa e indique el proveedor:</p>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem;">
+                    {% for e in ["GLP","Diésel","Bencina","Parafina","Petróleo Pesado","Carbón","Gas Natural","Otro"] %}
+                    <div style="background: #F9FAFB; padding: 1rem; border-radius: 8px; display: flex; align-items: center; gap: 1rem;">
+                        <input type="checkbox" id="energetico_{{ loop.index }}" name="energeticos[]" value="{{ e }}"
+                               style="width: 18px; height: 18px;">
+                        <label for="energetico_{{ loop.index }}" style="flex: 1; font-weight: 600; color: #374151;">
+                            {{ e }}
+                        </label>
+                        <input type="text" name="proveedor_{{ e }}" placeholder="Proveedor"
+                               style="flex: 2; padding: 8px 12px; border: 1px solid #D1D5DB; border-radius: 6px; font-size: 0.9rem;"
+                               disabled>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            
+            <hr style="border: none; border-top: 1px solid #E5E7EB; margin: 2rem 0;">
+            
+            <!-- Información por Unidad -->
+            <div style="margin-bottom: 2.5rem;">
+                <label style="display: flex; align-items: center; gap: 1rem; cursor: pointer; padding: 1rem; background: #F0F9FF; border-radius: 8px;">
+                    <input type="checkbox" name="info_unidad" 
+                           style="width: 20px; height: 20px;">
+                    <div>
+                        <div style="font-weight: 600; color: #1E40AF; margin-bottom: 0.25rem;">
+                            ¿La empresa cuenta con información por unidad de consumo?
+                        </div>
+                        <div style="color: #6B7280; font-size: 0.9rem;">
+                            Marque esta opción si su empresa tiene datos desglosados por departamento o unidad de negocio
+                        </div>
+                    </div>
+                </label>
+            </div>
+            
+            <hr style="border: none; border-top: 1px solid #E5E7EB; margin: 2rem 0;">
+            
+            <!-- Preguntas de Configuración -->
+            <div>
+                <h2 style="margin-bottom: 1.5rem; color: #374151;">
+                    <i class="fas fa-question-circle"></i> Preguntas de Configuración
+                </h2>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
+                    <div>
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #374151;">
+                            ¿La empresa cuenta con vehículos corporativos?
+                        </label>
+                        <select name="vehiculos" style="width: 100%; padding: 10px 14px; border: 2px solid #E5E7EB; border-radius: 8px; font-size: 1rem;">
+                            <option value="si">Sí</option>
+                            <option value="no" selected>No</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #374151;">
+                            ¿La empresa paga combustible de colaboradores?
+                        </label>
+                        <select name="colaboradores" style="width: 100%; padding: 10px 14px; border: 2px solid #E5E7EB; border-radius: 8px; font-size: 1rem;">
+                            <option value="si">Sí</option>
+                            <option value="no" selected>No</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #374151;">
+                            ¿Cuenta con tarjeta o convenio de carga?
+                        </label>
+                        <select name="tarjeta" style="width: 100%; padding: 10px 14px; border: 2px solid #E5E7EB; border-radius: 8px; font-size: 1rem;">
+                            <option value="si">Sí</option>
+                            <option value="no" selected>No</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Botón de Guardar -->
+            <div style="margin-top: 3rem; text-align: center;">
+                <button type="submit" style="background: #10B981; color: white; border: none; padding: 14px 40px; border-radius: 8px; font-size: 1.1rem; font-weight: 600; cursor: pointer; transition: all 0.3s; display: inline-flex; align-items: center; gap: 10px;">
+                    <i class="fas fa-save"></i> Guardar Configuración
+                </button>
+                <p style="color: #6B7280; margin-top: 1rem; font-size: 0.9rem;">
+                    Puede modificar esta configuración en cualquier momento desde esta misma página
+                </p>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Información Adicional -->
+    <div style="margin-top: 2rem; background: #F0F9FF; padding: 1.5rem; border-radius: 8px;">
+        <h3 style="margin-bottom: 1rem; color: #1E40AF; display: flex; align-items: center; gap: 10px;">
+            <i class="fas fa-info-circle"></i> ¿Por qué es importante esta información?
+        </h3>
+        <ul style="list-style: none; padding: 0; margin: 0; color: #6B7280;">
+            <li style="padding: 0.5rem 0; display: flex; align-items: flex-start; gap: 10px;">
+                <i class="fas fa-check-circle" style="color: #10B981; flex-shrink: 0; margin-top: 2px;"></i>
+                <span>Nos ayuda a personalizar los cálculos de huella de carbono según sus características específicas</span>
+            </li>
+            <li style="padding: 0.5rem 0; display: flex; align-items: flex-start; gap: 10px;">
+                <i class="fas fa-check-circle" style="color: #10B981; flex-shrink: 0; margin-top: 2px;"></i>
+                <span>Permite generar reportes más precisos y recomendaciones adecuadas a su situación</span>
+            </li>
+            <li style="padding: 0.5rem 0; display: flex; align-items: flex-start; gap: 10px;">
+                <i class="fas fa-check-circle" style="color: #10B981; flex-shrink: 0; margin-top: 2px;"></i>
+                <span>Facilita el seguimiento y la mejora continua de su gestión ambiental</span>
+            </li>
+        </ul>
+    </div>
+</div>
+
+<script>
+    // Habilitar/deshabilitar campos de proveedor según checkbox
+    document.querySelectorAll('input[type="checkbox"][name^="energeticos"]').forEach(checkbox => {
+        const energetico = checkbox.value;
+        const proveedorInput = document.querySelector(`input[name="proveedor_${energetico}"]`);
+        
+        checkbox.addEventListener('change', function() {
+            proveedorInput.disabled = !this.checked;
+            if (!this.checked) {
+                proveedorInput.value = '';
+            }
+        });
+        
+        // Inicializar estado
+        proveedorInput.disabled = !checkbox.checked;
+    });
+    
+    // Mejorar experiencia en formularios
+    document.querySelectorAll('select').forEach(select => {
+        select.addEventListener('focus', function() {
+            this.style.borderColor = '#10B981';
+            this.style.boxShadow = '0 0 0 3px rgba(16, 185, 129, 0.1)';
+        });
+        
+        select.addEventListener('blur', function() {
+            this.style.borderColor = '#E5E7EB';
+            this.style.boxShadow = 'none';
+        });
+    });
+    
+    document.querySelectorAll('input[type="text"]').forEach(input => {
+        input.addEventListener('focus', function() {
+            if (!this.disabled) {
+                this.style.borderColor = '#10B981';
+                this.style.boxShadow = '0 0 0 3px rgba(16, 185, 129, 0.1)';
+            }
+        });
+        
+        input.addEventListener('blur', function() {
+            this.style.borderColor = '#D1D5DB';
+            this.style.boxShadow = 'none';
+        });
+    });
+    
+    // Botón hover effect
+    document.querySelector('button').addEventListener('mouseenter', function() {
+        this.style.background = '#059669';
+        this.style.transform = 'translateY(-2px)';
+    });
+    
+    document.querySelector('button').addEventListener('mouseleave', function() {
+        this.style.background = '#10B981';
+        this.style.transform = 'translateY(0)';
+    });
+</script>
+
+<style>
+    @media (max-width: 768px) {
+        .form-grid {
+            grid-template-columns: 1fr !important;
+        }
+        
+        .question-grid {
+            grid-template-columns: 1fr !important;
+        }
+        
+        button {
+            width: 100% !important;
+            justify-content: center;
+        }
+    }
+    
+    input[type="checkbox"]:checked {
+        accent-color: #10B981;
+    }
+    
+    select:focus, input:focus:not(:disabled) {
+        outline: none;
+    }
+</style>
+{% endblock %}

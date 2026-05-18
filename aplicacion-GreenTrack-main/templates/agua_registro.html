@@ -1,0 +1,408 @@
+{% extends "base.html" %}
+
+{% block title %}Registro de Emisiones al Agua - GreenTrack{% endblock %}
+
+{% block content %}
+<div style="max-width: 1000px; margin: 0 auto;">
+    <div style="margin-bottom: 2rem;">
+        <a href="{{ url_for('agua_dashboard') }}" style="display: inline-flex; align-items: center; gap: 8px; color: #3B82F6; text-decoration: none; font-weight: 500;">
+            <i class="fas fa-arrow-left"></i> Volver al Dashboard de Agua
+        </a>
+    </div>
+    
+    <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+        <h1 style="margin-bottom: 0.5rem; color: #111827; display: flex; align-items: center; gap: 10px;">
+            <i class="fas fa-file-alt" style="color: #3B82F6;"></i> Formulario de Emisiones al Agua
+        </h1>
+        <p style="color: #6B7280; margin-bottom: 2rem;">Complete todos los campos según las instrucciones</p>
+        
+        <form method="POST">
+            <!-- SECCIÓN 1: CONSUMO DE AGUA E HIELO -->
+            <div style="margin-bottom: 2.5rem; padding: 1.5rem; background: #F0F9FF; border-radius: 8px;">
+                <h2 style="margin-bottom: 1rem; color: #1E40AF; display: flex; align-items: center; gap: 10px;">
+                    <i class="fas fa-info-circle"></i> 1. INSTRUCCIONES - ¿Cómo rellenar el formulario?
+                </h2>
+                <div style="color: #374151; margin-bottom: 1.5rem;">
+                    <p><strong>Instrucciones:</strong></p>
+                    <ol style="margin-left: 1.5rem; color: #6B7280;">
+                        <li>Ingrese la cantidad de Agua embotellada consumida al año en Litros</li>
+                        <li>Ingrese la cantidad de hielo comprado y producido en kg</li>
+                        <li>Seleccione todas las fuentes de <strong>Afluentes y Efluentes</strong> que participen del proceso productivo</li>
+                        <li>Se crearán tantas columnas en su tabla como afluentes y efluentes haya seleccionado</li>
+                        <li>Complete la información de los caudales</li>
+                    </ol>
+                </div>
+                
+                <h3 style="margin-bottom: 1rem; color: #374151; border-bottom: 2px solid #E5E7EB; padding-bottom: 0.5rem;">
+                    Consumo Anual
+                </h3>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-top: 1rem;">
+                    <div>
+                        <label for="agua_embotellada" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #374151;">
+                            Agua embotellada (Litros/año) *
+                        </label>
+                        <input type="number" id="agua_embotellada" name="agua_embotellada" 
+                               step="0.01" min="0" required placeholder="Ej: 5000"
+                               style="width: 100%; padding: 12px 16px; border: 2px solid #E5E7EB; border-radius: 8px; font-size: 1rem;">
+                        <p style="font-size: 0.9rem; color: #6B7280; margin-top: 0.25rem;">Consumo anual en litros</p>
+                    </div>
+                    
+                    <div>
+                        <label for="hielo_comprado" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #374151;">
+                            Hielo comprado (kg/año)
+                        </label>
+                        <input type="number" id="hielo_comprado" name="hielo_comprado" 
+                               step="0.01" min="0" placeholder="Ej: 1000"
+                               style="width: 100%; padding: 12px 16px; border: 2px solid #E5E7EB; border-radius: 8px; font-size: 1rem;">
+                    </div>
+                    
+                    <div>
+                        <label for="hielo_producido" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #374151;">
+                            Hielo producido (kg/año)
+                        </label>
+                        <input type="number" id="hielo_producido" name="hielo_producido" 
+                               step="0.01" min="0" placeholder="Ej: 2000"
+                               style="width: 100%; padding: 12px 16px; border: 2px solid #E5E7EB; border-radius: 8px; font-size: 1rem;">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- SECCIÓN 2: TRATAMIENTO DE AGUA (RILES) -->
+            <div style="margin-bottom: 2.5rem; padding: 1.5rem; background: #FEF3C7; border-radius: 8px;">
+                <h2 style="margin-bottom: 1rem; color: #92400E; display: flex; align-items: center; gap: 10px;">
+                    <i class="fas fa-industry"></i> 2. EMISIONES AL AGUA - Sistema de Tratamiento
+                </h2>
+                
+                <div style="margin-bottom: 1.5rem;">
+                    <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+                        <label style="font-weight: 600; color: #374151; min-width: 400px;">
+                            ¿Posee sistema de tratamiento de agua tanto en afluente como efluente? (RILES)
+                        </label>
+                        <div style="display: flex; gap: 1rem;">
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                <input type="radio" name="tiene_tratamiento" value="si" onchange="toggleTratamiento(true)">
+                                <span>Sí</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                <input type="radio" name="tiene_tratamiento" value="no" checked onchange="toggleTratamiento(false)">
+                                <span>No</span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div id="tratamiento_info" style="display: none;">
+                        <div style="margin-bottom: 1rem;">
+                            <label for="descripcion_tratamiento" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #374151;">
+                                Descripción de tratamiento, si aplica y diagrama de flujo
+                            </label>
+                            <textarea id="descripcion_tratamiento" name="descripcion_tratamiento" 
+                                      rows="3" placeholder="Describa el sistema de tratamiento utilizado..."
+                                      style="width: 100%; padding: 12px 16px; border: 2px solid #E5E7EB; border-radius: 8px; font-size: 1rem;"></textarea>
+                        </div>
+                        
+                        <div>
+                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #374151;">
+                                Adjuntar informes de autocontrol DS609 o DS90 según corresponda
+                            </label>
+                            <input type="file" id="archivo_informe" name="archivo_informe" 
+                                   accept=".pdf,.doc,.docx,.xls,.xlsx"
+                                   style="width: 100%; padding: 8px; border: 2px dashed #D1D5DB; border-radius: 8px;">
+                            <p style="font-size: 0.9rem; color: #6B7280; margin-top: 0.25rem;">
+                                Formatos aceptados: PDF, Word, Excel (máx. 10MB)
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- AFLUENTES Y EFLUENTES -->
+                <h3 style="margin-bottom: 1rem; color: #374151;">Fuentes de Afluentes y Efluentes</h3>
+                <p style="color: #6B7280; margin-bottom: 1rem;">Seleccione todas las fuentes que participen en su proceso productivo:</p>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+                    {% for fuente in ["Agua de proceso", "Agua de refrigeración", "Agua de lavado", "Agua sanitaria", "Agua pluvial", "Otra fuente"] %}
+                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.75rem; background: white; border-radius: 6px; border: 1px solid #E5E7EB;">
+                        <input type="checkbox" name="afluentes[]" value="{{ fuente }}">
+                        <span>{{ fuente }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+                
+                <!-- TABLA DE CUENCAS DESTINO -->
+                <h3 style="margin-bottom: 1rem; color: #374151; border-bottom: 2px solid #E5E7EB; padding-bottom: 0.5rem;">
+                    CREAR TABLA - Cuencas de Destino Final
+                </h3>
+                
+                <table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
+                    <thead>
+                        <tr style="background: #F9FAFB;">
+                            <th style="padding: 1rem; text-align: left; font-weight: 600; color: #374151; border: 1px solid #E5E7EB;">
+                                Tipo de cuenca destino final
+                            </th>
+                            <th style="padding: 1rem; text-align: left; font-weight: 600; color: #374151; border: 1px solid #E5E7EB;">
+                                Cantidad (m³/año)
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for cuenca in ["Rio", "Mar", "Lago", "Red Alcantarillado"] %}
+                        <tr>
+                            <td style="padding: 1rem; border: 1px solid #E5E7EB; font-weight: 600; color: #374151;">
+                                {{ cuenca }}
+                            </td>
+                            <td style="padding: 1rem; border: 1px solid #E5E7EB;">
+                                <input type="number" name="cuenca_{{ cuenca.lower().replace(' ', '_') }}" 
+                                       step="0.01" min="0" placeholder="0.00"
+                                       style="width: 100%; padding: 8px 12px; border: 1px solid #D1D5DB; border-radius: 4px; font-size: 1rem;">
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- SECCIÓN 3: COSTOS -->
+            <div style="margin-bottom: 2.5rem; padding: 1.5rem; background: #D1FAE5; border-radius: 8px;">
+                <h2 style="margin-bottom: 1rem; color: #065F46; display: flex; align-items: center; gap: 10px;">
+                    <i class="fas fa-calculator"></i> 3. COSTOS ASOCIADOS
+                </h2>
+                <p style="color: #6B7280; margin-bottom: 1.5rem;">Ingrese los costos relacionados con el consumo y tratamiento de agua:</p>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem;">
+                    <!-- COSTO AGUA POTABLE -->
+                    <div style="background: white; padding: 1rem; border-radius: 8px; border: 1px solid #E5E7EB;">
+                        <h4 style="margin-bottom: 1rem; color: #374151;">Agua Potable</h4>
+                        
+                        <div style="margin-bottom: 1rem;">
+                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #374151;">
+                                Consumo (m³)
+                            </label>
+                            <input type="number" name="costo_agua_cantidad" step="0.01" min="0" 
+                                   placeholder="Ej: 1000"
+                                   style="width: 100%; padding: 8px 12px; border: 1px solid #D1D5DB; border-radius: 4px;">
+                        </div>
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                            <div>
+                                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #374151;">
+                                    Costo (USD)
+                                </label>
+                                <input type="number" name="costo_agua_usd" step="0.01" min="0" 
+                                       placeholder="0.00"
+                                       style="width: 100%; padding: 8px 12px; border: 1px solid #D1D5DB; border-radius: 4px;">
+                            </div>
+                            <div>
+                                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #374151;">
+                                    Costo (CLP)
+                                </label>
+                                <input type="number" name="costo_agua_clp" step="1" min="0" 
+                                       placeholder="0"
+                                       style="width: 100%; padding: 8px 12px; border: 1px solid #D1D5DB; border-radius: 4px;">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- COSTO TRATAMIENTO -->
+                    <div style="background: white; padding: 1rem; border-radius: 8px; border: 1px solid #E5E7EB;">
+                        <h4 style="margin-bottom: 1rem; color: #374151;">Tratamiento de Aguas</h4>
+                        
+                        <div style="margin-bottom: 1rem;">
+                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #374151;">
+                                Concepto
+                            </label>
+                            <select name="costo_tratamiento_concepto" style="width: 100%; padding: 8px 12px; border: 1px solid #D1D5DB; border-radius: 4px;">
+                                <option value="">Seleccionar</option>
+                                <option value="Tratamiento primario">Tratamiento primario</option>
+                                <option value="Tratamiento secundario">Tratamiento secundario</option>
+                                <option value="Tratamiento terciario">Tratamiento terciario</option>
+                                <option value="Mantenimiento sistema">Mantenimiento sistema</option>
+                            </select>
+                        </div>
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                            <div>
+                                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #374151;">
+                                    USD
+                                </label>
+                                <input type="number" name="costo_tratamiento_usd" step="0.01" min="0" 
+                                       placeholder="0.00"
+                                       style="width: 100%; padding: 8px 12px; border: 1px solid #D1D5DB; border-radius: 4px;">
+                            </div>
+                            <div>
+                                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #374151;">
+                                    CLP
+                                </label>
+                                <input type="number" name="costo_tratamiento_clp" step="1" min="0" 
+                                       placeholder="0"
+                                       style="width: 100%; padding: 8px 12px; border: 1px solid #D1D5DB; border-radius: 4px;">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- TASA DE CAMBIO -->
+                    <div style="background: white; padding: 1rem; border-radius: 8px; border: 1px solid #E5E7EB;">
+                        <h4 style="margin-bottom: 1rem; color: #374151;">Tasa de Cambio</h4>
+                        <p style="color: #6B7280; font-size: 0.9rem; margin-bottom: 1rem;">
+                            Fecha actual: <span id="fecha_actual"></span>
+                        </p>
+                        
+                        <div style="margin-bottom: 1rem;">
+                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #374151;">
+                                USD a CLP
+                            </label>
+                            <input type="number" id="tasa_cambio" name="tasa_cambio" step="0.01" min="0" 
+                                   value="950" placeholder="Tasa de cambio"
+                                   style="width: 100%; padding: 8px 12px; border: 1px solid #D1D5DB; border-radius: 4px;">
+                            <p style="font-size: 0.9rem; color: #6B7280; margin-top: 0.25rem;">
+                                Valor aproximado: 1 USD = <span id="clp_equivalente">950</span> CLP
+                            </p>
+                        </div>
+                        
+                        <button type="button" onclick="actualizarTasas()" 
+                                style="width: 100%; background: #10B981; color: white; border: none; padding: 8px; border-radius: 4px; font-weight: 600; cursor: pointer;">
+                            <i class="fas fa-sync-alt"></i> Actualizar Tasas
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- BOTONES DE ENVÍO -->
+            <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 2rem;">
+                <button type="submit" 
+                        style="background: #3B82F6; color: white; border: none; padding: 14px 40px; border-radius: 8px; font-size: 1.1rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 10px;">
+                    <i class="fas fa-save"></i> Guardar Registro
+                </button>
+                
+                <button type="button" onclick="calcularTotales()"
+                        style="background: white; color: #3B82F6; border: 2px solid #3B82F6; padding: 14px 30px; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer;">
+                    <i class="fas fa-calculator"></i> Calcular Totales
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // Función para mostrar/ocultar sección de tratamiento
+    function toggleTratamiento(mostrar) {
+        const seccion = document.getElementById('tratamiento_info');
+        seccion.style.display = mostrar ? 'block' : 'none';
+        
+        // Hacer campos opcionales/requeridos
+        const descripcion = document.getElementById('descripcion_tratamiento');
+        const archivo = document.getElementById('archivo_informe');
+        
+        if (mostrar) {
+            descripcion.setAttribute('required', 'required');
+        } else {
+            descripcion.removeAttribute('required');
+            archivo.removeAttribute('required');
+        }
+    }
+    
+    // Actualizar fecha actual
+    function actualizarFecha() {
+        const ahora = new Date();
+        const opciones = { year: 'numeric', month: 'long', day: 'numeric' };
+        document.getElementById('fecha_actual').textContent = 
+            ahora.toLocaleDateString('es-CL', opciones);
+    }
+    
+    // Actualizar equivalencia CLP
+    document.getElementById('tasa_cambio').addEventListener('input', function() {
+        const tasa = parseFloat(this.value) || 950;
+        document.getElementById('clp_equivalente').textContent = tasa;
+    });
+    
+    // Calcular totales
+    function calcularTotales() {
+        let totalUSD = 0;
+        let totalCLP = 0;
+        
+        // Agua potable
+        const aguaUSD = parseFloat(document.querySelector('[name="costo_agua_usd"]').value) || 0;
+        const aguaCLP = parseFloat(document.querySelector('[name="costo_agua_clp"]').value) || 0;
+        
+        // Tratamiento
+        const tratamientoUSD = parseFloat(document.querySelector('[name="costo_tratamiento_usd"]').value) || 0;
+        const tratamientoCLP = parseFloat(document.querySelector('[name="costo_tratamiento_clp"]').value) || 0;
+        
+        totalUSD = aguaUSD + tratamientoUSD;
+        totalCLP = aguaCLP + tratamientoCLP;
+        
+        // Mostrar alerta con totales
+        alert(`TOTALES CALCULADOS:\n\n` +
+              `Costo Total USD: $${totalUSD.toFixed(2)}\n` +
+              `Costo Total CLP: $${totalCLP.toLocaleString('es-CL')}\n\n` +
+              `Equivalencia: $${totalUSD.toFixed(2)} USD ≈ $${Math.round(totalUSD * 950).toLocaleString('es-CL')} CLP`);
+    }
+    
+    // Validar formulario
+    document.querySelector('form').addEventListener('submit', function(e) {
+        const aguaEmb = document.getElementById('agua_embotellada').value;
+        
+        if (!aguaEmb || parseFloat(aguaEmb) < 0) {
+            e.preventDefault();
+            alert('Por favor ingrese una cantidad válida para agua embotellada (mayor o igual a 0)');
+            return false;
+        }
+        
+        // Validar que al menos una cuenca tenga valor
+        const cuencas = ['rio', 'mar', 'lago', 'alcantarillado'];
+        let tieneCuencas = false;
+        
+        cuencas.forEach(cuenca => {
+            const input = document.querySelector(`[name="cuenca_${cuenca}"]`);
+            if (input && input.value && parseFloat(input.value) > 0) {
+                tieneCuencas = true;
+            }
+        });
+        
+        if (!tieneCuencas) {
+            if (!confirm('No ha ingresado valores para las cuencas de destino. ¿Desea continuar?')) {
+                e.preventDefault();
+                return false;
+            }
+        }
+        
+        return true;
+    });
+    
+    // Inicializar
+    document.addEventListener('DOMContentLoaded', function() {
+        actualizarFecha();
+        toggleTratamiento(false);
+    });
+</script>
+
+<style>
+    @media (max-width: 768px) {
+        .section-grid {
+            grid-template-columns: 1fr !important;
+        }
+        
+        table {
+            font-size: 0.9rem;
+        }
+        
+        td, th {
+            padding: 0.5rem !important;
+        }
+    }
+    
+    input:focus, textarea:focus, select:focus {
+        outline: none;
+        border-color: #3B82F6 !important;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+    }
+    
+    button[type="submit"]:hover {
+        background: #2563EB !important;
+        transform: translateY(-2px);
+    }
+    
+    button[type="button"]:hover {
+        background: #F9FAFB !important;
+    }
+</style>
+{% endblock %}

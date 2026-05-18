@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard Combustión - EcoTrack{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+    <h1 style="color: #111827; margin: 0;"><i class="fas fa-fire" style="color: #EF4444;"></i> Gestión de Combustión</h1>
+    <a href="{{ url_for('registro') }}" class="btn-primary" style="background: #EF4444; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: 600;">
+        <i class="fas fa-plus"></i> Registrar Consumo
+    </a>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+    <div style="background: white; padding: 1.5rem; border-radius: 12px; border-left: 5px solid #EF4444; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+        <p style="color: #6B7280; margin: 0 0 5px 0; font-weight: 600; text-transform: uppercase; font-size: 0.85rem;">Emisiones Totales (Combustión)</p>
+        <h2 style="margin: 0; font-size: 2rem; color: #111827;">{{ "%.2f"|format(total_emision) }} <span style="font-size: 1rem; color: #6B7280;">kg CO₂e</span></h2>
+    </div>
+</div>
+
+<div style="display: grid; grid-template-columns: 1fr 2fr; gap: 2rem; margin-bottom: 2rem;">
+    <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+        <h3 style="margin-top: 0; color: #374151; border-bottom: 2px solid #F3F4F6; padding-bottom: 10px;">Emisiones por Combustible</h3>
+        {% if grafico_data %}
+            <canvas id="chartCombustion"></canvas>
+        {% else %}
+            <p style="color: #9CA3AF; text-align: center; margin-top: 2rem;">No hay datos suficientes para el gráfico.</p>
+        {% endif %}
+    </div>
+
+    <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+        <h3 style="margin-top: 0; color: #374151; border-bottom: 2px solid #F3F4F6; padding-bottom: 10px;">Últimos Registros</h3>
+        
+        {% if registros %}
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                <thead>
+                    <tr style="background: #F9FAFB; color: #4B5563; font-size: 0.9rem;">
+                        <th style="padding: 12px; border-bottom: 1px solid #E5E7EB;">Fecha</th>
+                        <th style="padding: 12px; border-bottom: 1px solid #E5E7EB;">Tipo</th>
+                        <th style="padding: 12px; border-bottom: 1px solid #E5E7EB;">Combustible</th>
+                        <th style="padding: 12px; border-bottom: 1px solid #E5E7EB;">Uso</th>
+                        <th style="padding: 12px; border-bottom: 1px solid #E5E7EB;">Emisión</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for reg in registros %}
+                    <tr style="border-bottom: 1px solid #F3F4F6;">
+                        <td style="padding: 12px; color: #6B7280; font-size: 0.9rem;">{{ reg[0][:10] }}</td>
+                        <td style="padding: 12px;"><span style="background: #FEE2E2; color: #991B1B; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold;">{{ reg[1] }}</span></td>
+                        <td style="padding: 12px; font-weight: 500; color: #111827;">{{ reg[2] }}</td>
+                        <td style="padding: 12px; color: #4B5563;">{{ reg[3] }}</td>
+                        <td style="padding: 12px; font-weight: bold; color: #EF4444;">{{ "%.2f"|format(reg[6]) }} kg</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div style="text-align: center; padding: 2rem; color: #6B7280;">
+            <i class="fas fa-folder-open" style="font-size: 2rem; margin-bottom: 1rem; color: #9CA3AF;"></i>
+            <p>Aún no hay registros de combustión.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% if grafico_data %}
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const ctx = document.getElementById('chartCombustion').getContext('2d');
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: [{% for item in grafico_data %}"{{ item[0] }}",{% endfor %}],
+                datasets: [{
+                    data: [{% for item in grafico_data %}{{ item[1] }},{% endfor %}],
+                    backgroundColor: ['#EF4444', '#F59E0B', '#F97316', '#DC2626', '#B91C1C', '#7F1D1D'],
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'bottom' }
+                },
+                cutout: '65%'
+            }
+        });
+    });
+</script>
+{% endif %}
+{% endblock %}

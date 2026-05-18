@@ -1,0 +1,392 @@
+{% extends "base.html" %}
+
+{% block title %}Registro de Residuos - GreenTrack{% endblock %}
+
+{% block content %}
+<div style="max-width: 1200px; margin: 0 auto;">
+    <div style="margin-bottom: 2rem;">
+        <a href="{{ url_for('residuos_dashboard') }}" style="display: inline-flex; align-items: center; gap: 8px; color: #10B981; text-decoration: none; font-weight: 500;">
+            <i class="fas fa-arrow-left"></i> Volver al Dashboard de Residuos
+        </a>
+    </div>
+
+    {% if preview_rows is defined and preview_rows %}
+    {% set con_factor = preview_rows | selectattr('factor', '>', 0) | list | length %}
+    {% set sin_factor = preview_rows | length - con_factor %}
+    <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 2rem;">
+        <h2 style="color: #111827; margin: 0 0 0.5rem 0; display: flex; align-items: center; gap: 10px;">
+            <i class="fas fa-search" style="color: #3B82F6;"></i> Vista Previa — {{ tipo_ingreso_prev | upper }}
+        </h2>
+        <p style="color: #6B7280; margin: 0 0 1.5rem 0; font-size: 0.9rem;">Revisa los datos antes de guardar. Nada se ha registrado aún.</p>
+
+        <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
+            <div style="background: #D1FAE5; padding: 0.75rem 1.25rem; border-radius: 8px; font-weight: 700; color: #065F46;">
+                <i class="fas fa-check-circle"></i> {{ con_factor }} con factor asignado
+            </div>
+            {% if sin_factor > 0 %}
+            <div style="background: #FEF3C7; padding: 0.75rem 1.25rem; border-radius: 8px; font-weight: 700; color: #92400E;">
+                <i class="fas fa-exclamation-triangle"></i> {{ sin_factor }} sin factor (emisión = 0)
+            </div>
+            {% endif %}
+            <div style="background: #EFF6FF; padding: 0.75rem 1.25rem; border-radius: 8px; font-weight: 700; color: #1E40AF;">
+                Total emisión: {{ "%.2f"|format(preview_rows | sum(attribute='emision')) }} kg CO₂e
+            </div>
+        </div>
+
+        <div style="overflow-x: auto; margin-bottom: 1.5rem;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                <thead>
+                    <tr style="background: #F3F4F6; color: #374151;">
+                        <th style="padding: 10px 12px; text-align: left; border-bottom: 2px solid #E5E7EB;">Residuo (PDF)</th>
+                        <th style="padding: 10px 12px; text-align: left; border-bottom: 2px solid #E5E7EB;">Equivalente en Chile</th>
+                        <th style="padding: 10px 12px; text-align: left; border-bottom: 2px solid #E5E7EB;">Tratamiento</th>
+                        <th style="padding: 10px 12px; text-align: right; border-bottom: 2px solid #E5E7EB;">Cantidad (kg)</th>
+                        <th style="padding: 10px 12px; text-align: right; border-bottom: 2px solid #E5E7EB;">Factor (kg CO₂e/t)</th>
+                        <th style="padding: 10px 12px; text-align: right; border-bottom: 2px solid #E5E7EB;">Emisión (kg CO₂e)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in preview_rows %}
+                    <tr style="border-bottom: 1px solid #F3F4F6; {% if r.factor == 0 %}background: #FFFBEB;{% endif %}">
+                        <td style="padding: 9px 12px; max-width: 200px; word-break: break-word; color: #6B7280; font-size: 0.8rem;">{{ r.categoria }}</td>
+                        <td style="padding: 9px 12px; max-width: 220px; word-break: break-word; font-weight: 600; color: #111827;">
+                            {% if r.nombre_chile %}
+                                {{ r.nombre_chile }}
+                            {% else %}
+                                <span style="color: #D97706; font-style: italic;">{{ r.defra_cat }}</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 9px 12px; font-size: 0.85rem;">
+                            {% if tipo_ingreso_prev == 'sidrep' %}
+                                <span style="background: #FEF2F2; color: #991B1B; padding: 2px 9px; border-radius: 6px; font-size: 0.78rem; font-weight: 700;">Vertedero</span>
+                            {% else %}
+                                <select class="sel-tratamiento" data-idx="{{ loop.index0 }}"
+                                        style="padding: 5px 8px; border: 1px solid #D1D5DB; border-radius: 6px; font-size: 0.82rem; background: white; color: #374151; max-width: 180px;">
+                                    <option value="">— Sin especificar —</option>
+                                    {% for t in tratamientos_disponibles %}
+                                    <option value="{{ t }}" {% if t == r.tratamiento %}selected{% endif %}>{{ t }}</option>
+                                    {% endfor %}
+                                    {% if r.tratamiento and r.tratamiento not in tratamientos_disponibles %}
+                                    <option value="{{ r.tratamiento }}" selected>{{ r.tratamiento }}</option>
+                                    {% endif %}
+                                </select>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 9px 12px; text-align: right;">{{ "%.2f"|format(r.cantidad) }}</td>
+                        <td style="padding: 9px 12px; text-align: right;">
+                            {% if r.factor > 0 %}
+                                <span style="color: #059669; font-weight: 600;">{{ r.factor }}</span>
+                            {% else %}
+                                <span style="color: #D97706;">—</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 9px 12px; text-align: right; font-weight: 700;">
+                            {% if r.emision > 0 %}
+                                {{ "%.4f"|format(r.emision) }}
+                            {% else %}
+                                <span style="color: #D97706;">0</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div style="background: #EFF6FF; border: 1px solid #BFDBFE; border-radius: 8px; padding: 1rem 1.25rem; margin-bottom: 1.25rem; display: flex; align-items: flex-start; gap: 10px;">
+            <i class="fas fa-info-circle" style="color: #3B82F6; margin-top: 2px; flex-shrink: 0;"></i>
+            <p style="margin: 0; color: #1E40AF; font-size: 0.9rem;">
+                Al enviar, el administrador revisará los datos antes de registrarlos. Podrás ver el estado en <a href="/mis_envios" style="color: #1E40AF; font-weight: 600;">Mis Envíos</a>.
+            </p>
+        </div>
+
+        <!-- Periodo del reporte -->
+        <div style="background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 8px; padding: 1rem 1.25rem; margin-bottom: 1.25rem;">
+            <label style="display: block; font-weight: 700; color: #92400E; margin-bottom: 0.4rem; font-size: 0.9rem;">
+                <i class="fas fa-calendar-alt"></i> Periodo del reporte (mes y año de los residuos)
+            </label>
+            <p style="margin: 0 0 0.6rem 0; color: #78350F; font-size: 0.82rem;">
+                Detectado automáticamente desde el PDF. Corrígelo si no corresponde — todos los registros se guardarán con esta fecha.
+            </p>
+            <input type="month" id="periodo_override_display"
+                   value="{{ periodo_detectado | default('') }}"
+                   style="padding: 8px 12px; border: 1px solid #FCD34D; border-radius: 6px; font-size: 0.95rem; background: white;"
+                   max="{{ 'now' }}">
+        </div>
+
+        <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+            <form method="POST" action="/formulario_residuos" id="formConfirmar">
+                <input type="hidden" name="tipo_ingreso" value="confirmar_pdf">
+                <input type="hidden" name="datos_confirmados" value="{{ preview_json }}">
+                <input type="hidden" name="nombre_pdf" value="{{ nombre_pdf | default('') }}">
+                <input type="hidden" name="tipo_pdf" value="{{ tipo_ingreso_prev | default('') }}">
+                <input type="hidden" name="periodo_override" id="periodo_override_hidden" value="{{ periodo_detectado | default('') }}">
+                <button type="submit" style="background: #3B82F6; color: white; border: none; padding: 12px 28px; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 1rem; display: flex; align-items: center; gap: 8px;">
+                    <i class="fas fa-paper-plane"></i> Enviar para Revisión ({{ preview_rows | length }} registros)
+                </button>
+            </form>
+            <a href="/formulario_residuos" style="background: #F3F4F6; color: #374151; padding: 12px 28px; border-radius: 8px; font-weight: 600; text-decoration: none; display: flex; align-items: center; gap: 8px;">
+                <i class="fas fa-times"></i> Cancelar
+            </a>
+        </div>
+        <script>
+        document.getElementById('periodo_override_display').addEventListener('change', function() {
+            document.getElementById('periodo_override_hidden').value = this.value;
+        });
+
+        // Actualizar tratamiento en el JSON cuando el usuario lo cambia (solo SINADER)
+        const _jsonField = document.getElementById('datos_confirmados') ||
+                           document.querySelector('input[name="datos_confirmados"]');
+        document.querySelectorAll('.sel-tratamiento').forEach(sel => {
+            sel.addEventListener('change', function() {
+                if (!_jsonField) return;
+                try {
+                    const filas = JSON.parse(_jsonField.value);
+                    const idx = parseInt(this.dataset.idx);
+                    if (filas[idx] !== undefined) {
+                        filas[idx].tratamiento = this.value;
+                        _jsonField.value = JSON.stringify(filas);
+                        // Resaltar la fila para feedback visual
+                        this.style.borderColor = '#10B981';
+                        this.style.background = '#F0FDF4';
+                    }
+                } catch(e) {}
+            });
+        });
+        </script>
+    </div>
+    {% endif %}
+
+    <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+        <h1 style="margin-bottom: 0.5rem; color: #111827; display: flex; align-items: center; gap: 10px;">
+            <i class="fas fa-recycle" style="color: #10B981;"></i> Formulario de Gestión de Residuos
+        </h1>
+        <p style="color: #6B7280; margin-bottom: 2rem;">Complete según las instrucciones del formulario de residuos</p>
+
+        <form method="POST" id="residuosForm" action="/formulario_residuos" enctype="multipart/form-data">
+            
+            <div style="margin-bottom: 2.5rem; padding: 1.5rem; background: #F0F9FF; border-radius: 8px;">
+                <h2 style="margin-bottom: 1rem; color: #1E40AF; display: flex; align-items: center; gap: 10px;">
+                    <i class="fas fa-magic"></i> 1. Método de Ingreso
+                </h2>
+                
+                <div style="margin-bottom: 1.5rem;">
+                    <label style="display: block; margin-bottom: 1rem; font-weight: 600; color: #374151;">
+                        ¿Cómo deseas registrar los residuos?
+                    </label>
+                    <div style="display: flex; gap: 2rem; flex-wrap: wrap;">
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; background: white; padding: 10px 15px; border-radius: 6px; border: 1px solid #D1D5DB;">
+                            <input type="radio" name="tipo_ingreso" value="manual" checked onchange="toggleReporte('manual')">
+                            <span>✍️ Ingreso Manual (Tabla)</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; background: white; padding: 10px 15px; border-radius: 6px; border: 1px solid #D1D5DB;">
+                            <input type="radio" name="tipo_ingreso" value="sinader" onchange="toggleReporte('auto')">
+                            <span>📄 Auto-SINADER (Residuos Generales)</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; background: white; padding: 10px 15px; border-radius: 6px; border: 1px solid #D1D5DB;">
+                            <input type="radio" name="tipo_ingreso" value="sidrep" onchange="toggleReporte('auto')">
+                            <span>⚠️ Auto-SIDREP (Residuos Peligrosos)</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div id="reporte_section" style="display: none; border-top: 1px solid #BFDBFE; padding-top: 1.5rem;">
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #374151;">
+                            Subir Certificado Oficial (PDF) *
+                        </label>
+                        <input type="file" id="archivo_pdf" name="archivo_pdf" accept=".pdf" 
+                               style="width: 100%; padding: 12px 16px; border: 2px dashed #3B82F6; border-radius: 8px; font-size: 1rem; background: #EFF6FF;">
+                        <p style="font-size: 0.9rem; color: #6B7280; margin-top: 0.5rem;">
+                            El sistema leerá el PDF y extraerá automáticamente todas las filas con sus cantidades.
+                        </p>
+                    </div>
+                    
+                    <button type="submit" style="background: #3B82F6; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 1.1rem; box-shadow: 0 4px 6px rgba(59, 130, 246, 0.2);">
+                        <i class="fas fa-cogs"></i> Procesar Documento
+                    </button>
+                </div>
+            </div>
+            
+            <div id="tabla_section">
+                <div style="margin-bottom: 2rem; padding: 1.5rem; background: #FEF3C7; border-radius: 8px;">
+                    <h2 style="margin-bottom: 1rem; color: #92400E; display: flex; align-items: center; gap: 10px;">
+                        <i class="fas fa-table"></i> 2. Registro Manual de Residuos
+                    </h2>
+                    <p style="color: #6B7280; margin-bottom: 1.5rem;">
+                        Complete la tabla con la información de residuos según las instrucciones.
+                    </p>
+                </div>
+                
+                <div style="overflow-x: auto; margin-bottom: 2rem;">
+                    <table style="width: 100%; border-collapse: collapse; min-width: 800px;">
+                        <thead>
+                            <tr style="background: #10B981; color: white;">
+                                <th style="padding: 1rem; text-align: left; font-weight: 600;">Mes de Registro *</th>
+                                <th style="padding: 1rem; text-align: left; font-weight: 600;">TIPO de residuo *</th>
+                                <th style="padding: 1rem; text-align: left; font-weight: 600;">CANTIDAD *</th>
+                                <th style="padding: 1rem; text-align: left; font-weight: 600;">Tratamiento</th>
+                                <th style="padding: 1rem; text-align: left; font-weight: 600;">Costo</th>
+                                <th style="padding: 1rem; text-align: left; font-weight: 600;">Destino</th>
+                                <th style="padding: 1rem; text-align: left; font-weight: 600;">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla_residuos">
+                            <tr>
+                                <td style="padding: 0.5rem; border: 1px solid #E5E7EB;">
+                                    <input type="month" name="periodo[]" required
+                                           style="width: 100%; padding: 8px; border: 1px solid #D1D5DB; border-radius: 4px;">
+                                </td>
+                                <td style="padding: 0.5rem; border: 1px solid #E5E7EB;">
+                                    <select name="tipo_residuo[]" required onchange="actualizarFactor(this)"
+                                            style="width: 100%; padding: 8px; border: 1px solid #D1D5DB; border-radius: 4px;">
+                                        <option value="">Seleccione desde BD...</option>
+                                        {% for f in factores %}
+                                            <option value="{{ f.categoria }}" data-factor="{{ f.factor }}" data-unidad="{{ f.unidad }}" data-tratamiento="{{ f.tratamiento or '' }}">
+                                                {%- if f.nombre_chile -%}{{ f.nombre_chile }}{%- else -%}{{ f.categoria }}{%- endif -%}
+                                                {%- if f.tratamiento %} — {{ f.tratamiento }}{%- endif -%}
+                                            </option>
+                                        {% endfor %}
+                                        <option value="Otro" style="color: red; font-weight: bold;">Ingreso Manual (Otro)</option>
+                                    </select>
+                                    <input type="hidden" name="factor[]" class="factor-oculto" value="0">
+                                </td>
+                                <td style="padding: 0.5rem; border: 1px solid #E5E7EB;">
+                                    <input type="number" name="cantidad[]" step="0.01" min="0" placeholder="0.00" required
+                                           style="width: 100%; padding: 8px; border: 1px solid #D1D5DB; border-radius: 4px;">
+                                </td>
+                                <td style="padding: 0.5rem; border: 1px solid #E5E7EB;">
+                                    <select name="tratamiento[]" style="width: 100%; padding: 8px; border: 1px solid #D1D5DB; border-radius: 4px;">
+                                        <option value="">Seleccionar</option>
+                                        <option value="Reciclaje">Reciclaje</option>
+                                        <option value="Vertedero">Vertedero</option>
+                                        <option value="Incineración">Incineración</option>
+                                        <option value="Compostaje">Compostaje</option>
+                                        <option value="Tratamiento especial">Tratamiento especial</option>
+                                        <option value="Reutilización">Reutilización</option>
+                                    </select>
+                                </td>
+                                <td style="padding: 0.5rem; border: 1px solid #E5E7EB;">
+                                    <input type="number" name="costo[]" step="0.01" min="0" placeholder="0.00"
+                                           style="width: 100%; padding: 8px; border: 1px solid #D1D5DB; border-radius: 4px;">
+                                </td>
+                                <td style="padding: 0.5rem; border: 1px solid #E5E7EB;">
+                                    <input type="text" name="destino[]" placeholder="Ej: Empresa"
+                                           style="width: 100%; padding: 8px; border: 1px solid #D1D5DB; border-radius: 4px;">
+                                </td>
+                                <td style="padding: 0.5rem; border: 1px solid #E5E7EB; text-align: center;">
+                                    <button type="button" onclick="eliminarFila(this)" style="background: #EF4444; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div style="display: flex; gap: 1rem; margin-bottom: 2rem;">
+                    <button type="button" onclick="agregarFila()" style="background: #10B981; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-plus"></i> Agregar Fila
+                    </button>
+                    <button type="button" onclick="calcularTotal()" style="background: #3B82F6; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-calculator"></i> Calcular Total
+                    </button>
+                </div>
+                
+                <div id="total_container" style="display: none; margin-bottom: 2rem; padding: 1rem; background: #D1FAE5; border-radius: 8px;">
+                    <h3 style="margin-bottom: 0.5rem; color: #065F46;">Suma Total (Referencial):</h3>
+                    <div style="display: flex; align-items: baseline; gap: 10px;">
+                        <span id="total_residuos" style="font-size: 1.5rem; font-weight: 700; color: #111827;">0.00</span>
+                    </div>
+                </div>
+                
+                <div style="text-align: center;">
+                    <button type="submit" style="background: #10B981; color: white; border: none; padding: 14px 40px; border-radius: 8px; font-size: 1.1rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 10px;">
+                        <i class="fas fa-save"></i> Guardar Filas Manuales
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function toggleReporte(modo) {
+        const reporteSection = document.getElementById('reporte_section');
+        const tablaSection = document.getElementById('tabla_section');
+        
+        if (modo === 'auto') {
+            reporteSection.style.display = 'block';
+            tablaSection.style.display = 'none';
+            document.getElementById('archivo_pdf').required = true;
+            // Quitamos required a la tabla manual para que deje enviar el PDF
+            document.querySelector('input[name="periodo[]"]').required = false;
+            document.querySelector('select[name="tipo_residuo[]"]').required = false;
+            document.querySelector('input[name="cantidad[]"]').required = false;
+        } else {
+            reporteSection.style.display = 'none';
+            tablaSection.style.display = 'block';
+            document.getElementById('archivo_pdf').required = false;
+            // Volvemos a pedir los manuales
+            document.querySelector('input[name="periodo[]"]').required = true;
+            document.querySelector('select[name="tipo_residuo[]"]').required = true;
+            document.querySelector('input[name="cantidad[]"]').required = true;
+        }
+    }
+    
+    function actualizarFactor(selectElement) {
+        const fila = selectElement.closest('tr');
+        const factorInput = fila.querySelector('.factor-oculto');
+        const tratSelect = fila.querySelector('select[name="tratamiento[]"]');
+        const selectedOption = selectElement.options[selectElement.selectedIndex];
+        if (selectedOption && selectedOption.dataset.factor) {
+            factorInput.value = selectedOption.dataset.factor;
+        } else {
+            factorInput.value = '0';
+        }
+        // Autocompletar tratamiento desde la opción seleccionada
+        if (tratSelect && selectedOption && selectedOption.dataset.tratamiento) {
+            const trat = selectedOption.dataset.tratamiento;
+            for (let opt of tratSelect.options) {
+                if (opt.value.toLowerCase() === trat.toLowerCase() || trat.toLowerCase().includes(opt.value.toLowerCase())) {
+                    tratSelect.value = opt.value;
+                    break;
+                }
+            }
+        }
+    }
+
+    function agregarFila() {
+        const tbody = document.getElementById('tabla_residuos');
+        const filaNueva = tbody.rows[0].cloneNode(true);
+        const inputs = filaNueva.querySelectorAll('input');
+        inputs.forEach(input => {
+            if(input.type !== 'hidden') input.value = '';
+            if(input.type === 'hidden') input.value = '0'; 
+        });
+        const selects = filaNueva.querySelectorAll('select');
+        selects.forEach(select => select.selectedIndex = 0);
+        tbody.appendChild(filaNueva);
+    }
+    
+    function eliminarFila(boton) {
+        const fila = boton.closest('tr');
+        if (document.getElementById('tabla_residuos').rows.length > 1) {
+            fila.remove();
+        } else {
+            alert('Debe haber al menos una fila en la tabla');
+        }
+    }
+    
+    function calcularTotal() {
+        let total = 0;
+        const cantidadInputs = document.querySelectorAll('input[name="cantidad[]"]');
+        cantidadInputs.forEach(input => {
+            const valor = parseFloat(input.value) || 0;
+            total += valor;
+        });
+        document.getElementById('total_residuos').textContent = total.toFixed(2);
+        document.getElementById('total_container').style.display = 'block';
+    }
+</script>
+{% endblock %}

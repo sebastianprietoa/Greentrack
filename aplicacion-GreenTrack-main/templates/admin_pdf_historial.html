@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block title %}Historial Global de PDFs - GreenTrack{% endblock %}
+
+{% block content %}
+<div style="padding: 0;">
+
+    <div style="margin-bottom: 1.5rem;">
+        <a href="/admin/dashboard" style="display: inline-flex; align-items: center; gap: 8px; color: #6366F1; text-decoration: none; font-weight: 500;">
+            <i class="fas fa-arrow-left"></i> Volver al Dashboard Admin
+        </a>
+    </div>
+
+    <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem; margin-bottom: 2rem;">
+            <div>
+                <h2 style="margin: 0 0 0.4rem 0; color: #111827; display: flex; align-items: center; gap: 10px;">
+                    <i class="fas fa-history" style="color: #6B7280;"></i> Historial Global de Cargas PDF
+                </h2>
+                <p style="color: #6B7280; margin: 0; font-size: 0.9rem;">
+                    Todos los archivos PDF procesados por todas las empresas.
+                </p>
+            </div>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <input type="text" id="filtro_empresa" oninput="filtrarTabla()" placeholder="Filtrar por empresa..."
+                       style="padding: 8px 12px; border: 1px solid #D1D5DB; border-radius: 8px; font-size: 0.9rem; width: 220px;">
+            </div>
+        </div>
+
+        {% if cargas %}
+        <div style="overflow-x: auto;">
+            <table id="tabla_cargas" style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                <thead>
+                    <tr style="background: #F3F4F6; color: #374151;">
+                        <th style="padding: 12px 14px; text-align: left; border-bottom: 2px solid #E5E7EB;">Empresa</th>
+                        <th style="padding: 12px 14px; text-align: left; border-bottom: 2px solid #E5E7EB;">Fecha de carga</th>
+                        <th style="padding: 12px 14px; text-align: left; border-bottom: 2px solid #E5E7EB;">Archivo</th>
+                        <th style="padding: 12px 14px; text-align: center; border-bottom: 2px solid #E5E7EB;">Tipo</th>
+                        <th style="padding: 12px 14px; text-align: center; border-bottom: 2px solid #E5E7EB;">Registros</th>
+                        <th style="padding: 12px 14px; text-align: center; border-bottom: 2px solid #E5E7EB;">Sin factor</th>
+                        <th style="padding: 12px 14px; text-align: center; border-bottom: 2px solid #E5E7EB;">Estado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in cargas %}
+                    <tr class="fila-carga" style="border-bottom: 1px solid #F3F4F6; {% if loop.index is odd %}background: #FAFAFA;{% endif %}">
+                        <td style="padding: 10px 14px; font-weight: 600; color: #111827;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <div style="width: 28px; height: 28px; border-radius: 6px; background: #EEF2FF; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                    <i class="fas fa-building" style="color: #6366F1; font-size: 0.75rem;"></i>
+                                </div>
+                                <span class="nombre-empresa">{{ c.empresa }}</span>
+                            </div>
+                        </td>
+                        <td style="padding: 10px 14px; color: #374151; white-space: nowrap;">{{ c.fecha_subida }}</td>
+                        <td style="padding: 10px 14px; color: #111827; max-width: 260px; word-break: break-all;">
+                            <i class="fas fa-file-pdf" style="color: #EF4444; margin-right: 6px;"></i>{{ c.nombre_archivo }}
+                        </td>
+                        <td style="padding: 10px 14px; text-align: center;">
+                            {% if c.tipo == 'sinader' %}
+                                <span style="background: #DBEAFE; color: #1E40AF; padding: 3px 10px; border-radius: 12px; font-size: 0.78rem; font-weight: 700;">SINADER</span>
+                            {% elif c.tipo == 'sidrep' %}
+                                <span style="background: #FEE2E2; color: #991B1B; padding: 3px 10px; border-radius: 12px; font-size: 0.78rem; font-weight: 700;">SIDREP</span>
+                            {% else %}
+                                <span style="background: #F3F4F6; color: #6B7280; padding: 3px 10px; border-radius: 12px; font-size: 0.78rem;">{{ c.tipo | upper }}</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 10px 14px; text-align: center; font-weight: 700; color: #111827;">{{ c.registros_generados }}</td>
+                        <td style="padding: 10px 14px; text-align: center;">
+                            {% if c.sin_factor > 0 %}
+                                <span style="color: #D97706; font-weight: 600;">{{ c.sin_factor }}</span>
+                            {% else %}
+                                <span style="color: #059669;">0</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 10px 14px; text-align: center;">
+                            {% if c.sin_factor == 0 %}
+                                <span style="color: #059669;"><i class="fas fa-check-circle"></i> Completo</span>
+                            {% else %}
+                                <span style="color: #D97706;"><i class="fas fa-exclamation-triangle"></i> Parcial</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div style="margin-top: 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+            <p style="color: #9CA3AF; font-size: 0.8rem; margin: 0;" id="contador_filas">
+                {{ total }} carga(s) en total &nbsp;|&nbsp; Página {{ pagina }} de {{ total_paginas }}
+            </p>
+            {% if total_paginas > 1 %}
+            <div style="display: flex; gap: 6px;">
+                {% if pagina > 1 %}
+                <a href="?pagina={{ pagina - 1 }}" style="padding: 5px 12px; border: 1px solid #D1D5DB; border-radius: 6px; color: #374151; text-decoration: none; font-size: 0.85rem; background: white;">← Anterior</a>
+                {% endif %}
+                {% for p in range([1, pagina - 2]|max, [total_paginas + 1, pagina + 3]|min) %}
+                <a href="?pagina={{ p }}" style="padding: 5px 10px; border: 1px solid {% if p == pagina %}#6366F1{% else %}#D1D5DB{% endif %}; border-radius: 6px; color: {% if p == pagina %}white{% else %}#374151{% endif %}; background: {% if p == pagina %}#6366F1{% else %}white{% endif %}; text-decoration: none; font-size: 0.85rem;">{{ p }}</a>
+                {% endfor %}
+                {% if pagina < total_paginas %}
+                <a href="?pagina={{ pagina + 1 }}" style="padding: 5px 12px; border: 1px solid #D1D5DB; border-radius: 6px; color: #374151; text-decoration: none; font-size: 0.85rem; background: white;">Siguiente →</a>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+
+        {% else %}
+        <div style="text-align: center; padding: 3rem; color: #9CA3AF;">
+            <i class="fas fa-inbox" style="font-size: 3rem; margin-bottom: 1rem; display: block;"></i>
+            <p style="font-size: 1rem;">Aún no hay PDFs procesados en ninguna empresa.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+function filtrarTabla() {
+    const filtro = document.getElementById('filtro_empresa').value.toLowerCase();
+    const filas = document.querySelectorAll('.fila-carga');
+    let visibles = 0;
+    filas.forEach(fila => {
+        const nombre = fila.querySelector('.nombre-empresa').textContent.toLowerCase();
+        const visible = nombre.includes(filtro);
+        fila.style.display = visible ? '' : 'none';
+        if (visible) visibles++;
+    });
+    const contador = document.getElementById('contador_filas');
+    if (contador) contador.textContent = visibles + ' carga(s) mostrada(s)';
+}
+</script>
+{% endblock %}

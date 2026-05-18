@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+{% block title %}Dashboard Residuos - GreenTrack{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+    <div>
+        <h1 style="margin: 0; color: #111827; font-size: 1.8rem;">
+            <i class="fas fa-recycle" style="color: #10B981;"></i> Residuos (Alcance 3)
+        </h1>
+        <p style="color: #6B7280; margin: 4px 0 0 0; font-size: 0.9rem;">Visualización del impacto generado por disposición y tratamiento.</p>
+    </div>
+    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+        <a href="/formulario_residuos" style="background: #10B981; color: white; text-decoration: none; padding: 10px 18px; border-radius: 8px; font-weight: 600; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 7px;">
+            <i class="fas fa-plus-circle"></i> Agregar Registro
+        </a>
+        <a href="/exportar_ghg" style="background: #1E40AF; color: white; text-decoration: none; padding: 10px 16px; border-radius: 8px; font-weight: 600; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 7px;">
+            <i class="fas fa-file-excel"></i> GHG Protocol
+        </a>
+        <a href="/residuos/pdf_historial" style="background: #6B7280; color: white; text-decoration: none; padding: 10px 16px; border-radius: 8px; font-weight: 600; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 7px;">
+            <i class="fas fa-history"></i> Historial PDFs
+        </a>
+        <div style="background: white; padding: 0.75rem 1.25rem; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.07); border-left: 4px solid #10B981; text-align: center; white-space: nowrap;">
+            <p style="margin: 0; font-size: 0.7rem; color: #6B7280; font-weight: 700; text-transform: uppercase;">Emisión Total</p>
+            <p style="margin: 2px 0 0 0; font-size: 1.4rem; font-weight: 700; color: #111827;">{{ "{:,.2f}".format(total_emision) }} <span style="font-size: 0.8rem; color: #6B7280;">kg CO₂e</span></p>
+        </div>
+    </div>
+</div>
+
+{% if total_emision == 0 and not datos_categoria %}
+<div style="background: white; padding: 3.5rem 2rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); text-align: center;">
+    <i class="fas fa-recycle" style="font-size: 3rem; color: #D1D5DB; margin-bottom: 1rem; display: block;"></i>
+    <h3 style="color: #374151; margin: 0 0 0.5rem 0;">Aún no hay registros de residuos</h3>
+    <p style="color: #6B7280; margin: 0 0 1.5rem 0;">Agrega tu primer registro manualmente o sube un PDF de SINADER o SIDREP.</p>
+    <a href="/formulario_residuos" style="background: #10B981; color: white; text-decoration: none; padding: 10px 24px; border-radius: 8px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px;">
+        <i class="fas fa-plus-circle"></i> Agregar Primer Registro
+    </a>
+</div>
+{% else %}
+
+<!-- Fila 1: Doughnut categorías + Tendencia mensual -->
+<div style="display: grid; grid-template-columns: 1fr 2fr; gap: 2rem; margin-bottom: 2rem;">
+
+    <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+        <h4 style="margin: 0 0 1rem 0; color: #374151; font-size: 1rem; border-bottom: 1px solid #F3F4F6; padding-bottom: 0.75rem;">
+            <i class="fas fa-chart-pie" style="color: #10B981;"></i> Emisiones por Clasificación
+        </h4>
+        <div style="position: relative; height: 260px; width: 100%;">
+            <canvas id="graficoCategoria"></canvas>
+        </div>
+    </div>
+
+    <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+        <h4 style="margin: 0 0 1rem 0; color: #374151; font-size: 1rem; border-bottom: 1px solid #F3F4F6; padding-bottom: 0.75rem;">
+            <i class="fas fa-chart-bar" style="color: #3B82F6;"></i> Evolución Mensual de Emisiones
+        </h4>
+        <div style="position: relative; height: 260px; width: 100%;">
+            <canvas id="graficoMeses"></canvas>
+        </div>
+    </div>
+
+</div>
+
+<!-- Fila 2: Breakdown por tratamiento con barras de progreso + gráfico donut -->
+{% if datos_tratamiento %}
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
+
+    <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+        <h4 style="margin: 0 0 1rem 0; color: #374151; font-size: 1rem; border-bottom: 1px solid #F3F4F6; padding-bottom: 0.75rem;">
+            <i class="fas fa-tasks" style="color: #F59E0B;"></i> Emisiones por Tipo de Tratamiento
+        </h4>
+        {% set total_trat = datos_tratamiento | sum(attribute='total') %}
+        {% set colores_trat = ['#EF4444','#F59E0B','#10B981','#3B82F6','#8B5CF6','#F43F5E','#14B8A6'] %}
+        {% for item in datos_tratamiento %}
+        {% set pct = (item.total / total_trat * 100) if total_trat > 0 else 0 %}
+        <div style="margin-bottom: 1.1rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                <span style="font-size: 0.83rem; font-weight: 600; color: #374151;">{{ item.tratamiento }}</span>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <span style="font-size: 0.78rem; color: #6B7280;">{{ "{:,.2f}".format(item.total) }} kg</span>
+                    <span style="font-size: 0.75rem; font-weight: 700; color: {{ colores_trat[loop.index0 % 7] }}; min-width: 40px; text-align: right;">{{ "%.1f"|format(pct) }}%</span>
+                </div>
+            </div>
+            <div style="background: #F3F4F6; border-radius: 999px; height: 9px; overflow: hidden;">
+                <div style="background: {{ colores_trat[loop.index0 % 7] }}; width: {{ "%.1f"|format(pct) }}%; height: 100%; border-radius: 999px; transition: width 0.7s ease;"></div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+        <h4 style="margin: 0 0 1rem 0; color: #374151; font-size: 1rem; border-bottom: 1px solid #F3F4F6; padding-bottom: 0.75rem;">
+            <i class="fas fa-chart-donut" style="color: #8B5CF6;"></i> Distribución de Tratamientos
+        </h4>
+        <div style="position: relative; height: 260px; width: 100%;">
+            <canvas id="graficoTratamiento"></canvas>
+        </div>
+    </div>
+
+</div>
+{% endif %}
+
+{% endif %}
+
+<script>
+const formatKg = val => new Intl.NumberFormat('es-CL', {minimumFractionDigits:2, maximumFractionDigits:2}).format(val) + ' kg CO₂e';
+const paletaVerdes = ['#059669','#10B981','#34D399','#6EE7B7','#A7F3D0','#064E3B','#047857'];
+const paletaMix    = ['#EF4444','#F59E0B','#10B981','#3B82F6','#8B5CF6','#F43F5E','#14B8A6'];
+
+const datosCat = {{ datos_categoria | tojson }};
+const datosMes = {{ datos_mes | tojson }};
+const datosTrat = {{ datos_tratamiento | tojson }};
+
+if (datosCat && datosCat.length) {
+    const totalCat = datosCat.reduce((s, d) => s + d.total, 0);
+    new Chart(document.getElementById('graficoCategoria'), {
+        type: 'doughnut',
+        data: {
+            labels: datosCat.map(d => d.categoria),
+            datasets: [{ data: datosCat.map(d => d.total), backgroundColor: paletaVerdes, borderWidth: 2, borderColor: '#fff' }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '60%',
+            plugins: {
+                legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 12 } },
+                tooltip: {
+                    callbacks: {
+                        label: ctx => {
+                            const pct = totalCat > 0 ? (ctx.parsed / totalCat * 100).toFixed(1) : 0;
+                            return ' ' + ctx.label + ': ' + formatKg(ctx.parsed) + ' (' + pct + '%)';
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+if (datosMes && datosMes.length) {
+    new Chart(document.getElementById('graficoMeses'), {
+        type: 'bar',
+        data: {
+            labels: datosMes.map(d => d.mes),
+            datasets: [{
+                label: 'kg CO₂e',
+                data: datosMes.map(d => d.total),
+                backgroundColor: '#10B98170',
+                borderColor: '#10B981',
+                borderWidth: 1.5,
+                borderRadius: 6,
+                barPercentage: 0.6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: { callbacks: { label: ctx => ' ' + formatKg(ctx.parsed.y) } }
+            },
+            scales: {
+                y: { beginAtZero: true, grid: { borderDash: [2, 4], color: '#E5E7EB' },
+                     ticks: { callback: v => v >= 1000 ? (v/1000).toFixed(1)+'k' : v } },
+                x: { grid: { display: false } }
+            }
+        }
+    });
+}
+
+if (datosTrat && datosTrat.length) {
+    const totalTrat = datosTrat.reduce((s, d) => s + d.total, 0);
+    new Chart(document.getElementById('graficoTratamiento'), {
+        type: 'doughnut',
+        data: {
+            labels: datosTrat.map(d => d.tratamiento),
+            datasets: [{ data: datosTrat.map(d => d.total), backgroundColor: paletaMix, borderWidth: 2, borderColor: '#fff' }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '60%',
+            plugins: {
+                legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 12 } },
+                tooltip: {
+                    callbacks: {
+                        label: ctx => {
+                            const pct = totalTrat > 0 ? (ctx.parsed / totalTrat * 100).toFixed(1) : 0;
+                            return ' ' + ctx.label + ': ' + formatKg(ctx.parsed) + ' (' + pct + '%)';
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+</script>
+{% endblock %}

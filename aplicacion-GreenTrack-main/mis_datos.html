@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block title %}Mi Perfil - EcoTrack{% endblock %}
+
+{% block content %}
+<div style="max-width: 750px; margin: 2rem auto;">
+    <div style="background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.05); border: 1px solid #F3F4F6;">
+        
+        <div style="background: linear-gradient(135deg, #059669 0%, #10B981 100%); height: 140px; position: relative;">
+            <div style="position: absolute; bottom: -40px; left: 2.5rem; width: 85px; height: 85px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.1); border: 4px solid white;">
+                <span style="font-size: 2.2rem; font-weight: 800; color: #059669;">{{ datos_usuario['empresa'][0]|upper }}</span>
+            </div>
+        </div>
+
+        <div style="padding: 3.5rem 2.5rem 2.5rem 2.5rem;">
+            
+            <div style="margin-bottom: 2.5rem;">
+                <h2 style="margin: 0; font-size: 1.8rem; color: #111827; font-weight: 700;">{{ datos_usuario['empresa'] }}</h2>
+                <p style="color: #6B7280; margin: 5px 0 0 0; font-size: 0.95rem;">
+                    <i class="fas fa-check-circle" style="color: #10B981; margin-right: 5px;"></i> Cuenta verificada y activa
+                </p>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 2rem;">
+                
+                <div style="display: flex; align-items: flex-start; gap: 15px;">
+                    <div style="width: 45px; height: 45px; border-radius: 10px; background: #EFF6FF; color: #3B82F6; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; flex-shrink: 0;">
+                        <i class="fas fa-envelope"></i>
+                    </div>
+                    <div style="min-width: 0; flex: 1;">
+                        <p style="margin: 0; font-size: 0.75rem; color: #6B7280; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">Correo de Acceso</p>
+                        <p style="margin: 3px 0 0 0; font-size: 1.1rem; color: #1F2937; font-weight: 500; word-wrap: break-word;">{{ datos_usuario['email'] }}</p>
+                    </div>
+                </div>
+
+                <div style="display: flex; align-items: flex-start; gap: 15px;">
+                    <div style="width: 45px; height: 45px; border-radius: 10px; background: #ECFDF5; color: #10B981; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; flex-shrink: 0;">
+                        <i class="fas fa-id-card"></i>
+                    </div>
+                    <div style="min-width: 0; flex: 1;">
+                        <p style="margin: 0; font-size: 0.75rem; color: #6B7280; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">RUT</p>
+                        <p style="margin: 3px 0 0 0; font-size: 1.1rem; color: #1F2937; font-weight: 500;">
+                            {% if datos_usuario['rut'] %}{{ datos_usuario['rut'] }}{% else %}<span style="color: #9CA3AF; font-style: italic;">No registrado</span>{% endif %}
+                        </p>
+                    </div>
+                </div>
+
+                <div style="display: flex; align-items: flex-start; gap: 15px;">
+                    <div style="width: 45px; height: 45px; border-radius: 10px; background: #FEF3C7; color: #D97706; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; flex-shrink: 0;">
+                        <i class="fas fa-user-tie"></i>
+                    </div>
+                    <div style="min-width: 0; flex: 1;">
+                        <p style="margin: 0; font-size: 0.75rem; color: #6B7280; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">Nombre de Contacto</p>
+                        <p style="margin: 3px 0 0 0; font-size: 1.1rem; color: #1F2937; font-weight: 500;">
+                            {% if datos_usuario['contacto'] %}{{ datos_usuario['contacto'] }}{% else %}<span style="color: #9CA3AF; font-style: italic;">No registrado</span>{% endif %}
+                        </p>
+                    </div>
+                </div>
+
+            </div>
+            
+            <div style="margin-top: 3rem; padding-top: 1.5rem; border-top: 1px dashed #E5E7EB; display: flex; gap: 15px; align-items: center;">
+                <div style="width: 35px; height: 35px; border-radius: 50%; background: #F3F4F6; color: #6B7280; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                    <i class="fas fa-lock"></i>
+                </div>
+                <p style="color: #6B7280; font-size: 0.85rem; margin: 0; line-height: 1.4;">
+                    Datos protegidos con estándar criptográfico SHA-256. Por motivos de seguridad, las modificaciones de Razón Social o RUT deben ser solicitadas directamente al Administrador del Sistema.
+                </p>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

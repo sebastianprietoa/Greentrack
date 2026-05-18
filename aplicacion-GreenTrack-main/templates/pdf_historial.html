@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}Historial de PDFs - GreenTrack{% endblock %}
+
+{% block content %}
+<div style="padding: 2rem; max-width: 1100px; margin: 0 auto;">
+
+    <div style="margin-bottom: 1.5rem;">
+        <a href="/residuos" style="display: inline-flex; align-items: center; gap: 8px; color: #10B981; text-decoration: none; font-weight: 500;">
+            <i class="fas fa-arrow-left"></i> Volver al Dashboard de Residuos
+        </a>
+    </div>
+
+    <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
+        <h2 style="margin: 0 0 0.4rem 0; color: #111827; display: flex; align-items: center; gap: 10px;">
+            <i class="fas fa-history" style="color: #6B7280;"></i> Historial de Cargas PDF
+        </h2>
+        <p style="color: #6B7280; margin: 0 0 2rem 0; font-size: 0.9rem;">
+            Registro de todos los archivos PDF procesados y confirmados en la plataforma.
+        </p>
+
+        {% if cargas %}
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                <thead>
+                    <tr style="background: #F3F4F6; color: #374151;">
+                        <th style="padding: 12px 14px; text-align: left; border-bottom: 2px solid #E5E7EB;">Fecha de carga</th>
+                        <th style="padding: 12px 14px; text-align: left; border-bottom: 2px solid #E5E7EB;">Archivo</th>
+                        <th style="padding: 12px 14px; text-align: center; border-bottom: 2px solid #E5E7EB;">Tipo</th>
+                        <th style="padding: 12px 14px; text-align: center; border-bottom: 2px solid #E5E7EB;">Registros guardados</th>
+                        <th style="padding: 12px 14px; text-align: center; border-bottom: 2px solid #E5E7EB;">Sin factor</th>
+                        <th style="padding: 12px 14px; text-align: center; border-bottom: 2px solid #E5E7EB;">Estado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in cargas %}
+                    <tr style="border-bottom: 1px solid #F3F4F6; {% if loop.index is odd %}background: #FAFAFA;{% endif %}">
+                        <td style="padding: 10px 14px; color: #374151; white-space: nowrap;">{{ c.fecha_subida }}</td>
+                        <td style="padding: 10px 14px; color: #111827; max-width: 300px; word-break: break-all;">
+                            <i class="fas fa-file-pdf" style="color: #EF4444; margin-right: 6px;"></i>{{ c.nombre_archivo }}
+                        </td>
+                        <td style="padding: 10px 14px; text-align: center;">
+                            {% if c.tipo == 'sinader' %}
+                                <span style="background: #DBEAFE; color: #1E40AF; padding: 3px 10px; border-radius: 12px; font-size: 0.78rem; font-weight: 700;">SINADER</span>
+                            {% elif c.tipo == 'sidrep' %}
+                                <span style="background: #FEE2E2; color: #991B1B; padding: 3px 10px; border-radius: 12px; font-size: 0.78rem; font-weight: 700;">SIDREP</span>
+                            {% else %}
+                                <span style="background: #F3F4F6; color: #6B7280; padding: 3px 10px; border-radius: 12px; font-size: 0.78rem;">{{ c.tipo | upper }}</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 10px 14px; text-align: center; font-weight: 700; color: #111827;">{{ c.registros_generados }}</td>
+                        <td style="padding: 10px 14px; text-align: center;">
+                            {% if c.sin_factor > 0 %}
+                                <span style="color: #D97706; font-weight: 600;">{{ c.sin_factor }}</span>
+                            {% else %}
+                                <span style="color: #059669;">0</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 10px 14px; text-align: center;">
+                            {% if c.sin_factor == 0 %}
+                                <span style="color: #059669;"><i class="fas fa-check-circle"></i> Completo</span>
+                            {% else %}
+                                <span style="color: #D97706;"><i class="fas fa-exclamation-triangle"></i> Parcial</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <p style="color: #9CA3AF; font-size: 0.8rem; margin-top: 1rem; text-align: right;">
+            {{ cargas | length }} carga(s) registrada(s)
+        </p>
+
+        {% else %}
+        <div style="text-align: center; padding: 3rem; color: #9CA3AF;">
+            <i class="fas fa-inbox" style="font-size: 3rem; margin-bottom: 1rem; display: block;"></i>
+            <p style="font-size: 1rem;">Aún no hay PDFs procesados.<br>
+               Sube un SINADER o SIDREP desde <a href="/formulario_residuos" style="color: #10B981;">Agregar Registro</a>.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

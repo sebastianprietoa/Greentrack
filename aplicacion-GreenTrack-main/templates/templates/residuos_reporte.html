@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+
+{% block title %}Reporte de Residuos - EcoTrack{% endblock %}
+
+{% block content %}
+<div style="max-width: 1200px; margin: 0 auto;">
+    <div style="margin-bottom: 2rem;">
+        <a href="{{ url_for('residuos_dashboard') }}" style="display: inline-flex; align-items: center; gap: 8px; color: #10B981; text-decoration: none; font-weight: 500;">
+            <i class="fas fa-arrow-left"></i> Volver al Dashboard
+        </a>
+    </div>
+    
+    <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+        <h1 style="margin-bottom: 0.5rem; color: #111827; display: flex; align-items: center; gap: 10px;">
+            <i class="fas fa-file-alt" style="color: #10B981;"></i> Reporte Completo de Residuos
+        </h1>
+        <p style="color: #6B7280; margin-bottom: 2rem;">Resumen de todos los registros de residuos de la empresa</p>
+        
+        <!-- Resumen Ejecutivo -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+            <div style="background: #D1FAE5; padding: 1.5rem; border-radius: 8px; border-left: 4px solid #10B981;">
+                <h3 style="margin-bottom: 0.5rem; color: #065F46;">Total Residuos</h3>
+                <p style="font-size: 2rem; font-weight: 700; color: #111827; margin: 0;">
+                    {{ "%.2f"|format(total_residuos) }} t
+                </p>
+            </div>
+            
+            <div style="background: #FEF3C7; padding: 1.5rem; border-radius: 8px; border-left: 4px solid #D97706;">
+                <h3 style="margin-bottom: 0.5rem; color: #92400E;">Tipos de Residuos</h3>
+                <p style="font-size: 2rem; font-weight: 700; color: #111827; margin: 0;">
+                    {{ tipos_distintos }}
+                </p>
+            </div>
+            
+            <div style="background: #E0F2FE; padding: 1.5rem; border-radius: 8px; border-left: 4px solid #3B82F6;">
+                <h3 style="margin-bottom: 0.5rem; color: #1E40AF;">Costo Total</h3>
+                <p style="font-size: 2rem; font-weight: 700; color: #111827; margin: 0;">
+                    ${{ "%.2f"|format(total_costo) }}
+                </p>
+            </div>
+        </div>
+        
+        <!-- Tabla de Residuos -->
+        {% if df_residuos %}
+        <div style="margin-bottom: 2rem;">
+            <h2 style="margin-bottom: 1.5rem; color: #111827; display: flex; align-items: center; gap: 10px;">
+                <i class="fas fa-table"></i> Registros de Residuos
+            </h2>
+            <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="background: #F9FAFB;">
+                            <th style="padding: 1rem; text-align: left; font-weight: 600; color: #374151;">Fecha Registro</th>
+                            <th style="padding: 1rem; text-align: left; font-weight: 600; color: #374151;">Período</th>
+                            <th style="padding: 1rem; text-align: left; font-weight: 600; color: #374151;">Tipo de Residuo</th>
+                            <th style="padding: 1rem; text-align: left; font-weight: 600; color: #374151;">Cantidad (t)</th>
+                            <th style="padding: 1rem; text-align: left; font-weight: 600; color: #374151;">Tratamiento</th>
+                            <th style="padding: 1rem; text-align: left; font-weight: 600; color: #374151;">Costo</th>
+                            <th style="padding: 1rem; text-align: left; font-weight: 600; color: #374151;">Destino</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for residuo in df_residuos %}
+                        <tr style="border-bottom: 1px solid #E5E7EB;">
+                            <td style="padding: 1rem; color: #374151;">{{ residuo.fecha[:10] }}</td>
+                            <td style="padding: 1rem; color: #374151; font-weight: 600;">{{ residuo.periodo }}</td>
+                            <td style="padding: 1rem; color: #374151;">{{ residuo.tipo_residuo }}</td>
+                            <td style="padding: 1rem; color: #374151; font-weight: 600;">{{ "%.2f"|format(residuo.cantidad_ton) }}</td>
+                            <td style="padding: 1rem; color: #374151;">{{ residuo.tratamiento or 'N/A' }}</td>
+                            <td style="padding: 1rem; color: #10B981; font-weight: 600;">{{ "$%.2f"|format(residuo.costo) if residuo.costo else 'N/A' }}</td>
+                            <td style="padding: 1rem; color: #374151;">{{ residuo.destino or 'N/A' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Reportes de Ventanilla Única -->
+        {% if df_reportes %}
+        <div style="margin-bottom: 2rem;">
+            <h2 style="margin-bottom: 1.5rem; color: #111827; display: flex; align-items: center; gap: 10px;">
+                <i class="fas fa-external-link-alt"></i> Reportes de Ventanilla Única
+            </h2>
+            <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="background: #F9FAFB;">
+                            <th style="padding: 1rem; text-align: left; font-weight: 600; color: #374151;">Fecha</th>
+                            <th style="padding: 1rem; text-align: left; font-weight: 600; color: #374151;">Tipo</th>
+                            <th style="padding: 1rem; text-align: left; font-weight: 600; color: #374151;">Link del Reporte</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for reporte in df_reportes %}
+                        <tr style="border-bottom: 1px solid #E5E7EB;">
+                            <td style="padding: 1rem; color: #374151;">{{ reporte.fecha[:10] }}</td>
+                            <td style="padding: 1rem; color: #374151;">{{ reporte.tipo }}</td>
+                            <td style="padding: 1rem;">
+                                <a href="{{ reporte.link_reporte }}" target="_blank" 
+                                   style="color: #3B82F6; text-decoration: none; word-break: break-all;">
+                                    {{ reporte.link_reporte|truncate(50) }}
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Botones de Acción -->
+        <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 3rem; padding-top: 2rem; border-top: 1px solid #E5E7EB;">
+            <a href="{{ url_for('residuos_registro') }}" 
+               style="background: #10B981; color: white; border: none; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+                <i class="fas fa-plus"></i> Nuevo Registro
+            </a>
+            
+            <button onclick="exportarExcel()" 
+                    style="background: white; color: #374151; border: 2px solid #E5E7EB; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                <i class="fas fa-file-excel"></i> Exportar a Excel
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    function exportarExcel() {
+        alert("Exportando datos a Excel... (funcionalidad en desarrollo)");
+        // En una versión futura, esto generaría un archivo Excel con todos los datos
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+{% block title %}Dashboard Combustión - GreenTrack{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+    <div>
+        <h1 style="color: #111827; margin: 0;"><i class="fas fa-fire" style="color: #EF4444;"></i> Combustión (Alcance 1)</h1>
+        <p style="color: #6B7280; margin: 4px 0 0 0; font-size: 0.9rem;">Emisiones directas por combustión estacionaria y móvil.</p>
+    </div>
+    <a href="{{ url_for('registro') }}" style="background: #EF4444; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 8px;">
+        <i class="fas fa-plus"></i> Registrar Consumo
+    </a>
+</div>
+
+<!-- KPI total -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+    <div style="background: white; padding: 1.5rem; border-radius: 12px; border-left: 5px solid #EF4444; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+        <p style="color: #9CA3AF; margin: 0 0 4px 0; font-weight: 700; text-transform: uppercase; font-size: 0.72rem; letter-spacing: 0.05em;">Emisión Total Combustión</p>
+        <h2 style="margin: 0; font-size: 2rem; color: #111827;">{{ "%.2f"|format(total_emision) }} <span style="font-size: 1rem; color: #6B7280;">kg CO₂e</span></h2>
+    </div>
+    {% if tendencia_fija %}
+    <div style="background: white; padding: 1.5rem; border-radius: 12px; border-left: 5px solid #F97316; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+        <p style="color: #9CA3AF; margin: 0 0 4px 0; font-weight: 700; text-transform: uppercase; font-size: 0.72rem; letter-spacing: 0.05em;">Combustión Fija</p>
+        <h2 style="margin: 0; font-size: 2rem; color: #111827;">{{ "%.2f"|format(tendencia_fija | sum) }} <span style="font-size: 1rem; color: #6B7280;">kg CO₂e</span></h2>
+    </div>
+    <div style="background: white; padding: 1.5rem; border-radius: 12px; border-left: 5px solid #DC2626; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+        <p style="color: #9CA3AF; margin: 0 0 4px 0; font-weight: 700; text-transform: uppercase; font-size: 0.72rem; letter-spacing: 0.05em;">Combustión Móvil</p>
+        <h2 style="margin: 0; font-size: 2rem; color: #111827;">{{ "%.2f"|format(tendencia_movil | sum) }} <span style="font-size: 1rem; color: #6B7280;">kg CO₂e</span></h2>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Gráficos: donut + tendencia mensual -->
+<div style="display: grid; grid-template-columns: 1fr 2fr; gap: 2rem; margin-bottom: 2rem;">
+
+    <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+        <h3 style="margin: 0 0 1rem 0; color: #374151; font-size: 1rem; border-bottom: 1px solid #F3F4F6; padding-bottom: 0.75rem;">
+            <i class="fas fa-chart-pie" style="color: #EF4444;"></i> Por Combustible
+        </h3>
+        {% if grafico_data %}
+            <div style="position: relative; height: 260px;">
+                <canvas id="chartCombustion"></canvas>
+            </div>
+        {% else %}
+            <div style="text-align: center; padding: 3rem; color: #9CA3AF;">
+                <i class="fas fa-chart-pie" style="font-size: 2rem; margin-bottom: 0.5rem; display: block;"></i>
+                <p style="margin: 0; font-size: 0.9rem;">Sin datos aún</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+        <h3 style="margin: 0 0 1rem 0; color: #374151; font-size: 1rem; border-bottom: 1px solid #F3F4F6; padding-bottom: 0.75rem;">
+            <i class="fas fa-chart-bar" style="color: #F97316;"></i> Tendencia Mensual — Fija vs Móvil
+        </h3>
+        {% if meses_comb %}
+            <div style="position: relative; height: 260px;">
+                <canvas id="chartTendenciaComb"></canvas>
+            </div>
+        {% else %}
+            <div style="text-align: center; padding: 3rem; color: #9CA3AF;">
+                <i class="fas fa-chart-bar" style="font-size: 2rem; margin-bottom: 0.5rem; display: block;"></i>
+                <p style="margin: 0; font-size: 0.9rem;">Sin datos de tendencia aún</p>
+            </div>
+        {% endif %}
+    </div>
+
+</div>
+
+<!-- Tabla últimos registros -->
+<div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+    <h3 style="margin: 0 0 1rem 0; color: #374151; font-size: 1rem; border-bottom: 1px solid #F3F4F6; padding-bottom: 0.75rem;">
+        <i class="fas fa-list" style="color: #6B7280;"></i> Últimos Registros
+    </h3>
+    {% if registros %}
+    <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.87rem;">
+            <thead>
+                <tr style="background: #F9FAFB;">
+                    <th style="padding: 10px 12px; text-align: left; color: #6B7280; font-size: 0.75rem; text-transform: uppercase; border-bottom: 2px solid #E5E7EB;">Fecha</th>
+                    <th style="padding: 10px 12px; text-align: left; color: #6B7280; font-size: 0.75rem; text-transform: uppercase; border-bottom: 2px solid #E5E7EB;">Tipo</th>
+                    <th style="padding: 10px 12px; text-align: left; color: #6B7280; font-size: 0.75rem; text-transform: uppercase; border-bottom: 2px solid #E5E7EB;">Combustible</th>
+                    <th style="padding: 10px 12px; text-align: left; color: #6B7280; font-size: 0.75rem; text-transform: uppercase; border-bottom: 2px solid #E5E7EB;">Uso</th>
+                    <th style="padding: 10px 12px; text-align: right; color: #6B7280; font-size: 0.75rem; text-transform: uppercase; border-bottom: 2px solid #E5E7EB;">Emisión</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for reg in registros %}
+                <tr style="border-bottom: 1px solid #F3F4F6;">
+                    <td style="padding: 10px 12px; color: #6B7280;">{{ (reg.fecha | string)[:10] }}</td>
+                    <td style="padding: 10px 12px;">
+                        <span style="background: #FEE2E2; color: #991B1B; padding: 3px 8px; border-radius: 8px; font-size: 0.75rem; font-weight: 700;">{{ reg.fuente }}</span>
+                    </td>
+                    <td style="padding: 10px 12px; font-weight: 600; color: #111827;">{{ reg.categoria }}</td>
+                    <td style="padding: 10px 12px; color: #4B5563;">{{ reg.actividad }}</td>
+                    <td style="padding: 10px 12px; text-align: right; font-weight: 700; color: #EF4444;">{{ "%.2f"|format(reg.emision) }} kg</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div style="text-align: center; padding: 3rem; color: #6B7280;">
+        <i class="fas fa-folder-open" style="font-size: 2rem; margin-bottom: 1rem; color: #9CA3AF; display: block;"></i>
+        <p style="margin: 0;">Aún no hay registros de combustión.</p>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+const formatKg = val => new Intl.NumberFormat('es-CL', {minimumFractionDigits:2, maximumFractionDigits:2}).format(val) + ' kg CO₂e';
+
+{% if grafico_data %}
+(function() {
+    const labels = [{% for item in grafico_data %}"{{ item.categoria }}",{% endfor %}];
+    const data   = [{% for item in grafico_data %}{{ item.total }},{% endfor %}];
+    const total  = data.reduce((a, b) => a + b, 0);
+    new Chart(document.getElementById('chartCombustion'), {
+        type: 'doughnut',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: data,
+                backgroundColor: ['#EF4444','#F97316','#F59E0B','#DC2626','#B91C1C','#7F1D1D'],
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '62%',
+            plugins: {
+                legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 12 } },
+                tooltip: {
+                    callbacks: {
+                        label: ctx => {
+                            const pct = total > 0 ? (ctx.parsed / total * 100).toFixed(1) : 0;
+                            return ' ' + ctx.label + ': ' + formatKg(ctx.parsed) + ' (' + pct + '%)';
+                        }
+                    }
+                }
+            }
+        }
+    });
+})();
+{% endif %}
+
+{% if meses_comb %}
+(function() {
+    const meses = {{ meses_comb | tojson }};
+    const fija  = {{ tendencia_fija | tojson }};
+    const movil = {{ tendencia_movil | tojson }};
+    new Chart(document.getElementById('chartTendenciaComb'), {
+        type: 'bar',
+        data: {
+            labels: meses,
+            datasets: [
+                {
+                    label: 'Fija / Estacionaria',
+                    data: fija,
+                    backgroundColor: '#F9730670',
+                    borderColor: '#F97316',
+                    borderWidth: 1.5,
+                    borderRadius: 4,
+                    stack: 'comb'
+                },
+                {
+                    label: 'Móvil / Refrigerantes',
+                    data: movil,
+                    backgroundColor: '#EF444470',
+                    borderColor: '#EF4444',
+                    borderWidth: 1.5,
+                    borderRadius: 4,
+                    stack: 'comb'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 12 } },
+                tooltip: {
+                    callbacks: {
+                        label: ctx => ' ' + ctx.dataset.label + ': ' + formatKg(ctx.parsed.y),
+                        afterBody: function(items) {
+                            const i = items[0].dataIndex;
+                            return ['', 'Total: ' + formatKg((fija[i] || 0) + (movil[i] || 0))];
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: { grid: { display: false }, stacked: true },
+                y: { beginAtZero: true, stacked: true, grid: { color: '#E5E7EB' },
+                     ticks: { callback: v => v >= 1000 ? (v/1000).toFixed(1)+'k' : v } }
+            }
+        }
+    });
+})();
+{% endif %}
+</script>
+{% endblock %}

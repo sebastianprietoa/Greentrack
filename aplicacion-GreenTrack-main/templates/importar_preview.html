@@ -1,0 +1,264 @@
+{% extends "base.html" %}
+{% block title %}Vista Previa Importación - GreenTrack{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+    <div>
+        <h1 style="color: #111827; margin: 0;"><i class="fas fa-eye" style="color: #3B82F6;"></i> Vista Previa de Importación</h1>
+        <p style="color: #6B7280; margin: 4px 0 0 0; font-size: 0.9rem;">Revisa los datos antes de confirmar. Solo se importarán las filas válidas.</p>
+    </div>
+    <a href="/importar" style="color: #6B7280; text-decoration: none; font-size: 0.88rem; display: flex; align-items: center; gap: 6px;">
+        <i class="fas fa-arrow-left"></i> Subir otro archivo
+    </a>
+</div>
+
+<!-- KPIs -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+
+    <div style="background: white; padding: 1.25rem 1.5rem; border-radius: 12px; border-left: 5px solid #6B7280; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+        <p style="margin: 0 0 4px 0; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: #9CA3AF; letter-spacing: 0.05em;">Total filas</p>
+        <div style="font-size: 2rem; font-weight: 700; color: #111827;">{{ total }}</div>
+    </div>
+
+    <div style="background: white; padding: 1.25rem 1.5rem; border-radius: 12px; border-left: 5px solid #10B981; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+        <p style="margin: 0 0 4px 0; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: #9CA3AF; letter-spacing: 0.05em;">Válidos</p>
+        <div style="font-size: 2rem; font-weight: 700; color: #10B981;">{{ validos }}</div>
+        <p style="margin: 2px 0 0 0; font-size: 0.75rem; color: #9CA3AF;">listos para importar</p>
+    </div>
+
+    <div style="background: white; padding: 1.25rem 1.5rem; border-radius: 12px; border-left: 5px solid {{ '#EF4444' if errores > 0 else '#E5E7EB' }}; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+        <p style="margin: 0 0 4px 0; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: #9CA3AF; letter-spacing: 0.05em;">Con errores</p>
+        <div style="font-size: 2rem; font-weight: 700; color: {{ '#EF4444' if errores > 0 else '#9CA3AF' }};">{{ errores }}</div>
+        <p style="margin: 2px 0 0 0; font-size: 0.75rem; color: #9CA3AF;">serán omitidos</p>
+    </div>
+
+    {% if validos > 0 %}
+    <div style="background: white; padding: 1.25rem 1.5rem; border-radius: 12px; border-left: 5px solid #8B5CF6; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+        <p style="margin: 0 0 4px 0; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: #9CA3AF; letter-spacing: 0.05em;">Emisión estimada</p>
+        <div style="font-size: 1.4rem; font-weight: 700; color: #8B5CF6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ total_emision | formato_kpi }}</div>
+        <p style="margin: 2px 0 0 0; font-size: 0.75rem; color: #9CA3AF;">{{ total_emision | formato_cl }} kg CO₂e</p>
+    </div>
+    {% endif %}
+
+</div>
+
+{% if errores > 0 %}
+<div style="background: #FEF2F2; border: 1px solid #FECACA; border-radius: 10px; padding: 0.875rem 1.25rem; margin-bottom: 1.5rem; display: flex; align-items: flex-start; gap: 10px;">
+    <i class="fas fa-exclamation-triangle" style="color: #EF4444; margin-top: 2px; flex-shrink: 0;"></i>
+    <p style="margin: 0; font-size: 0.88rem; color: #991B1B;">
+        <strong>{{ errores }} fila(s) tienen errores</strong> y serán omitidas al importar.
+        Pasa el cursor sobre <strong>✗ Error</strong> para ver el detalle, o corrige el archivo y vuelve a subirlo.
+    </p>
+</div>
+{% endif %}
+
+<!-- Gráfico + resumen por fuente -->
+{% if resumen_fuentes %}
+<div style="display: grid; grid-template-columns: 260px 1fr; gap: 1.5rem; margin-bottom: 2rem; align-items: start;">
+
+    <div style="background: white; padding: 1.25rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+        <h3 style="margin: 0 0 1rem 0; color: #374151; font-size: 0.9rem; border-bottom: 1px solid #F3F4F6; padding-bottom: 0.6rem;">
+            <i class="fas fa-chart-pie" style="color: #3B82F6;"></i> Distribución por fuente
+        </h3>
+        <div style="position: relative; height: 180px;">
+            <canvas id="donutFuentes"></canvas>
+        </div>
+    </div>
+
+    <div style="background: white; padding: 1.25rem 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+        <h3 style="margin: 0 0 1rem 0; color: #374151; font-size: 0.9rem; border-bottom: 1px solid #F3F4F6; padding-bottom: 0.6rem;">
+            <i class="fas fa-list" style="color: #6B7280;"></i> Resumen de filas válidas por fuente
+        </h3>
+        {% set colores_fuente = {'Electricidad': '#F59E0B', 'Combustión Fija': '#EF4444', 'Combustible Móvil': '#F97316', 'Refrigerantes': '#3B82F6', 'Residuos': '#10B981'} %}
+        {% for item in resumen_fuentes %}
+        {% set color = colores_fuente.get(item.fuente, '#8B5CF6') %}
+        {% set pct = (item.emision / total_emision * 100) if total_emision > 0 else 0 %}
+        <div style="margin-bottom: 0.9rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px;">
+                <span style="font-size: 0.82rem; font-weight: 700; color: #374151;">{{ item.fuente }}</span>
+                <span style="font-size: 0.78rem; color: #6B7280;">{{ item.count }} fila(s) · {{ item.emision | formato_cl }} kg CO₂e</span>
+            </div>
+            <div style="background: #F3F4F6; border-radius: 999px; height: 7px; overflow: hidden;">
+                <div style="background: {{ color }}; width: {{ '%.1f' | format(pct) }}%; height: 100%; border-radius: 999px;"></div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+</div>
+{% endif %}
+
+<!-- Tabla detalle -->
+<div style="background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); overflow: hidden; margin-bottom: 2rem;">
+    <div style="padding: 1rem 1.5rem; border-bottom: 1px solid #F3F4F6; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+        <h3 style="margin: 0; color: #374151; font-size: 1rem;">
+            <i class="fas fa-table" style="color: #6B7280;"></i> Detalle por fila
+        </h3>
+        <!-- Filtros -->
+        <div style="display: flex; gap: 6px;">
+            <button onclick="filtrarTabla('todos')" id="btn-todos" class="btn-filtro activo" style="padding: 5px 14px; border-radius: 6px; border: 1.5px solid #3B82F6; background: #3B82F6; color: white; font-size: 0.78rem; font-weight: 700; cursor: pointer;">
+                Todos ({{ total }})
+            </button>
+            <button onclick="filtrarTabla('valido')" id="btn-valido" class="btn-filtro" style="padding: 5px 14px; border-radius: 6px; border: 1.5px solid #10B981; background: white; color: #10B981; font-size: 0.78rem; font-weight: 700; cursor: pointer;">
+                ✓ Válidos ({{ validos }})
+            </button>
+            {% if errores > 0 %}
+            <button onclick="filtrarTabla('error')" id="btn-error" class="btn-filtro" style="padding: 5px 14px; border-radius: 6px; border: 1.5px solid #EF4444; background: white; color: #EF4444; font-size: 0.78rem; font-weight: 700; cursor: pointer;">
+                ✗ Errores ({{ errores }})
+            </button>
+            {% endif %}
+        </div>
+    </div>
+    <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.82rem;" id="tablaPreview">
+            <thead>
+                <tr style="background: #F9FAFB;">
+                    <th style="padding: 8px 12px; text-align: center; color: #6B7280; font-size: 0.7rem; text-transform: uppercase; border-bottom: 2px solid #E5E7EB;">#</th>
+                    <th style="padding: 8px 12px; text-align: left; color: #6B7280; font-size: 0.7rem; text-transform: uppercase; border-bottom: 2px solid #E5E7EB;">Estado</th>
+                    <th style="padding: 8px 12px; text-align: left; color: #6B7280; font-size: 0.7rem; text-transform: uppercase; border-bottom: 2px solid #E5E7EB; white-space: nowrap;">Período</th>
+                    <th style="padding: 8px 12px; text-align: left; color: #6B7280; font-size: 0.7rem; text-transform: uppercase; border-bottom: 2px solid #E5E7EB;">Fuente</th>
+                    <th style="padding: 8px 12px; text-align: left; color: #6B7280; font-size: 0.7rem; text-transform: uppercase; border-bottom: 2px solid #E5E7EB;">Categoría</th>
+                    <th style="padding: 8px 12px; text-align: left; color: #6B7280; font-size: 0.7rem; text-transform: uppercase; border-bottom: 2px solid #E5E7EB;">Área</th>
+                    <th style="padding: 8px 12px; text-align: right; color: #6B7280; font-size: 0.7rem; text-transform: uppercase; border-bottom: 2px solid #E5E7EB; white-space: nowrap;">Cantidad</th>
+                    <th style="padding: 8px 12px; text-align: center; color: #6B7280; font-size: 0.7rem; text-transform: uppercase; border-bottom: 2px solid #E5E7EB;">Factor</th>
+                    <th style="padding: 8px 12px; text-align: right; color: #6B7280; font-size: 0.7rem; text-transform: uppercase; border-bottom: 2px solid #E5E7EB; white-space: nowrap;">Emisión kg CO₂e</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for fila in filas %}
+                <tr data-estado="{{ 'valido' if fila.valid else 'error' }}"
+                    style="border-bottom: 1px solid #F3F4F6; background: {{ '#F0FDF4' if fila.valid else '#FFF5F5' }};">
+                    <td style="padding: 8px 12px; text-align: center; color: #9CA3AF; font-size: 0.75rem;">{{ fila.row_num }}</td>
+                    <td style="padding: 8px 12px;">
+                        {% if fila.valid %}
+                        <span style="background: #D1FAE5; color: #065F46; padding: 3px 9px; border-radius: 6px; font-size: 0.72rem; font-weight: 700;">✓ Válido</span>
+                        {% if fila.advertencia %}
+                        <span title="{{ fila.advertencia }}" style="margin-left: 4px; background: #FEF3C7; color: #92400E; padding: 2px 6px; border-radius: 5px; font-size: 0.68rem; cursor: help;">⚡ auto</span>
+                        {% endif %}
+                        {% else %}
+                        <span title="{{ fila.error }}" style="background: #FEE2E2; color: #991B1B; padding: 3px 9px; border-radius: 6px; font-size: 0.72rem; font-weight: 700; cursor: help;">✗ Error</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 8px 12px; color: #374151; white-space: nowrap;">{{ fila.mes }} {{ fila.anio }}</td>
+                    <td style="padding: 8px 12px;">
+                        <span style="background: #F3F4F6; color: #374151; padding: 2px 7px; border-radius: 5px; font-size: 0.75rem;">{{ fila.fuente }}</span>
+                    </td>
+                    <td style="padding: 8px 12px; color: #374151; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ fila.categoria }}</td>
+                    <td style="padding: 8px 12px; color: #6B7280; white-space: nowrap;">{{ fila.area }}</td>
+                    <td style="padding: 8px 12px; text-align: right; color: #374151; font-weight: 600; white-space: nowrap;">
+                        {{ "%.2f"|format(fila.cantidad) }} <span style="color: #9CA3AF; font-weight: 400; font-size: 0.75rem;">{{ fila.unidad }}</span>
+                    </td>
+                    <td style="padding: 8px 12px; text-align: center; white-space: nowrap;">
+                        <span style="font-size: 0.78rem; color: {{ '#F59E0B' if fila.factor_origen == 'auto' else '#6B7280' }};"
+                              title="{{ '⚡ Completado automáticamente desde catálogo' if fila.factor_origen == 'auto' else 'Factor del archivo' }}">
+                            {{ "%.4f"|format(fila.factor) }}
+                            {% if fila.factor_origen == 'auto' %}<i class="fas fa-magic" style="font-size: 0.65rem;"></i>{% endif %}
+                        </span>
+                    </td>
+                    <td style="padding: 8px 12px; text-align: right; font-weight: 700; color: {{ '#10B981' if fila.valid else '#EF4444' }}; white-space: nowrap;">
+                        {{ "%.4f"|format(fila.emision) }}
+                    </td>
+                </tr>
+                {% if not fila.valid and fila.error %}
+                <tr data-estado="error" style="background: #FFF5F5;">
+                    <td colspan="9" style="padding: 4px 12px 8px 40px; font-size: 0.75rem; color: #B91C1C; border-bottom: 1px solid #FEE2E2;">
+                        <i class="fas fa-exclamation-circle"></i> {{ fila.error }}
+                    </td>
+                </tr>
+                {% endif %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Botones de acción -->
+{% if validos > 0 %}
+<div style="display: flex; gap: 1rem; justify-content: flex-end; flex-wrap: wrap; align-items: center;">
+    <a href="/importar" style="padding: 12px 24px; background: white; color: #6B7280; border: 2px solid #E5E7EB; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 8px;">
+        <i class="fas fa-times"></i> Cancelar
+    </a>
+    <form method="POST" action="/importar/confirmar" id="confirmForm" style="margin: 0;">
+        <input type="hidden" name="filas_json" value="{{ filas_json | e }}">
+        <button type="submit" id="confirmBtn"
+                style="padding: 12px 28px; background: #10B981; color: white; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 8px;">
+            <i class="fas fa-check"></i> Confirmar e Importar {{ validos }} registro(s)
+        </button>
+    </form>
+</div>
+{% else %}
+<div style="text-align: center; background: white; padding: 2.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+    <i class="fas fa-exclamation-circle" style="font-size: 2.5rem; color: #EF4444; margin-bottom: 1rem; display: block;"></i>
+    <p style="color: #374151; font-weight: 600; margin-bottom: 0.5rem;">No hay filas válidas para importar.</p>
+    <p style="color: #6B7280; font-size: 0.88rem; margin-bottom: 1.5rem;">Revisa los errores, corrige el archivo y vuelve a subirlo.</p>
+    <a href="/importar" style="padding: 12px 24px; background: #3B82F6; color: white; border-radius: 8px; text-decoration: none; font-weight: 600;">
+        <i class="fas fa-arrow-left"></i> Volver e intentar con otro archivo
+    </a>
+</div>
+{% endif %}
+
+<script>
+// Filtro de tabla
+function filtrarTabla(estado) {
+    document.querySelectorAll('#tablaPreview tbody tr').forEach(tr => {
+        const est = tr.getAttribute('data-estado');
+        tr.style.display = (estado === 'todos' || est === estado) ? '' : 'none';
+    });
+    document.querySelectorAll('.btn-filtro').forEach(btn => {
+        btn.style.background = 'white';
+        btn.style.color = btn.id === 'btn-valido' ? '#10B981' : btn.id === 'btn-error' ? '#EF4444' : '#3B82F6';
+    });
+    const active = document.getElementById('btn-' + estado);
+    if (active) {
+        active.style.background = active.id === 'btn-valido' ? '#10B981' : active.id === 'btn-error' ? '#EF4444' : '#3B82F6';
+        active.style.color = 'white';
+    }
+}
+
+// Spinner al confirmar
+document.getElementById('confirmForm')?.addEventListener('submit', function() {
+    const btn = document.getElementById('confirmBtn');
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Importando…';
+    btn.disabled = true;
+    btn.style.background = '#6B7280';
+});
+
+{% if resumen_fuentes %}
+// Donut chart por fuente
+const coloresFuente = {
+    'Electricidad': '#F59E0B',
+    'Combustión Fija': '#EF4444',
+    'Combustible Móvil': '#F97316',
+    'Refrigerantes': '#3B82F6',
+    'Residuos': '#10B981',
+    'Desconocida': '#9CA3AF'
+};
+const resumen = {{ resumen_fuentes | tojson }};
+new Chart(document.getElementById('donutFuentes'), {
+    type: 'doughnut',
+    data: {
+        labels: resumen.map(r => r.fuente),
+        datasets: [{
+            data: resumen.map(r => r.count),
+            backgroundColor: resumen.map(r => coloresFuente[r.fuente] || '#8B5CF6'),
+            borderWidth: 2,
+            borderColor: '#fff'
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '60%',
+        plugins: {
+            legend: { position: 'bottom', labels: { font: { size: 10 }, boxWidth: 10, padding: 8 } },
+            tooltip: {
+                callbacks: {
+                    label: ctx => ' ' + ctx.label + ': ' + ctx.parsed + ' fila(s)'
+                }
+            }
+        }
+    }
+});
+{% endif %}
+</script>
+{% endblock %}

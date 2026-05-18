@@ -1,0 +1,866 @@
+{% extends "base.html" %}
+{% block title %}Panel Administrativo - GreenTrack{% endblock %}
+
+{% block content %}
+
+<!-- Header admin -->
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+    <div style="display: flex; align-items: center; gap: 14px;">
+        <div style="background: linear-gradient(135deg, #6366F1, #8B5CF6); width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(99,102,241,0.35); flex-shrink: 0;">
+            <i class="fas fa-shield-alt" style="color: white; font-size: 1.3rem;"></i>
+        </div>
+        <div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <h1 style="color: #111827; margin: 0; font-size: 1.4rem;">Panel Administrativo</h1>
+                <span style="background: #EEF2FF; color: #6366F1; font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.05em;">Admin</span>
+            </div>
+            <p style="color: #6B7280; margin: 2px 0 0 0; font-size: 0.85rem;">Gestión global de empresas, usuarios y factores de emisión.</p>
+        </div>
+    </div>
+    <button onclick="document.getElementById('modal_empresa').style.display='flex'"
+            style="background: #10B981; border: none; padding: 10px 20px; border-radius: 8px; color: white; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 8px; font-size: 0.9rem; box-shadow: 0 2px 8px rgba(16,185,129,0.3);">
+        <i class="fas fa-plus"></i> Nueva Empresa
+    </button>
+</div>
+
+<!-- KPIs -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+
+    <div style="background: white; padding: 1.25rem 1.5rem; border-radius: 12px; border-left: 5px solid #6366F1; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+            <i class="fas fa-building" style="color: #6366F1; font-size: 0.95rem;"></i>
+            <p style="margin: 0; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: #9CA3AF; letter-spacing: 0.05em;">Empresas Activas</p>
+        </div>
+        <div style="font-size: 2rem; font-weight: 700; color: #111827;">{{ total_empresas }}</div>
+        <p style="margin: 2px 0 0 0; font-size: 0.75rem; color: #9CA3AF;">clientes registrados</p>
+    </div>
+
+    <div style="background: white; padding: 1.25rem 1.5rem; border-radius: 12px; border-left: 5px solid #10B981; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+            <i class="fas fa-database" style="color: #10B981; font-size: 0.95rem;"></i>
+            <p style="margin: 0; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: #9CA3AF; letter-spacing: 0.05em;">Registros Totales</p>
+        </div>
+        <div style="font-size: 2rem; font-weight: 700; color: #111827;">{{ total_registros | formato_kpi }}</div>
+        <p style="margin: 2px 0 0 0; font-size: 0.75rem; color: #9CA3AF;">{{ total_registros | formato_cl }} entradas</p>
+    </div>
+
+    <div style="background: white; padding: 1.25rem 1.5rem; border-radius: 12px; border-left: 5px solid #F59E0B; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+            <i class="fas fa-smog" style="color: #F59E0B; font-size: 0.95rem;"></i>
+            <p style="margin: 0; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: #9CA3AF; letter-spacing: 0.05em;">Emisión Global</p>
+        </div>
+        <div style="font-size: 1.6rem; font-weight: 700; color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ total_emisiones | formato_kpi }}</div>
+        <p style="margin: 2px 0 0 0; font-size: 0.75rem; color: #9CA3AF;">{{ total_emisiones | formato_cl }} kg CO₂e</p>
+    </div>
+
+    <a href="/admin/pendientes" style="text-decoration: none;">
+        <div style="background: white; padding: 1.25rem 1.5rem; border-radius: 12px; border-left: 5px solid {{ '#EF4444' if total_pendientes > 0 else '#E5E7EB' }}; box-shadow: 0 2px 8px rgba(0,0,0,0.06); cursor: pointer; transition: box-shadow 0.2s;" onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,0.1)'" onmouseout="this.style.boxShadow='0 2px 8px rgba(0,0,0,0.06)'">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                <i class="fas fa-clock" style="color: {{ '#EF4444' if total_pendientes > 0 else '#9CA3AF' }}; font-size: 0.95rem;"></i>
+                <p style="margin: 0; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: #9CA3AF; letter-spacing: 0.05em;">Revisiones Pendientes</p>
+            </div>
+            <div style="font-size: 2rem; font-weight: 700; color: {{ '#EF4444' if total_pendientes > 0 else '#9CA3AF' }};">{{ total_pendientes }}</div>
+            <p style="margin: 2px 0 0 0; font-size: 0.75rem; color: #9CA3AF;">{{ 'PDFs por revisar' if total_pendientes > 0 else 'sin pendientes' }}</p>
+        </div>
+    </a>
+
+</div>
+
+<!-- Tabs de navegación -->
+<div style="display: flex; gap: 4px; margin-bottom: 1.5rem; background: white; padding: 6px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); width: fit-content;">
+    <a href="/admin/dashboard"
+       style="padding: 8px 20px; border-radius: 7px; font-size: 0.88rem; font-weight: 600; text-decoration: none; display: flex; align-items: center; gap: 7px;
+              background: {{ '#6366F1' if admin_section == 'dashboard' else 'transparent' }};
+              color: {{ 'white' if admin_section == 'dashboard' else '#6B7280' }};">
+        <i class="fas fa-chart-bar"></i> Dashboard
+    </a>
+    <a href="/admin/empresas"
+       style="padding: 8px 20px; border-radius: 7px; font-size: 0.88rem; font-weight: 600; text-decoration: none; display: flex; align-items: center; gap: 7px;
+              background: {{ '#6366F1' if admin_section == 'empresas' else 'transparent' }};
+              color: {{ 'white' if admin_section == 'empresas' else '#6B7280' }};">
+        <i class="fas fa-building"></i> Empresas
+        <span style="background: {{ 'rgba(255,255,255,0.25)' if admin_section == 'empresas' else '#EEF2FF' }}; color: {{ 'white' if admin_section == 'empresas' else '#6366F1' }}; font-size: 0.72rem; padding: 1px 7px; border-radius: 10px;">{{ total_empresas }}</span>
+    </a>
+    <a href="/admin/factores"
+       style="padding: 8px 20px; border-radius: 7px; font-size: 0.88rem; font-weight: 600; text-decoration: none; display: flex; align-items: center; gap: 7px;
+              background: {{ '#6366F1' if admin_section == 'factores' else 'transparent' }};
+              color: {{ 'white' if admin_section == 'factores' else '#6B7280' }};">
+        <i class="fas fa-atom"></i> Factores
+    </a>
+    <a href="/admin/pendientes"
+       style="padding: 8px 20px; border-radius: 7px; font-size: 0.88rem; font-weight: 600; text-decoration: none; display: flex; align-items: center; gap: 7px;
+              background: {{ '#6366F1' if admin_section == 'pendientes' else 'transparent' }};
+              color: {{ 'white' if admin_section == 'pendientes' else '#6B7280' }}; position: relative;">
+        <i class="fas fa-inbox"></i> Revisiones
+        {% if total_pendientes > 0 %}
+        <span style="background: {{ 'rgba(255,255,255,0.25)' if admin_section == 'pendientes' else '#EF4444' }}; color: white; font-size: 0.68rem; font-weight: 700; padding: 1px 6px; border-radius: 10px;">{{ total_pendientes }}</span>
+        {% endif %}
+    </a>
+</div>
+
+<!-- ===== MODALES ===== -->
+<div id="modal_empresa" style="display: none; background: rgba(0,0,0,0.5); position: fixed; inset: 0; z-index: 2000; align-items: center; justify-content: center; padding: 1rem;">
+    <div style="background: white; padding: 2rem; border-radius: 16px; width: 100%; max-width: 480px; position: relative; box-shadow: 0 20px 60px rgba(0,0,0,0.2);">
+        <button onclick="document.getElementById('modal_empresa').style.display='none'"
+                style="position: absolute; top: 1rem; right: 1rem; border: none; background: #F3F4F6; width: 32px; height: 32px; border-radius: 50%; font-size: 1.1rem; cursor: pointer; color: #6B7280; display: flex; align-items: center; justify-content: center;">&times;</button>
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 1.5rem;">
+            <div style="background: #D1FAE5; border-radius: 10px; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;">
+                <i class="fas fa-building" style="color: #10B981; font-size: 1.2rem;"></i>
+            </div>
+            <div>
+                <h3 style="margin: 0; color: #111827;">Crear Nueva Empresa</h3>
+                <p style="margin: 0; font-size: 0.85rem; color: #6B7280;">Se enviará acceso al correo indicado</p>
+            </div>
+        </div>
+        <form action="/admin/crear_empresa" method="POST">
+            <div style="margin-bottom: 1rem;">
+                <label style="display: block; font-size: 0.8rem; font-weight: 600; color: #374151; margin-bottom: 5px;">Nombre de la Empresa *</label>
+                <input type="text" name="empresa" placeholder="Ej: Minera Valle Norte S.A." required
+                       style="width: 100%; padding: 10px 12px; border: 1px solid #D1D5DB; border-radius: 8px; font-size: 0.95rem; box-sizing: border-box;">
+            </div>
+            <div style="margin-bottom: 1rem;">
+                <label style="display: block; font-size: 0.8rem; font-weight: 600; color: #374151; margin-bottom: 5px;">Correo Electrónico *</label>
+                <input type="email" name="email" placeholder="contacto@empresa.cl" required
+                       style="width: 100%; padding: 10px 12px; border: 1px solid #D1D5DB; border-radius: 8px; font-size: 0.95rem; box-sizing: border-box;">
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                <div>
+                    <label style="display: block; font-size: 0.8rem; font-weight: 600; color: #374151; margin-bottom: 5px;">RUT *</label>
+                    <input type="text" name="rut" placeholder="12.345.678-9" required
+                           style="width: 100%; padding: 10px 12px; border: 1px solid #D1D5DB; border-radius: 8px; font-size: 0.95rem; box-sizing: border-box;">
+                </div>
+                <div>
+                    <label style="display: block; font-size: 0.8rem; font-weight: 600; color: #374151; margin-bottom: 5px;">Nombre de Contacto *</label>
+                    <input type="text" name="contacto" placeholder="Juan Pérez" required
+                           style="width: 100%; padding: 10px 12px; border: 1px solid #D1D5DB; border-radius: 8px; font-size: 0.95rem; box-sizing: border-box;">
+                </div>
+            </div>
+            <div style="margin-bottom: 1.5rem;">
+                <label style="display: block; font-size: 0.8rem; font-weight: 600; color: #374151; margin-bottom: 5px;">Contraseña Temporal *</label>
+                <input type="password" name="password" placeholder="Mínimo 6 caracteres" required
+                       style="width: 100%; padding: 10px 12px; border: 1px solid #D1D5DB; border-radius: 8px; font-size: 0.95rem; box-sizing: border-box;">
+                <p style="margin: 5px 0 0 0; font-size: 0.78rem; color: #9CA3AF;">La empresa deberá cambiarla en su primer ingreso.</p>
+            </div>
+            <button type="submit" style="width: 100%; background: #10B981; color: white; padding: 12px; border: none; border-radius: 8px; font-weight: 600; font-size: 1rem; cursor: pointer;">
+                <i class="fas fa-check"></i> Crear Empresa
+            </button>
+        </form>
+    </div>
+</div>
+
+<div id="modal_editar" style="display: none; background: rgba(0,0,0,0.5); position: fixed; inset: 0; z-index: 2000; align-items: center; justify-content: center; padding: 1rem;">
+    <div style="background: white; padding: 2rem; border-radius: 16px; width: 100%; max-width: 480px; position: relative; box-shadow: 0 20px 60px rgba(0,0,0,0.2);">
+        <button onclick="document.getElementById('modal_editar').style.display='none'"
+                style="position: absolute; top: 1rem; right: 1rem; border: none; background: #F3F4F6; width: 32px; height: 32px; border-radius: 50%; font-size: 1.1rem; cursor: pointer; color: #6B7280; display: flex; align-items: center; justify-content: center;">&times;</button>
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 1.5rem;">
+            <div style="background: #EEF2FF; border-radius: 10px; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;">
+                <i class="fas fa-edit" style="color: #6366F1; font-size: 1.2rem;"></i>
+            </div>
+            <div>
+                <h3 style="margin: 0; color: #111827;">Editar Empresa</h3>
+                <p style="margin: 0; font-size: 0.85rem; color: #6B7280;">Modifica los datos de la cuenta</p>
+            </div>
+        </div>
+        <form id="form_editar" method="POST">
+            <div style="margin-bottom: 1rem;">
+                <label style="display: block; font-size: 0.8rem; font-weight: 600; color: #374151; margin-bottom: 5px;">Nombre de la Empresa *</label>
+                <input id="edit_empresa" type="text" name="empresa" required
+                       style="width: 100%; padding: 10px 12px; border: 1px solid #D1D5DB; border-radius: 8px; font-size: 0.95rem; box-sizing: border-box;">
+            </div>
+            <div style="margin-bottom: 1rem;">
+                <label style="display: block; font-size: 0.8rem; font-weight: 600; color: #374151; margin-bottom: 5px;">Correo Electrónico *</label>
+                <input id="edit_email" type="email" name="email" required
+                       style="width: 100%; padding: 10px 12px; border: 1px solid #D1D5DB; border-radius: 8px; font-size: 0.95rem; box-sizing: border-box;">
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+                <div>
+                    <label style="display: block; font-size: 0.8rem; font-weight: 600; color: #374151; margin-bottom: 5px;">RUT</label>
+                    <input id="edit_rut" type="text" name="rut"
+                           style="width: 100%; padding: 10px 12px; border: 1px solid #D1D5DB; border-radius: 8px; font-size: 0.95rem; box-sizing: border-box;">
+                </div>
+                <div>
+                    <label style="display: block; font-size: 0.8rem; font-weight: 600; color: #374151; margin-bottom: 5px;">Contacto</label>
+                    <input id="edit_contacto" type="text" name="contacto"
+                           style="width: 100%; padding: 10px 12px; border: 1px solid #D1D5DB; border-radius: 8px; font-size: 0.95rem; box-sizing: border-box;">
+                </div>
+            </div>
+            <button type="submit" style="width: 100%; background: #6366F1; color: white; padding: 12px; border: none; border-radius: 8px; font-weight: 600; font-size: 1rem; cursor: pointer;">
+                <i class="fas fa-save"></i> Guardar Cambios
+            </button>
+        </form>
+    </div>
+</div>
+
+<div id="modal_reset" style="display: none; background: rgba(0,0,0,0.5); position: fixed; inset: 0; z-index: 2000; align-items: center; justify-content: center; padding: 1rem;">
+    <div style="background: white; padding: 2rem; border-radius: 16px; width: 100%; max-width: 420px; position: relative; box-shadow: 0 20px 60px rgba(0,0,0,0.2);">
+        <button onclick="document.getElementById('modal_reset').style.display='none'"
+                style="position: absolute; top: 1rem; right: 1rem; border: none; background: #F3F4F6; width: 32px; height: 32px; border-radius: 50%; font-size: 1.1rem; cursor: pointer; color: #6B7280; display: flex; align-items: center; justify-content: center;">&times;</button>
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 1.5rem;">
+            <div style="background: #FEF3C7; border-radius: 10px; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;">
+                <i class="fas fa-key" style="color: #F59E0B; font-size: 1.2rem;"></i>
+            </div>
+            <div>
+                <h3 style="margin: 0; color: #111827;">Resetear Contraseña</h3>
+                <p style="margin: 0; font-size: 0.85rem; color: #6B7280;">Empresa: <strong id="reset_empresa_name"></strong></p>
+            </div>
+        </div>
+        <form id="form_reset" method="POST">
+            <div style="margin-bottom: 1.5rem;">
+                <label style="display: block; font-size: 0.8rem; font-weight: 600; color: #374151; margin-bottom: 5px;">Nueva Contraseña *</label>
+                <input id="reset_password" type="password" name="nueva_password" placeholder="Mínimo 6 caracteres" required minlength="6"
+                       style="width: 100%; padding: 10px 12px; border: 1px solid #D1D5DB; border-radius: 8px; font-size: 0.95rem; box-sizing: border-box;">
+            </div>
+            <button type="submit" style="width: 100%; background: #F59E0B; color: white; padding: 12px; border: none; border-radius: 8px; font-weight: 600; font-size: 1rem; cursor: pointer;">
+                <i class="fas fa-key"></i> Resetear Contraseña
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- ===== SECCIÓN: DASHBOARD ===== -->
+{% if admin_section == "dashboard" %}
+
+{% if chart_empresas %}
+<div style="display: grid; grid-template-columns: 1fr 320px; gap: 1.5rem; margin-bottom: 1.5rem; align-items: start;">
+
+    <!-- Gráfico de barras -->
+    <div style="background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); padding: 1.5rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.2rem; flex-wrap: wrap; gap: 1rem;">
+            <h3 style="margin: 0; color: #374151; font-size: 1rem;">
+                <i class="fas fa-chart-bar" style="color: #6366F1;"></i> Emisiones por Empresa
+            </h3>
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <label style="font-size: 0.82rem; color: #6B7280; font-weight: 600;">Año:</label>
+                <select id="anio_chart" onchange="updateChart(this.value)"
+                        style="padding: 5px 10px; border: 1px solid #D1D5DB; border-radius: 6px; font-size: 0.85rem; color: #374151;">
+                    {% for a in chart_anios %}
+                    <option value="{{ a }}">{{ a }}</option>
+                    {% endfor %}
+                    <option value="Todos">Todos los años</option>
+                </select>
+                <a href="/admin/exportar_ghg_global?anio={{ chart_anios[0] if chart_anios else 'Todos' }}"
+                   id="btn_ghg_global"
+                   style="background: #064E3B; color: white; padding: 6px 12px; border-radius: 6px; text-decoration: none; font-size: 0.82rem; font-weight: 600; display: flex; align-items: center; gap: 6px;">
+                    <i class="fas fa-file-excel"></i> GHG Global
+                </a>
+            </div>
+        </div>
+        <div style="position: relative; height: 280px;">
+            <canvas id="chartEmpresas"></canvas>
+        </div>
+        <p id="chart_no_data" style="display: none; text-align: center; color: #9CA3AF; padding: 2rem; margin: 0; font-size: 0.9rem;">
+            Sin datos para el año seleccionado.
+        </p>
+    </div>
+
+    <!-- Top emisores donut -->
+    {% if top_emisores %}
+    <div style="background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); padding: 1.5rem;">
+        <h3 style="margin: 0 0 1rem 0; color: #374151; font-size: 1rem; border-bottom: 1px solid #F3F4F6; padding-bottom: 0.75rem;">
+            <i class="fas fa-trophy" style="color: #F59E0B;"></i> Top Emisores
+        </h3>
+        <div style="position: relative; height: 170px; margin-bottom: 1rem;">
+            <canvas id="donutTop"></canvas>
+        </div>
+        {% set total_top = top_emisores | sum(attribute='total') %}
+        {% set colores_top = ['#6366F1','#10B981','#F59E0B','#EF4444','#3B82F6','#8B5CF6'] %}
+        {% for item in top_emisores %}
+        {% set pct = (item.total / total_top * 100) if total_top > 0 else 0 %}
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <div style="display: flex; align-items: center; gap: 6px; min-width: 0;">
+                <span style="width: 8px; height: 8px; border-radius: 50%; background: {{ colores_top[loop.index0 % 6] }}; flex-shrink: 0;"></span>
+                <span style="font-size: 0.78rem; color: #374151; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ item.empresa }}</span>
+            </div>
+            <span style="font-size: 0.75rem; color: #9CA3AF; white-space: nowrap; margin-left: 6px;">{{ '%.0f' | format(pct) }}%</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+</div>
+{% endif %}
+
+<!-- Últimas empresas -->
+<div style="background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); overflow: hidden;">
+    <div style="padding: 1rem 1.5rem; border-bottom: 1px solid #F3F4F6; display: flex; justify-content: space-between; align-items: center;">
+        <h3 style="margin: 0; color: #374151; font-size: 1rem;">
+            <i class="fas fa-clock" style="color: #6B7280;"></i> Empresas Registradas Recientemente
+        </h3>
+        <a href="/admin/empresas" style="font-size: 0.82rem; color: #6366F1; font-weight: 600; text-decoration: none;">
+            Ver todas <i class="fas fa-arrow-right"></i>
+        </a>
+    </div>
+    {% if ultimas_empresas %}
+    <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.87rem;">
+            <thead>
+                <tr style="background: #F9FAFB;">
+                    <th style="padding: 10px 14px; text-align: left; color: #6B7280; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid #E5E7EB;">Empresa</th>
+                    <th style="padding: 10px 14px; text-align: left; color: #6B7280; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid #E5E7EB;">Contacto</th>
+                    <th style="padding: 10px 14px; text-align: left; color: #6B7280; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid #E5E7EB;">Email</th>
+                    <th style="padding: 10px 14px; text-align: left; color: #6B7280; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid #E5E7EB;">Fecha</th>
+                    <th style="padding: 10px 14px; text-align: center; color: #6B7280; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid #E5E7EB;">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for emp in ultimas_empresas %}
+                <tr style="border-bottom: 1px solid #F3F4F6;" onmouseover="this.style.background='#FAFAFA'" onmouseout="this.style.background=''">
+                    <td style="padding: 10px 14px; font-weight: 600; color: #111827;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <div style="width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, #EEF2FF, #E0E7FF); display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-weight: 700; color: #6366F1; font-size: 0.8rem;">
+                                {{ emp.empresa[0].upper() }}
+                            </div>
+                            {{ emp.empresa }}
+                        </div>
+                    </td>
+                    <td style="padding: 10px 14px; color: #374151;">{{ emp.contacto or '—' }}</td>
+                    <td style="padding: 10px 14px; color: #3B82F6; font-size: 0.83rem;">{{ emp.email }}</td>
+                    <td style="padding: 10px 14px; color: #9CA3AF; font-size: 0.82rem; white-space: nowrap;">{{ emp.fecha_registro }}</td>
+                    <td style="padding: 10px 14px;">
+                        <div style="display: flex; gap: 5px; justify-content: center; flex-wrap: wrap;">
+                            <a href="/admin/empresa/{{ emp.empresa }}" style="background: #EEF2FF; color: #6366F1; padding: 5px 9px; border-radius: 6px; text-decoration: none; font-size: 0.78rem; font-weight: 600;" title="Ver detalle">
+                                <i class="fas fa-chart-pie"></i> Ver
+                            </a>
+                            <button data-id="{{ emp.id }}" data-empresa="{{ emp.empresa }}" data-email="{{ emp.email }}" data-contacto="{{ emp.contacto or '' }}" data-rut=""
+                                    onclick="openEditModal(this)"
+                                    style="background: #F5F3FF; color: #7C3AED; border: none; padding: 5px 9px; border-radius: 6px; font-size: 0.78rem; font-weight: 600; cursor: pointer;">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button data-id="{{ emp.id }}" data-empresa="{{ emp.empresa }}"
+                                    onclick="openResetModal(this)"
+                                    style="background: #FFFBEB; color: #B45309; border: none; padding: 5px 9px; border-radius: 6px; font-size: 0.78rem; font-weight: 600; cursor: pointer;">
+                                <i class="fas fa-key"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div style="padding: 3rem; text-align: center;">
+        <i class="fas fa-building" style="font-size: 2.5rem; color: #E5E7EB; margin-bottom: 1rem; display: block;"></i>
+        <p style="color: #9CA3AF; margin: 0 0 1rem 0;">Aún no hay empresas registradas.</p>
+        <button onclick="document.getElementById('modal_empresa').style.display='flex'"
+                style="background: #10B981; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600;">
+            <i class="fas fa-plus"></i> Crear primera empresa
+        </button>
+    </div>
+    {% endif %}
+</div>
+
+<!-- ===== SECCIÓN: EMPRESAS ===== -->
+{% elif admin_section == "empresas" %}
+
+<div style="background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); overflow: hidden;">
+    <div style="padding: 1rem 1.5rem; border-bottom: 1px solid #F3F4F6; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+        <h3 style="margin: 0; color: #374151; font-size: 1rem;">
+            <i class="fas fa-building" style="color: #6366F1;"></i> Listado de Empresas Clientes
+            <span style="background: #EEF2FF; color: #6366F1; font-weight: 700; padding: 2px 10px; border-radius: 20px; font-size: 0.8rem; margin-left: 8px;">{{ empresas|length }}</span>
+        </h3>
+        <div style="display:flex; gap:0.75rem; align-items:center; flex-wrap:wrap;">
+            <!-- Buscador -->
+            <div style="position: relative;">
+                <i class="fas fa-search" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #9CA3AF; font-size: 0.82rem;"></i>
+                <input type="text" id="buscadorEmpresas" placeholder="Buscar empresa, RUT, email…" oninput="filtrarEmpresas()"
+                       style="padding: 7px 12px 7px 30px; border: 1px solid #D1D5DB; border-radius: 8px; font-size: 0.85rem; width: 220px; outline: none;">
+            </div>
+            <button onclick="document.getElementById('modalExportarTodo').style.display='flex'"
+                    style="background:#10B981; color:white; border:none; padding:7px 14px; border-radius:8px; font-size:0.82rem; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:6px;">
+                <i class="fas fa-file-excel"></i> Exportar Todo
+            </button>
+        </div>
+    </div>
+    {% if empresas %}
+    <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.87rem;" id="tablaEmpresas">
+            <thead>
+                <tr style="background: #F9FAFB;">
+                    <th style="padding: 10px 14px; text-align: left; color: #6B7280; font-size: 0.72rem; text-transform: uppercase; border-bottom: 2px solid #E5E7EB;">Empresa</th>
+                    <th style="padding: 10px 14px; text-align: left; color: #6B7280; font-size: 0.72rem; text-transform: uppercase; border-bottom: 2px solid #E5E7EB;">RUT</th>
+                    <th style="padding: 10px 14px; text-align: left; color: #6B7280; font-size: 0.72rem; text-transform: uppercase; border-bottom: 2px solid #E5E7EB;">Contacto</th>
+                    <th style="padding: 10px 14px; text-align: left; color: #6B7280; font-size: 0.72rem; text-transform: uppercase; border-bottom: 2px solid #E5E7EB;">Email</th>
+                    <th style="padding: 10px 14px; text-align: center; color: #6B7280; font-size: 0.72rem; text-transform: uppercase; border-bottom: 2px solid #E5E7EB;">Actividad</th>
+                    <th style="padding: 10px 14px; text-align: left; color: #6B7280; font-size: 0.72rem; text-transform: uppercase; border-bottom: 2px solid #E5E7EB;">Registro</th>
+                    <th style="padding: 10px 14px; text-align: center; color: #6B7280; font-size: 0.72rem; text-transform: uppercase; border-bottom: 2px solid #E5E7EB;">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for emp in empresas %}
+                {% set stats = em_stats[emp.empresa] if emp.empresa in em_stats else none %}
+                <tr class="fila-empresa" style="border-bottom: 1px solid #F3F4F6;" onmouseover="this.style.background='#FAFAFA'" onmouseout="this.style.background=''">
+                    <td style="padding: 10px 14px; font-weight: 600; color: #111827;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <div style="width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, #EEF2FF, #E0E7FF); display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-weight: 700; color: #6366F1; font-size: 0.8rem;">
+                                {{ emp.empresa[0].upper() }}
+                            </div>
+                            <span class="empresa-nombre">{{ emp.empresa }}</span>
+                        </div>
+                    </td>
+                    <td style="padding: 10px 14px; color: #6B7280; font-size: 0.83rem;" class="empresa-rut">{{ emp.rut or '—' }}</td>
+                    <td style="padding: 10px 14px; color: #374151;">{{ emp.contacto or '—' }}</td>
+                    <td style="padding: 10px 14px; color: #3B82F6; font-size: 0.83rem;" class="empresa-email">{{ emp.email }}</td>
+                    <td style="padding: 10px 14px; text-align: center;">
+                        {% if stats %}
+                        <div>
+                            <span style="background: #D1FAE5; color: #065F46; padding: 2px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 700; display: inline-block;">● Activa</span>
+                            <p style="margin: 3px 0 0 0; font-size: 0.72rem; color: #9CA3AF;">{{ stats.cnt }} reg · {{ stats.total | formato_kpi }} kg</p>
+                        </div>
+                        {% else %}
+                        <span style="background: #F3F4F6; color: #9CA3AF; padding: 2px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 700;">Sin datos</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 10px 14px; color: #9CA3AF; font-size: 0.82rem; white-space: nowrap;">{{ emp.fecha_registro }}</td>
+                    <td style="padding: 10px 14px;">
+                        <div style="display: flex; gap: 4px; justify-content: center; flex-wrap: wrap;">
+                            <a href="/admin/empresa/{{ emp.empresa }}" style="background: #EEF2FF; color: #6366F1; padding: 5px 9px; border-radius: 6px; text-decoration: none; font-size: 0.78rem; font-weight: 600;" title="Ver detalle">
+                                <i class="fas fa-chart-pie"></i> Ver
+                            </a>
+                            <a href="/admin/exportar/{{ emp.empresa }}" style="background: #D1FAE5; color: #059669; padding: 5px 9px; border-radius: 6px; text-decoration: none; font-size: 0.78rem; font-weight: 600;" title="Exportar Excel">
+                                <i class="fas fa-file-excel"></i>
+                            </a>
+                            <button data-id="{{ emp.id }}" data-empresa="{{ emp.empresa }}" data-email="{{ emp.email }}" data-contacto="{{ emp.contacto or '' }}" data-rut="{{ emp.rut or '' }}"
+                                    onclick="openEditModal(this)"
+                                    style="background: #F5F3FF; color: #7C3AED; border: none; padding: 5px 9px; border-radius: 6px; font-size: 0.78rem; font-weight: 600; cursor: pointer;" title="Editar">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button data-id="{{ emp.id }}" data-empresa="{{ emp.empresa }}"
+                                    onclick="openResetModal(this)"
+                                    style="background: #FFFBEB; color: #B45309; border: none; padding: 5px 9px; border-radius: 6px; font-size: 0.78rem; font-weight: 600; cursor: pointer;" title="Resetear contraseña">
+                                <i class="fas fa-key"></i>
+                            </button>
+                            <form method="POST" action="/admin/eliminar_empresa/{{ emp.id }}" style="display:inline; margin:0;">
+                                <button type="submit"
+                                    onclick="return confirm('¿Eliminar empresa {{ emp.empresa }} y TODOS sus datos? Esta acción no se puede deshacer.')"
+                                    style="background: #FEE2E2; color: #991B1B; border: none; padding: 5px 9px; border-radius: 6px; font-size: 0.78rem; font-weight: 600; cursor: pointer;" title="Eliminar">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div id="sinResultados" style="display: none; padding: 2.5rem; text-align: center; color: #9CA3AF; font-size: 0.9rem;">
+        <i class="fas fa-search" style="font-size: 1.5rem; display: block; margin-bottom: 0.5rem;"></i>
+        No se encontraron empresas con ese criterio.
+    </div>
+    {% else %}
+    <div style="padding: 3rem; text-align: center;">
+        <i class="fas fa-building" style="font-size: 2.5rem; color: #E5E7EB; margin-bottom: 1rem; display: block;"></i>
+        <p style="color: #9CA3AF; margin: 0;">No hay empresas registradas aún.</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- ===== SECCIÓN: FACTORES ===== -->
+{% elif admin_section == "factores" %}
+
+<div style="background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); overflow: hidden;">
+    <div style="padding: 1rem 1.5rem; border-bottom: 1px solid #F3F4F6;">
+        <h3 style="margin: 0; color: #374151; font-size: 1rem;">
+            <i class="fas fa-atom" style="color: #6366F1;"></i> Gestión de Factores de Emisión
+        </h3>
+    </div>
+    <div style="padding: 1.5rem;">
+
+        <!-- Sincronización general -->
+        <div style="background: #F0FDF4; padding: 1.25rem 1.5rem; border-radius: 10px; margin-bottom: 1.25rem; border-left: 4px solid #10B981; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+            <div>
+                <h4 style="margin: 0 0 3px 0; color: #065F46; display: flex; align-items: center; gap: 8px; font-size: 0.95rem;">
+                    <i class="fas fa-sync-alt"></i> Sincronización Automática
+                </h4>
+                <p style="margin: 0; color: #6B7280; font-size: 0.85rem;">Sube el archivo <strong>"Evolución factores de emisión.xlsx"</strong> para actualizar todos los valores base.</p>
+            </div>
+            <form id="formFactores" action="/admin/cargar_factores" method="POST" enctype="multipart/form-data" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                <input type="file" name="archivo_factores" id="archivoFactores" accept=".xlsx, .xls" required
+                       style="font-size: 0.85rem; padding: 7px; border: 1px dashed #D1D5DB; border-radius: 6px; background: white; color: #374151;">
+                <div style="display: flex; align-items: center; gap: 6px;">
+                    <label style="font-size: 0.8rem; font-weight: 600; color: #374151; white-space: nowrap;">Año:</label>
+                    <input type="number" name="año_factores" placeholder="2024" min="2000" max="2099"
+                           style="width: 85px; padding: 7px; border: 1px solid #D1D5DB; border-radius: 6px; font-size: 0.85rem;">
+                    <span style="font-size: 0.75rem; color: #9CA3AF;">(0 = genérico)</span>
+                </div>
+                <button type="submit" style="background: #10B981; color: white; border: none; padding: 9px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.85rem; display: flex; align-items: center; gap: 6px;">
+                    <i class="fas fa-upload"></i> Cargar
+                </button>
+                <button type="button" onclick="diagnosticarExcel()" style="background: #6366F1; color: white; border: none; padding: 9px 14px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.85rem;">
+                    <i class="fas fa-search"></i> Diagnosticar
+                </button>
+            </form>
+        </div>
+
+        <!-- Modal diagnóstico -->
+        <div id="modalDiag" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:9999; overflow:auto; padding:2rem;">
+            <div style="background:white; border-radius:12px; max-width:95vw; margin:auto; padding:1.5rem; position:relative;">
+                <button onclick="document.getElementById('modalDiag').style.display='none'"
+                        style="position:absolute; top:12px; right:16px; background:#EF4444; color:white; border:none; border-radius:6px; padding:4px 12px; cursor:pointer; font-weight:700;">✕ Cerrar</button>
+                <h3 style="margin:0 0 1rem 0; color:#111827;"><i class="fas fa-table" style="color:#6366F1"></i> Estructura del Excel</h3>
+                <div id="diagContenido" style="overflow-x:auto;"></div>
+            </div>
+        </div>
+
+        <!-- Sincronización eléctrica -->
+        <div style="background: #FFFBEB; padding: 1.25rem 1.5rem; border-radius: 10px; margin-bottom: 1.25rem; border-left: 4px solid #F59E0B; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+            <div>
+                <h4 style="margin: 0 0 3px 0; color: #92400E; display: flex; align-items: center; gap: 8px; font-size: 0.95rem;">
+                    <i class="fas fa-bolt"></i> Factores Eléctricos (SEN / SEM / SEA)
+                </h4>
+                <p style="margin: 0; color: #6B7280; font-size: 0.85rem;">Sube el Excel con la hoja <strong>"Factores eléctricos"</strong>. Se mostrará una vista previa antes de confirmar.</p>
+            </div>
+            <form action="{{ url_for('preview_electricidad') }}" method="POST" enctype="multipart/form-data" style="display: flex; gap: 8px; align-items: center;">
+                <input type="file" name="archivo_electricidad" accept=".xlsx, .xls" required
+                       style="font-size: 0.85rem; padding: 7px; border: 1px dashed #D1D5DB; border-radius: 6px; background: white; color: #374151;">
+                <button type="submit" style="background: #F59E0B; color: white; border: none; padding: 9px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.85rem; display: flex; align-items: center; gap: 6px;">
+                    <i class="fas fa-eye"></i> Vista previa
+                </button>
+            </form>
+        </div>
+
+        <!-- Tabla factores eléctricos -->
+        {% if factores_elec %}
+        <div style="border: 1px solid #E5E7EB; border-radius: 10px; margin-bottom: 1.5rem; overflow: hidden;">
+            <div style="padding: 0.875rem 1.25rem; background: #F9FAFB; border-bottom: 1px solid #E5E7EB; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <i class="fas fa-bolt" style="color: #F59E0B;"></i>
+                    <span style="font-weight: 700; color: #374151; font-size: 0.9rem;">Factores Eléctricos Cargados</span>
+                    <span style="background: #FEF3C7; color: #92400E; padding: 2px 8px; border-radius: 10px; font-size: 0.72rem; font-weight: 700;">{{ factores_elec|length }} registros</span>
+                </div>
+                <div style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
+                    {% for (sis, anio), cnt in resumen_elec.items()|sort %}
+                    <span style="background: #EFF6FF; color: #1E40AF; padding: 2px 8px; border-radius: 8px; font-size: 0.75rem; font-weight: 600;">{{ sis }} {{ anio }}: {{ cnt }} meses</span>
+                    {% endfor %}
+                    <select id="filtroAnioElec" onchange="filtrarTablaElec()" style="padding: 4px 8px; border: 1px solid #D1D5DB; border-radius: 6px; font-size: 0.82rem;">
+                        <option value="">Todos los años</option>
+                        {% set años_vistos = [] %}
+                        {% for f in factores_elec %}
+                            {% if f.anio not in años_vistos %}
+                                {% if años_vistos.append(f.anio) %}{% endif %}
+                                <option value="{{ f.anio }}">{{ f.anio }}</option>
+                            {% endif %}
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div style="overflow-x: auto; max-height: 320px; overflow-y: auto;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;" id="tablaFactoresElec">
+                    <thead style="position: sticky; top: 0; z-index: 1;">
+                        <tr style="background: #F3F4F6;">
+                            <th style="padding: 8px 14px; text-align: left; color: #4B5563; font-size: 0.72rem; text-transform: uppercase; border-bottom: 2px solid #E5E7EB;">Año</th>
+                            <th style="padding: 8px 14px; text-align: left; color: #4B5563; font-size: 0.72rem; text-transform: uppercase; border-bottom: 2px solid #E5E7EB;">Mes</th>
+                            <th style="padding: 8px 14px; text-align: left; color: #4B5563; font-size: 0.72rem; text-transform: uppercase; border-bottom: 2px solid #E5E7EB;">Sistema</th>
+                            <th style="padding: 8px 14px; text-align: right; color: #4B5563; font-size: 0.72rem; text-transform: uppercase; border-bottom: 2px solid #E5E7EB;">Factor (kg CO₂e/kWh)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% set meses_n = ['', 'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'] %}
+                        {% for f in factores_elec %}
+                        <tr data-anio="{{ f.anio }}" style="border-bottom: 1px solid #F3F4F6;">
+                            <td style="padding: 7px 14px; color: #374151; font-weight: 600;">{{ f.anio }}</td>
+                            <td style="padding: 7px 14px; color: #6B7280;">{{ meses_n[f.mes] if f.mes <= 12 else f.mes }}</td>
+                            <td style="padding: 7px 14px;">
+                                <span style="background: #EFF6FF; color: #1E40AF; padding: 2px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 700;">{{ f.sistema }}</span>
+                            </td>
+                            <td style="padding: 7px 14px; text-align: right; font-weight: 700; color: #F59E0B; font-family: monospace;">{{ "%.6f"|format(f.factor_emision_avg) }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% else %}
+        <div style="background: #FFFBEB; border: 1px dashed #FCD34D; border-radius: 10px; padding: 1rem 1.25rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 10px;">
+            <i class="fas fa-exclamation-triangle" style="color: #F59E0B;"></i>
+            <span style="color: #92400E; font-size: 0.88rem;">No hay factores eléctricos cargados.</span>
+        </div>
+        {% endif %}
+
+        <hr style="border: none; border-top: 1px dashed #E5E7EB; margin-bottom: 1.5rem;">
+
+        <!-- Ingreso manual -->
+        <h4 style="color: #374151; margin: 0 0 0.75rem 0; font-size: 0.95rem;">Ingreso Manual de Factor</h4>
+        <form method="POST" style="background: #F9FAFB; padding: 1.25rem; border-radius: 8px; margin-bottom: 1.5rem; display: grid; grid-template-columns: 1fr 1fr 1fr 90px auto; gap: 12px; align-items: end; border: 1px solid #E5E7EB;">
+            <div>
+                <label style="display: block; font-size: 0.78rem; margin-bottom: 4px; font-weight: 600; color: #374151;">Categoría (ej: Diésel)</label>
+                <input type="text" name="categoria" required style="width: 100%; padding: 9px; border: 1px solid #D1D5DB; border-radius: 6px; box-sizing: border-box; font-size: 0.88rem;">
+            </div>
+            <div>
+                <label style="display: block; font-size: 0.78rem; margin-bottom: 4px; font-weight: 600; color: #374151;">Unidad (ej: L)</label>
+                <input type="text" name="unidad" required style="width: 100%; padding: 9px; border: 1px solid #D1D5DB; border-radius: 6px; box-sizing: border-box; font-size: 0.88rem;">
+            </div>
+            <div>
+                <label style="display: block; font-size: 0.78rem; margin-bottom: 4px; font-weight: 600; color: #374151;">Factor (kgCO₂e/u)</label>
+                <input type="number" step="0.00001" name="factor" required style="width: 100%; padding: 9px; border: 1px solid #D1D5DB; border-radius: 6px; box-sizing: border-box; font-size: 0.88rem;">
+            </div>
+            <div>
+                <label style="display: block; font-size: 0.78rem; margin-bottom: 4px; font-weight: 600; color: #374151;">Año</label>
+                <input type="number" name="año" placeholder="2024" min="2000" max="2099" style="width: 100%; padding: 9px; border: 1px solid #D1D5DB; border-radius: 6px; box-sizing: border-box; font-size: 0.88rem;">
+            </div>
+            <button type="submit" style="padding: 9px 16px; border-radius: 6px; border: none; background: #6366F1; color: white; cursor: pointer; font-weight: 600; font-size: 0.88rem;">
+                <i class="fas fa-save"></i> Guardar
+            </button>
+        </form>
+
+        <!-- Tabla factores -->
+        <div style="border: 1px solid #E5E7EB; border-radius: 10px; overflow: hidden;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                <thead style="background: #F3F4F6;">
+                    <tr>
+                        <th style="padding: 10px 14px; text-align: left; color: #4B5563; font-size: 0.72rem; text-transform: uppercase; border-bottom: 2px solid #E5E7EB;">Nombre en Chile</th>
+                        <th style="padding: 10px 14px; text-align: left; color: #4B5563; font-size: 0.72rem; text-transform: uppercase; border-bottom: 2px solid #E5E7EB;">Categoría DEFRA</th>
+                        <th style="padding: 10px 14px; text-align: left; color: #4B5563; font-size: 0.72rem; text-transform: uppercase; border-bottom: 2px solid #E5E7EB;">Tratamiento</th>
+                        <th style="padding: 10px 14px; text-align: left; color: #4B5563; font-size: 0.72rem; text-transform: uppercase; border-bottom: 2px solid #E5E7EB;">Unidad</th>
+                        <th style="padding: 10px 14px; text-align: right; color: #4B5563; font-size: 0.72rem; text-transform: uppercase; border-bottom: 2px solid #E5E7EB;">Factor</th>
+                        <th style="padding: 10px 14px; text-align: center; color: #4B5563; font-size: 0.72rem; text-transform: uppercase; border-bottom: 2px solid #E5E7EB;">Año</th>
+                        <th style="padding: 10px 14px; text-align: center; color: #4B5563; font-size: 0.72rem; text-transform: uppercase; border-bottom: 2px solid #E5E7EB;">Eliminar</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for f in factores %}
+                    <tr style="border-bottom: 1px solid #F3F4F6;" onmouseover="this.style.background='#FAFAFA'" onmouseout="this.style.background=''">
+                        <td style="padding: 9px 14px; font-weight: 600; color: #111827;">{{ f.nombre_chile or '—' }}</td>
+                        <td style="padding: 9px 14px; color: #6B7280; font-size: 0.83rem;">{{ f.categoria }}</td>
+                        <td style="padding: 9px 14px;">
+                            {% if f.tratamiento %}
+                            <span style="background: #F0FDF4; color: #065F46; padding: 2px 7px; border-radius: 6px; font-size: 0.75rem;">{{ f.tratamiento }}</span>
+                            {% else %}
+                            <span style="color: #D1D5DB; font-style: italic; font-size: 0.83rem;">—</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 9px 14px; color: #6B7280;">{{ f.unidad }}</td>
+                        <td style="padding: 9px 14px; text-align: right; font-weight: 700; color: #10B981; font-family: monospace;">{{ f.factor }}</td>
+                        <td style="padding: 9px 14px; text-align: center;">
+                            {% if f.año and f.año != 0 %}
+                            <span style="background: #EFF6FF; color: #1E40AF; padding: 2px 8px; border-radius: 8px; font-size: 0.78rem; font-weight: 700;">{{ f.año }}</span>
+                            {% else %}
+                            <span style="color: #9CA3AF; font-size: 0.78rem;">Genérico</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 9px 14px; text-align: center;">
+                            <a href="/admin/eliminar_factor/{{ f.categoria }}/{{ f.unidad }}/{{ f.get('año', 0) or 0 }}/{{ f.tratamiento or '' }}"
+                               style="color: #EF4444; text-decoration: none;"
+                               onclick="return confirm('¿Eliminar este factor?')">
+                                <i class="fas fa-trash-alt"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+</div>
+
+{% endif %}
+
+<script>
+function filtrarTablaElec() {
+    const val = document.getElementById('filtroAnioElec')?.value;
+    document.querySelectorAll('#tablaFactoresElec tbody tr').forEach(tr => {
+        tr.style.display = (!val || tr.dataset.anio === val) ? '' : 'none';
+    });
+}
+
+function filtrarEmpresas() {
+    const q = document.getElementById('buscadorEmpresas')?.value.toLowerCase() || '';
+    let visibles = 0;
+    document.querySelectorAll('.fila-empresa').forEach(tr => {
+        const nombre = tr.querySelector('.empresa-nombre')?.textContent.toLowerCase() || '';
+        const rut    = tr.querySelector('.empresa-rut')?.textContent.toLowerCase() || '';
+        const email  = tr.querySelector('.empresa-email')?.textContent.toLowerCase() || '';
+        const match  = nombre.includes(q) || rut.includes(q) || email.includes(q);
+        tr.style.display = match ? '' : 'none';
+        if (match) visibles++;
+    });
+    const aviso = document.getElementById('sinResultados');
+    if (aviso) aviso.style.display = visibles === 0 && q ? 'block' : 'none';
+}
+
+function openEditModal(btn) {
+    const d = btn.dataset;
+    document.getElementById('form_editar').action = '/admin/editar_empresa/' + d.id;
+    document.getElementById('edit_empresa').value  = d.empresa;
+    document.getElementById('edit_email').value    = d.email;
+    document.getElementById('edit_contacto').value = d.contacto;
+    document.getElementById('edit_rut').value      = d.rut;
+    document.getElementById('modal_editar').style.display = 'flex';
+}
+
+function openResetModal(btn) {
+    const d = btn.dataset;
+    document.getElementById('form_reset').action = '/admin/resetear_password/' + d.id;
+    document.getElementById('reset_empresa_name').textContent = d.empresa;
+    document.getElementById('reset_password').value = '';
+    document.getElementById('modal_reset').style.display = 'flex';
+}
+
+function diagnosticarExcel() {
+    const input = document.getElementById('archivoFactores');
+    if (!input?.files.length) { alert('Primero selecciona el archivo Excel.'); return; }
+    const fd = new FormData();
+    fd.append('archivo_factores', input.files[0]);
+    document.getElementById('diagContenido').innerHTML = '<p style="color:#6B7280">Cargando...</p>';
+    document.getElementById('modalDiag').style.display = 'block';
+    fetch('/admin/debug_excel', { method: 'POST', body: fd })
+        .then(r => r.text())
+        .then(html => { document.getElementById('diagContenido').innerHTML = html; })
+        .catch(e => { document.getElementById('diagContenido').innerHTML = '<p style="color:red">Error: ' + e + '</p>'; });
+}
+
+{% if admin_section == "dashboard" and chart_empresas %}
+const _chartData     = {{ chart_data | tojson }};
+const _chartEmpresas = {{ chart_empresas | tojson }};
+const _chartAnios    = {{ chart_anios | tojson }};
+const COLORS = ['#6366F1','#10B981','#F59E0B','#EF4444','#3B82F6','#8B5CF6','#14B8A6','#F97316','#EC4899','#84CC16'];
+let _myChart = null;
+
+function updateChart(anio) {
+    const values  = _chartData[anio] || [];
+    const hasData = values.some(v => v > 0);
+    document.getElementById('chart_no_data').style.display    = hasData ? 'none' : 'block';
+    document.getElementById('chartEmpresas').style.display    = hasData ? 'block' : 'none';
+    const btn = document.getElementById('btn_ghg_global');
+    if (btn) btn.href = '/admin/exportar_ghg_global?anio=' + anio;
+    if (!hasData) return;
+    if (_myChart) _myChart.destroy();
+    const ctx = document.getElementById('chartEmpresas').getContext('2d');
+    _myChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: _chartEmpresas,
+            datasets: [{
+                label: 'Emisiones (kg CO₂e)',
+                data: values,
+                backgroundColor: _chartEmpresas.map((_, i) => COLORS[i % COLORS.length] + 'BB'),
+                borderColor:     _chartEmpresas.map((_, i) => COLORS[i % COLORS.length]),
+                borderWidth: 1.5,
+                borderRadius: 5
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: c => ' ' + new Intl.NumberFormat('es-CL', {minimumFractionDigits:2}).format(c.parsed.y) + ' kg CO₂e'
+                    }
+                }
+            },
+            scales: {
+                y: { beginAtZero: true, grid: { color: '#E5E7EB' },
+                     ticks: { callback: v => v >= 1000 ? (v/1000).toFixed(1)+'k' : v } },
+                x: { grid: { display: false }, ticks: { maxRotation: 35, font: { size: 11 } } }
+            }
+        }
+    });
+}
+
+const _initAnio = _chartAnios.length > 0 ? _chartAnios[0] : 'Todos';
+document.getElementById('anio_chart').value = _initAnio;
+updateChart(_initAnio);
+
+{% if top_emisores %}
+const topData = {{ top_emisores | tojson }};
+new Chart(document.getElementById('donutTop'), {
+    type: 'doughnut',
+    data: {
+        labels: topData.map(t => t.empresa),
+        datasets: [{
+            data: topData.map(t => t.total),
+            backgroundColor: COLORS.slice(0, topData.length).map(c => c + 'CC'),
+            borderColor: COLORS.slice(0, topData.length),
+            borderWidth: 2
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '58%',
+        plugins: {
+            legend: { display: false },
+            tooltip: {
+                callbacks: {
+                    label: ctx => ' ' + new Intl.NumberFormat('es-CL', {minimumFractionDigits:2}).format(ctx.parsed) + ' kg CO₂e'
+                }
+            }
+        }
+    }
+});
+{% endif %}
+{% endif %}
+</script>
+
+{% if admin_section == "empresas" %}
+<!-- Modal Exportar Todo -->
+<div id="modalExportarTodo" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1100; align-items:center; justify-content:center; padding:1rem;">
+    <div style="background:white; border-radius:14px; padding:2rem; max-width:480px; width:100%; box-shadow:0 20px 60px rgba(0,0,0,0.2); position:relative;">
+        <button onclick="document.getElementById('modalExportarTodo').style.display='none'"
+                style="position:absolute; top:1rem; right:1rem; background:none; border:none; font-size:1.2rem; color:#9CA3AF; cursor:pointer;">
+            <i class="fas fa-times"></i>
+        </button>
+        <h2 style="margin:0 0 1.5rem 0; color:#111827; font-size:1.1rem; display:flex; align-items:center; gap:8px;">
+            <i class="fas fa-file-excel" style="color:#10B981;"></i> Exportar datos globales
+        </h2>
+        <form method="GET" action="/admin/exportar_todo">
+            <div style="margin-bottom:1rem;">
+                <label style="display:block; font-size:0.75rem; font-weight:700; color:#6B7280; text-transform:uppercase; margin-bottom:5px;">Empresa</label>
+                <select name="empresa" style="width:100%; padding:9px 12px; border:1px solid #D1D5DB; border-radius:7px; font-size:0.9rem; background:white;">
+                    <option value="">Todas las empresas</option>
+                    {% for emp in empresas %}
+                    <option value="{{ emp.empresa }}">{{ emp.empresa }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div style="margin-bottom:1rem;">
+                <label style="display:block; font-size:0.75rem; font-weight:700; color:#6B7280; text-transform:uppercase; margin-bottom:5px;">Año</label>
+                <select name="anio" style="width:100%; padding:9px 12px; border:1px solid #D1D5DB; border-radius:7px; font-size:0.9rem; background:white;">
+                    <option value="Todos">Todos los años</option>
+                    {% for a in anios_export %}
+                    <option value="{{ a }}">{{ a }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div style="margin-bottom:1rem;">
+                <label style="display:block; font-size:0.75rem; font-weight:700; color:#6B7280; text-transform:uppercase; margin-bottom:5px;">Fuente</label>
+                <select name="fuente" style="width:100%; padding:9px 12px; border:1px solid #D1D5DB; border-radius:7px; font-size:0.9rem; background:white;">
+                    <option value="">Todas las fuentes</option>
+                    {% for f in fuentes_export %}
+                    <option value="{{ f }}">{{ f }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div style="margin-bottom:1.5rem;">
+                <label style="display:block; font-size:0.75rem; font-weight:700; color:#6B7280; text-transform:uppercase; margin-bottom:5px;">Alcance</label>
+                <select name="alcance" style="width:100%; padding:9px 12px; border:1px solid #D1D5DB; border-radius:7px; font-size:0.9rem; background:white;">
+                    <option value="">Todos los alcances</option>
+                    <option value="Alcance 1">Alcance 1 — Directo</option>
+                    <option value="Alcance 2">Alcance 2 — Electricidad</option>
+                    <option value="Alcance 3">Alcance 3 — Residuos</option>
+                </select>
+            </div>
+            <div style="display:flex; gap:10px; justify-content:flex-end;">
+                <button type="button" onclick="document.getElementById('modalExportarTodo').style.display='none'"
+                        style="padding:9px 18px; border:1px solid #D1D5DB; border-radius:7px; background:white; color:#374151; font-weight:600; cursor:pointer;">
+                    Cancelar
+                </button>
+                <button type="submit"
+                        style="padding:9px 22px; background:#10B981; border:none; border-radius:7px; color:white; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:8px;">
+                    <i class="fas fa-download"></i> Descargar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+<script>
+document.getElementById('modalExportarTodo').addEventListener('click', function(e) {
+    if (e.target === this) this.style.display = 'none';
+});
+</script>
+{% endif %}
+{% endblock %}

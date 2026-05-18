@@ -1,0 +1,345 @@
+{% extends "base.html" %}
+
+{% block title %}Nuevo Registro - GreenTrack{% endblock %}
+
+{% block content %}
+<div style="max-width: 800px; margin: 0 auto; padding: 2rem;">
+    
+    <div style="margin-bottom: 2rem;">
+        <h1 style="color: #111827; margin: 0;">Registrar Actividad</h1>
+        <p style="color: #6B7280; margin-top: 5px;">Selecciona el alcance y tipo de emisión que deseas reportar.</p>
+    </div>
+
+    <div style="display: flex; gap: 10px; margin-bottom: 2rem; border-bottom: 2px solid #E5E7EB; padding-bottom: 10px;">
+        <button onclick="cambiarPestana('a1')" id="btn_a1" style="background: #3B82F6; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.3s;">
+            <i class="fas fa-fire"></i> Alcance 1
+        </button>
+        <button onclick="cambiarPestana('a2')" id="btn_a2" style="background: #F3F4F6; color: #4B5563; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.3s;">
+            <i class="fas fa-bolt" style="color: #F59E0B;"></i> Alcance 2
+        </button>
+        <button onclick="cambiarPestana('a3')" id="btn_a3" style="background: #F3F4F6; color: #4B5563; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.3s;">
+            <i class="fas fa-truck" style="color: #10B981;"></i> Alcance 3
+        </button>
+    </div>
+
+    <div id="form_a1" style="background: white; padding: 2.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border-top: 5px solid #3B82F6;">
+        <form action="/registro" method="POST">
+            <input type="hidden" name="alcance_oculto" value="Alcance 1">
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+                <div>
+                    <label style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">Mes de la actividad</label>
+                    <input type="month" name="fecha" required style="width: 100%; padding: 10px; border: 1px solid #D1D5DB; border-radius: 6px; box-sizing: border-box;">
+                </div>
+                <div>
+                    <label style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">Área o Instalación</label>
+                    <input type="text" name="area" placeholder="Ej: Planta de Producción" required style="width: 100%; padding: 10px; border: 1px solid #D1D5DB; border-radius: 6px; box-sizing: border-box;">
+                </div>
+            </div>
+
+            <div style="margin-bottom: 1.5rem;">
+                <label style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">Fuente de Emisión</label>
+                <select name="fuente" required style="width: 100%; padding: 10px; border: 1px solid #D1D5DB; border-radius: 6px; box-sizing: border-box;">
+                    <option value="">Seleccione...</option>
+                    <option value="Combustión Estacionaria">🔥 Combustión Estacionaria</option>
+                    <option value="Combustión Móvil">🚗 Combustión Móvil</option>
+                    <option value="Refrigerantes">❄️ Fugas de Refrigerantes</option>
+                </select>
+            </div>
+
+            <div style="margin-bottom: 1.5rem;">
+                <label style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">Factor / Categoría</label>
+                <select name="combustible" id="cat_a1" required style="width: 100%; padding: 10px; border: 1px solid #D1D5DB; border-radius: 6px; box-sizing: border-box;">
+                    <option value="">Seleccione desde la base de datos...</option>
+                    
+                    <optgroup label="⭐ PRINCIPALES">
+                        {% for cat in datos_factores.principales.keys() %}
+                            <option value="{{ cat }}">{{ cat }}</option>
+                        {% endfor %}
+                    </optgroup>
+                    
+                    <optgroup label="⛽ COMBUSTIBLES">
+                        {% for cat in datos_factores.combustibles.keys() %}
+                            <option value="{{ cat }}">{{ cat }}</option>
+                        {% endfor %}
+                    </optgroup>
+                    
+                    <optgroup label="❄️ REFRIGERANTES">
+                        {% for cat in datos_factores.refrigerantes.keys() %}
+                            <option value="{{ cat }}">{{ cat }}</option>
+                        {% endfor %}
+                    </optgroup>
+
+                    <option value="Otros" style="font-weight: bold; color: #EF4444;">No está en la lista (Ingreso Manual)</option>
+                </select>
+            </div>
+
+            <div id="man_a1" style="display: none; background: #FEF2F2; padding: 15px; border-radius: 8px; margin-bottom: 1.5rem; border: 1px solid #FCA5A5;">
+                <p style="margin: 0 0 10px 0; color: #B91C1C; font-size: 0.9rem; font-weight: 600;">Ingreso Manual de Factor</p>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <input type="text" name="otro_combustible" placeholder="Nombre de la categoría" style="padding: 8px; border: 1px solid #D1D5DB; border-radius: 4px;">
+                    <input type="number" step="0.00001" name="otro_factor" placeholder="Factor de Emisión (kg CO2e)" style="padding: 8px; border: 1px solid #D1D5DB; border-radius: 4px;">
+                </div>
+            </div>
+
+            <input type="hidden" name="factor_oculto" id="fac_a1" value="0">
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
+                <div>
+                    <label style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">Cantidad consumida</label>
+                    <input type="number" step="0.01" name="cantidad" required style="width: 100%; padding: 10px; border: 1px solid #D1D5DB; border-radius: 6px; box-sizing: border-box;">
+                </div>
+                <div>
+                    <label style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">Unidad</label>
+                    <select name="unidad" id="uni_select_a1" required style="width: 100%; padding: 10px; border: 1px solid #D1D5DB; border-radius: 6px; box-sizing: border-box; background: #F9FAFB;">
+                        <option value="">Seleccione primero el combustible...</option>
+                    </select>
+                    <input type="text" id="uni_input_a1" placeholder="Ej: Litros" style="display: none; width: 100%; padding: 10px; border: 1px solid #D1D5DB; border-radius: 6px; box-sizing: border-box;">
+                </div>
+            </div>
+
+            <button type="submit" style="width: 100%; background: #3B82F6; color: white; padding: 12px; border: none; border-radius: 8px; font-weight: 600; font-size: 1.1rem; cursor: pointer; box-shadow: 0 4px 6px rgba(59, 130, 246, 0.2);">
+                <i class="fas fa-save"></i> Guardar Registro Alcance 1
+            </button>
+        </form>
+    </div>
+
+<div id="form_a2" style="display: none; background: white; padding: 2.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border-top: 5px solid #F59E0B;">
+        <div style="background: #FFFBEB; padding: 15px; border-radius: 8px; margin-bottom: 2rem; color: #B45309; display: flex; gap: 10px; align-items: center;">
+            <i class="fas fa-info-circle" style="font-size: 1.5rem;"></i>
+            <p style="margin: 0; font-size: 0.95rem;">El sistema calculará las emisiones basadas en el mercado y en la ubicación según el origen y sistema seleccionados.</p>
+        </div>
+
+        <form action="/registro" method="POST" enctype="multipart/form-data">
+            <input type="hidden" name="alcance_oculto" value="Alcance 2">
+            <input type="hidden" name="fuente" value="Electricidad">
+            <input type="hidden" name="actividad" value="Consumo de red eléctrica">
+            <input type="hidden" name="unidad" value="kWh">
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+                <div>
+                    <label style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">Mes de Consumo</label>
+                    <input type="month" name="fecha" required style="width: 100%; padding: 10px; border: 1px solid #D1D5DB; border-radius: 6px; box-sizing: border-box;">
+                </div>
+                <div>
+                    <label style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">Instalación / Sucursal</label>
+                    <input type="text" name="area" placeholder="Ej: Oficina Central" required style="width: 100%; padding: 10px; border: 1px solid #D1D5DB; border-radius: 6px; box-sizing: border-box;">
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+                <div>
+                    <label style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">Origen de Energía</label>
+                    <select name="origen_energia" id="origen_elec" required style="width: 100%; padding: 10px; border: 1px solid #D1D5DB; border-radius: 6px; box-sizing: border-box;">
+                        <option value="">Seleccione origen...</option>
+                        <option value="Convencional">Convencional</option>
+                        <option value="ERNC">ERNC (Renovables)</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">Sistema</label>
+                    <select name="sistema_elec" id="sistema_elec" required style="width: 100%; padding: 10px; border: 1px solid #D1D5DB; border-radius: 6px; box-sizing: border-box; background: #F9FAFB;">
+                        <option value="">Seleccione primero el origen...</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="div_irec" style="display: none; background: #F0FDF4; border: 1px solid #BBF7D0; padding: 15px; border-radius: 8px; margin-bottom: 1.5rem;">
+                <label style="display: block; font-weight: 600; color: #166534; margin-bottom: 8px;">¿Tiene Certificado IREC Actualizado?</label>
+                <select name="tiene_irec" id="irec_elec" style="width: 100%; padding: 10px; border: 1px solid #10B981; border-radius: 6px; box-sizing: border-box;">
+                    <option value="No">No</option>
+                    <option value="Si">Sí</option>
+                </select>
+
+                <div id="div_archivo_irec" style="display: none; margin-top: 15px;">
+                    <label style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">Subir Certificado (PDF) *</label>
+                    <input type="file" name="certificado_irec" id="archivo_irec" accept=".pdf" style="width: 100%; padding: 10px; border: 1px dashed #10B981; border-radius: 6px; box-sizing: border-box; background: white;">
+                </div>
+            </div>
+
+            <div style="margin-bottom: 2.5rem;">
+                <label style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">Energía Consumida (kWh)</label>
+                <div style="position: relative;">
+                    <i class="fas fa-bolt" style="position: absolute; left: 15px; top: 12px; color: #F59E0B;"></i>
+                    <input type="number" step="0.01" name="cantidad" placeholder="Ej: 1500.50" required style="width: 100%; padding: 10px 10px 10px 40px; border: 1px solid #D1D5DB; border-radius: 6px; box-sizing: border-box; font-size: 1.1rem;">
+                </div>
+            </div>
+
+            <button type="submit" style="width: 100%; background: #F59E0B; color: white; padding: 12px; border: none; border-radius: 8px; font-weight: 600; font-size: 1.1rem; cursor: pointer; box-shadow: 0 4px 6px rgba(245, 158, 11, 0.2);">
+                <i class="fas fa-bolt"></i> Registrar Consumo Eléctrico
+            </button>
+        </form>
+</div>
+
+    <div id="form_a3" style="display: none; background: white; padding: 2.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border-top: 5px solid #10B981;">
+        <h2 style="margin: 0 0 0.5rem 0; color: #111827; display: flex; align-items: center; gap: 10px;">
+            <i class="fas fa-truck" style="color: #10B981;"></i> Alcance 3 — Emisiones Indirectas
+        </h2>
+        <p style="color: #6B7280; margin: 0 0 2rem 0; font-size: 0.95rem;">El Alcance 3 cubre emisiones de la cadena de valor. Actualmente la plataforma gestiona residuos (SINADER / SIDREP).</p>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem;">
+            <a href="{{ url_for('formulario_residuos') }}" style="background: #F0FDF4; border: 2px solid #10B981; border-radius: 10px; padding: 1.5rem; text-decoration: none; color: #065F46; text-align: center; transition: all 0.2s;" onmouseover="this.style.background='#DCFCE7'" onmouseout="this.style.background='#F0FDF4'">
+                <i class="fas fa-recycle" style="font-size: 2rem; color: #10B981; margin-bottom: 0.75rem; display: block;"></i>
+                <div style="font-weight: 700; font-size: 1rem; margin-bottom: 0.25rem;">Gestión de Residuos</div>
+                <div style="font-size: 0.85rem; color: #6B7280;">Ingreso manual, SINADER o SIDREP</div>
+            </a>
+            <div style="background: #F9FAFB; border: 2px dashed #D1D5DB; border-radius: 10px; padding: 1.5rem; text-align: center; color: #9CA3AF;">
+                <i class="fas fa-clock" style="font-size: 2rem; margin-bottom: 0.75rem; display: block;"></i>
+                <div style="font-weight: 600; font-size: 1rem; margin-bottom: 0.25rem;">Transporte de productos</div>
+                <div style="font-size: 0.85rem;">Próximamente</div>
+            </div>
+            <div style="background: #F9FAFB; border: 2px dashed #D1D5DB; border-radius: 10px; padding: 1.5rem; text-align: center; color: #9CA3AF;">
+                <i class="fas fa-clock" style="font-size: 2rem; margin-bottom: 0.75rem; display: block;"></i>
+                <div style="font-weight: 600; font-size: 1rem; margin-bottom: 0.25rem;">Viajes de negocios</div>
+                <div style="font-size: 0.85rem;">Próximamente</div>
+            </div>
+        </div>
+    </div>
+
+</div>
+ 
+<script>
+    // 1. Lógica de Pestañas
+    function cambiarPestana(tab) {
+        ['form_a1', 'form_a2', 'form_a3'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.style.display = 'none';
+        });
+        ['a1', 'a2', 'a3'].forEach(id => {
+            const btn = document.getElementById('btn_' + id);
+            if (btn) { btn.style.background = '#F3F4F6'; btn.style.color = '#4B5563'; }
+        });
+        const form = document.getElementById('form_' + tab);
+        if (form) form.style.display = 'block';
+        const activeBtn = document.getElementById('btn_' + tab);
+        if (activeBtn) {
+            activeBtn.style.color = 'white';
+            if (tab === 'a1') activeBtn.style.background = '#3B82F6';
+            if (tab === 'a2') activeBtn.style.background = '#F59E0B';
+            if (tab === 'a3') activeBtn.style.background = '#10B981';
+        }
+    }
+
+    const baseFactores = {{ datos_factores | tojson }};
+
+    // 2. FILTRADO INTELIGENTE Y REDIRECCIÓN
+    function configurarFiltros(idFuente, idCat, idUni, idFac, idMan) {
+        const selectFuente = document.querySelector(`select[name="${idFuente}"]`);
+        const selectCat = document.getElementById(idCat);
+        const selectUni = document.getElementById(idUni);
+        const factorOculto = document.getElementById(idFac);
+
+        selectFuente.addEventListener('change', function() {
+            const fuenteValue = this.value;
+
+            // REQUERIMIENTO: Redirigir si es Residuos
+            if (fuenteValue.includes("Residuos")) {
+                window.location.href = "/formulario_residuos";
+                return;
+            }
+
+            // REQUERIMIENTO: Filtrar lista de categorías
+            selectCat.innerHTML = '<option value="">Seleccione...</option>';
+            
+            let grupoABuscar = "";
+            if (fuenteValue.includes("Combustión")) grupoABuscar = "combustibles";
+            if (fuenteValue.includes("Refrigerantes")) grupoABuscar = "refrigerantes";
+            if (fuenteValue.includes("Viajes") || fuenteValue.includes("Transporte")) grupoABuscar = "otros";
+
+            if (grupoABuscar && baseFactores[grupoABuscar]) {
+                for (const cat in baseFactores[grupoABuscar]) {
+                    const opt = document.createElement('option');
+                    opt.value = cat;
+                    opt.textContent = cat;
+                    selectCat.appendChild(opt);
+                }
+            }
+            
+            // Añadir siempre la opción manual al final
+            const optManual = document.createElement('option');
+            optManual.value = "Otros";
+            optManual.textContent = "No está en la lista (Manual)";
+            optManual.style.fontWeight = "bold";
+            selectCat.appendChild(optManual);
+        });
+
+        // Lógica de unidades (mantiene la cascada que hicimos antes)
+        selectCat.addEventListener('change', function() {
+            selectUni.innerHTML = '<option value="">Seleccione unidad...</option>';
+            if (this.value === 'Otros') {
+                document.getElementById(idMan).style.display = 'block';
+            } else {
+                document.getElementById(idMan).style.display = 'none';
+                // Buscar unidades en todos los grupos
+                for (const g in baseFactores) {
+                    if (baseFactores[g][this.value]) {
+                        baseFactores[g][this.value].forEach(u => {
+                            const opt = document.createElement('option');
+                            opt.value = u.unidad; opt.textContent = u.unidad;
+                            opt.dataset.factor = u.factor;
+                            selectUni.appendChild(opt);
+                        });
+                    }
+                }
+                // Auto-seleccionar la primera unidad disponible y fijar el factor
+                const primerOpt = selectUni.querySelector('option[data-factor]');
+                if (primerOpt) {
+                    selectUni.value = primerOpt.value;
+                    factorOculto.value = primerOpt.dataset.factor || 0;
+                }
+            }
+        });
+
+        selectUni.addEventListener('change', function() {
+            const opt = this.options[this.selectedIndex];
+            factorOculto.value = opt ? (opt.dataset.factor || 0) : 0;
+        });
+    }
+
+    configurarFiltros('fuente', 'cat_a1', 'uni_select_a1', 'fac_a1', 'man_a1');
+    // 3. LÓGICA INTELIGENTE DE ELECTRICIDAD (ORIGEN Y SISTEMA)
+    const origenElec = document.getElementById('origen_elec');
+    const sistemaElec = document.getElementById('sistema_elec');
+    const divIrec = document.getElementById('div_irec');
+    const irecElec = document.getElementById('irec_elec');
+    const divArchivoIrec = document.getElementById('div_archivo_irec');
+    const archivoIrec = document.getElementById('archivo_irec');
+
+    if (origenElec) {
+        origenElec.addEventListener('change', function() {
+            sistemaElec.innerHTML = '<option value="">Seleccione sistema...</option>';
+            sistemaElec.style.background = 'white';
+            
+            const sistemasBase = ['SEN', 'SEM', 'SEA', 'SM Los Lagos'];
+
+            if (this.value === 'Convencional') {
+                sistemasBase.forEach(s => sistemaElec.innerHTML += `<option value="${s}">${s}</option>`);
+                // Ocultar opciones de IREC
+                divIrec.style.display = 'none';
+                irecElec.value = 'No';
+                divArchivoIrec.style.display = 'none';
+                archivoIrec.required = false;
+
+            } else if (this.value === 'ERNC') {
+                sistemasBase.forEach(s => sistemaElec.innerHTML += `<option value="${s}">${s}</option>`);
+                sistemaElec.innerHTML += `<option value="Autogeneración">Autogeneración</option>`;
+                // Mostrar opciones de IREC
+                divIrec.style.display = 'block';
+            } else {
+                sistemaElec.style.background = '#F9FAFB';
+                divIrec.style.display = 'none';
+            }
+        });
+
+        irecElec.addEventListener('change', function() {
+            if (this.value === 'Si') {
+                divArchivoIrec.style.display = 'block';
+                archivoIrec.required = true; // Hace que el PDF sea obligatorio
+            } else {
+                divArchivoIrec.style.display = 'none';
+                archivoIrec.required = false;
+            }
+        });
+    }
+</script>
+
+{% endblock %}

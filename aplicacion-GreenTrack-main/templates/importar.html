@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}Carga Masiva - GreenTrack{% endblock %}
+
+{% block content %}
+<div style="max-width: 820px; margin: 0 auto;">
+
+    <div style="margin-bottom: 2rem;">
+        <h1 style="color: #111827; margin: 0;"><i class="fas fa-file-upload" style="color: #3B82F6;"></i> Carga Masiva de Registros</h1>
+        <p style="color: #6B7280; margin: 4px 0 0 0; font-size: 0.9rem;">Importa múltiples registros de una sola vez usando tu planilla de Excel.</p>
+    </div>
+
+    <!-- Paso 1: Descargar plantilla -->
+    <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-bottom: 1.5rem; border-left: 5px solid #10B981;">
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 0.75rem;">
+            <span style="background: #10B981; color: white; width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; font-weight: 700; font-size: 0.9rem; flex-shrink: 0;">1</span>
+            <h3 style="margin: 0; color: #111827; font-size: 1rem;">Descarga la Plantilla Oficial</h3>
+        </div>
+        <p style="color: #6B7280; margin: 0 0 1rem 0; font-size: 0.88rem; padding-left: 40px;">Incluye columnas pre-configuradas, descripción de cada campo y una fila de ejemplo en verde para guiarte.</p>
+        <div style="padding-left: 40px;">
+            <a href="{{ url_for('descargar_plantilla') }}" style="display: inline-flex; align-items: center; gap: 8px; background: #10B981; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 0.88rem;">
+                <i class="fas fa-download"></i> Descargar Plantilla .xlsx
+            </a>
+        </div>
+    </div>
+
+    <!-- Paso 2: Subir archivo -->
+    <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border-left: 5px solid #3B82F6;">
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 0.75rem;">
+            <span style="background: #3B82F6; color: white; width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; font-weight: 700; font-size: 0.9rem; flex-shrink: 0;">2</span>
+            <h3 style="margin: 0; color: #111827; font-size: 1rem;">Sube tu Archivo Completado</h3>
+        </div>
+        <p style="color: #6B7280; margin: 0 0 1.25rem 0; font-size: 0.88rem; padding-left: 40px;">Arrastra tu archivo aquí o haz clic para seleccionarlo. Podrás revisar los datos antes de confirmar la importación.</p>
+
+        <form method="POST" action="/importar" enctype="multipart/form-data" id="uploadForm" style="padding-left: 40px;">
+            <!-- Drop zone -->
+            <div id="dropZone"
+                 style="border: 2px dashed #D1D5DB; padding: 2.5rem 1.5rem; text-align: center; border-radius: 10px; background: #F9FAFB; cursor: pointer; transition: border-color 0.2s, background 0.2s; margin-bottom: 1.25rem;"
+                 onclick="document.getElementById('archivoInput').click()">
+                <i class="fas fa-cloud-upload-alt" id="dropIcon" style="font-size: 2.5rem; color: #9CA3AF; margin-bottom: 0.75rem; display: block; transition: color 0.2s;"></i>
+                <p style="margin: 0; color: #6B7280; font-size: 0.95rem;">Arrastra tu <strong>.xlsx</strong> aquí o <span style="color: #3B82F6; font-weight: 600;">haz clic para seleccionar</span></p>
+                <p id="fileName" style="margin: 8px 0 0 0; color: #10B981; font-weight: 600; font-size: 0.9rem; display: none;"></p>
+                <input type="file" name="archivo" id="archivoInput" accept=".xlsx,.xls" required style="display: none;">
+            </div>
+
+            <!-- Spinner (oculto por defecto) -->
+            <div id="spinner" style="display: none; text-align: center; padding: 1rem 0 0.5rem;">
+                <i class="fas fa-spinner fa-spin" style="font-size: 1.8rem; color: #3B82F6;"></i>
+                <p style="margin: 8px 0 0 0; color: #6B7280; font-size: 0.88rem;">Procesando archivo, por favor espera…</p>
+            </div>
+
+            <button type="submit" id="submitBtn"
+                    style="width: 100%; padding: 14px; background: #3B82F6; color: white; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 0.95rem; display: flex; align-items: center; justify-content: center; gap: 8px; transition: background 0.2s;">
+                <i class="fas fa-eye"></i> Ver Vista Previa antes de Importar
+            </button>
+        </form>
+    </div>
+
+</div>
+
+<script>
+(function() {
+    const dropZone  = document.getElementById('dropZone');
+    const input     = document.getElementById('archivoInput');
+    const fileLabel = document.getElementById('fileName');
+    const form      = document.getElementById('uploadForm');
+    const spinner   = document.getElementById('spinner');
+    const submitBtn = document.getElementById('submitBtn');
+    const dropIcon  = document.getElementById('dropIcon');
+
+    function applyFile(file) {
+        if (!file) return;
+        fileLabel.textContent = '📄 ' + file.name;
+        fileLabel.style.display = 'block';
+        dropZone.style.borderColor = '#10B981';
+        dropZone.style.background  = '#F0FDF4';
+        dropIcon.style.color = '#10B981';
+    }
+
+    input.addEventListener('change', () => applyFile(input.files[0]));
+
+    dropZone.addEventListener('dragover', e => {
+        e.preventDefault();
+        dropZone.style.borderColor = '#3B82F6';
+        dropZone.style.background  = '#EFF6FF';
+    });
+    dropZone.addEventListener('dragleave', () => {
+        if (!input.files[0]) {
+            dropZone.style.borderColor = '#D1D5DB';
+            dropZone.style.background  = '#F9FAFB';
+        }
+    });
+    dropZone.addEventListener('drop', e => {
+        e.preventDefault();
+        const file = e.dataTransfer.files[0];
+        if (file && (file.name.endsWith('.xlsx') || file.name.endsWith('.xls'))) {
+            const dt = new DataTransfer();
+            dt.items.add(file);
+            input.files = dt.files;
+            applyFile(file);
+        }
+    });
+
+    form.addEventListener('submit', () => {
+        if (input.files[0]) {
+            submitBtn.style.display = 'none';
+            spinner.style.display = 'block';
+        }
+    });
+})();
+</script>
+{% endblock %}

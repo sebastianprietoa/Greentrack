@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% block title %}Vista Previa — Factores Eléctricos{% endblock %}
+
+{% block content %}
+<div style="display: flex; align-items: center; gap: 12px; margin-bottom: 2rem; flex-wrap: wrap;">
+    <a href="{{ url_for('admin_factores') }}" style="color: #6B7280; text-decoration: none; font-size: 0.9rem;">
+        <i class="fas fa-arrow-left"></i> Volver
+    </a>
+    <div>
+        <h1 style="margin: 0; color: #111827; font-size: 1.5rem;">
+            <i class="fas fa-eye" style="color: #F59E0B;"></i> Vista Previa — Factores Eléctricos
+        </h1>
+        <p style="margin: 4px 0 0 0; color: #6B7280; font-size: 0.88rem;">Revisa los datos antes de confirmar la carga. Esta acción reemplazará todos los factores eléctricos actuales.</p>
+    </div>
+</div>
+
+<!-- KPIs resumen -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+    <div style="background: white; padding: 1.25rem; border-radius: 12px; border-left: 4px solid #F59E0B; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+        <p style="margin: 0; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; color: #9CA3AF; letter-spacing: 0.05em;">Total filas</p>
+        <h2 style="margin: 4px 0 0 0; font-size: 1.8rem; color: #111827;">{{ filas|length }}</h2>
+    </div>
+    {% for sis in sistemas %}
+    <div style="background: white; padding: 1.25rem; border-radius: 12px; border-left: 4px solid #6366F1; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+        <p style="margin: 0; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; color: #9CA3AF; letter-spacing: 0.05em;">{{ sis }}</p>
+        <h2 style="margin: 4px 0 0 0; font-size: 1.8rem; color: #111827;">{{ filas|selectattr('sistema','equalto',sis)|list|length }}</h2>
+        <p style="margin: 2px 0 0 0; font-size: 0.78rem; color: #9CA3AF;">registros</p>
+    </div>
+    {% endfor %}
+    {% if errores %}
+    <div style="background: white; padding: 1.25rem; border-radius: 12px; border-left: 4px solid #EF4444; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+        <p style="margin: 0; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; color: #9CA3AF; letter-spacing: 0.05em;">Filas con error</p>
+        <h2 style="margin: 4px 0 0 0; font-size: 1.8rem; color: #EF4444;">{{ errores|length }}</h2>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Advertencia si hay errores -->
+{% if errores %}
+<div style="background: #FEF2F2; border: 1px solid #FECACA; border-radius: 10px; padding: 1rem 1.25rem; margin-bottom: 1.5rem;">
+    <p style="margin: 0 0 6px 0; font-weight: 700; color: #991B1B;"><i class="fas fa-exclamation-triangle"></i> Filas ignoradas por valores inválidos:</p>
+    <ul style="margin: 0; padding-left: 1.2rem; color: #B91C1C; font-size: 0.85rem;">
+        {% for e in errores %}<li>{{ e }}</li>{% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+<!-- Filtros -->
+<div style="background: white; padding: 1rem 1.5rem; border-radius: 10px; margin-bottom: 1rem; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; box-shadow: 0 1px 4px rgba(0,0,0,0.06);">
+    <span style="font-size: 0.85rem; font-weight: 600; color: #374151;">Filtrar:</span>
+    <select id="filtroSis" onchange="filtrar()" style="padding: 6px 10px; border: 1px solid #D1D5DB; border-radius: 6px; font-size: 0.85rem;">
+        <option value="">Todos los sistemas</option>
+        {% for s in sistemas %}<option value="{{ s }}">{{ s }}</option>{% endfor %}
+    </select>
+    <select id="filtroAnio" onchange="filtrar()" style="padding: 6px 10px; border: 1px solid #D1D5DB; border-radius: 6px; font-size: 0.85rem;">
+        <option value="">Todos los años</option>
+        {% for a in años %}<option value="{{ a }}">{{ a }}</option>{% endfor %}
+    </select>
+    <span id="contadorFiltro" style="font-size: 0.82rem; color: #9CA3AF;"></span>
+</div>
+
+<!-- Tabla -->
+<div style="background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); overflow: hidden; margin-bottom: 2rem;">
+    <div style="max-height: 480px; overflow-y: auto;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.87rem;" id="tablaPreview">
+            <thead style="position: sticky; top: 0; z-index: 1;">
+                <tr style="background: #F3F4F6;">
+                    <th style="padding: 10px 16px; text-align: left; color: #4B5563; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid #E5E7EB;">#</th>
+                    <th style="padding: 10px 16px; text-align: left; color: #4B5563; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid #E5E7EB;">Año</th>
+                    <th style="padding: 10px 16px; text-align: left; color: #4B5563; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid #E5E7EB;">Mes</th>
+                    <th style="padding: 10px 16px; text-align: left; color: #4B5563; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid #E5E7EB;">Sistema</th>
+                    <th style="padding: 10px 16px; text-align: right; color: #4B5563; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid #E5E7EB;">Factor (kg CO₂e/kWh)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% set meses_n = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'] %}
+                {% set colores = {'SEN': '#EFF6FF|#1E40AF', 'SEM': '#F0FDF4|#065F46', 'SEA': '#FEF3C7|#92400E', 'SM Los Lagos': '#F5F3FF|#5B21B6'} %}
+                {% for f in filas %}
+                <tr data-sis="{{ f.sistema }}" data-anio="{{ f.anio }}" style="border-bottom: 1px solid #F3F4F6;">
+                    <td style="padding: 8px 16px; color: #9CA3AF; font-size: 0.8rem;">{{ loop.index }}</td>
+                    <td style="padding: 8px 16px; color: #374151; font-weight: 600;">{{ f.anio }}</td>
+                    <td style="padding: 8px 16px; color: #6B7280;">{{ meses_n[f.mes] if f.mes <= 12 else f.mes }}</td>
+                    <td style="padding: 8px 16px;">
+                        {% set col = colores.get(f.sistema, '#F3F4F6|#374151').split('|') %}
+                        <span style="background: {{ col[0] }}; color: {{ col[1] }}; padding: 3px 9px; border-radius: 8px; font-size: 0.78rem; font-weight: 700;">{{ f.sistema }}</span>
+                    </td>
+                    <td style="padding: 8px 16px; text-align: right; font-family: monospace; font-weight: 700; color: #F59E0B;">{{ "%.6f"|format(f.factor) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Botones de acción -->
+<div style="display: flex; gap: 1rem; justify-content: flex-end; margin-bottom: 2rem;">
+    <a href="{{ url_for('admin_factores') }}"
+       style="background: #F3F4F6; color: #374151; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+        <i class="fas fa-times"></i> Cancelar
+    </a>
+    <form action="{{ url_for('cargar_electricidad') }}" method="POST">
+        <input type="hidden" name="datos_json" value="{{ datos_json }}">
+        <button type="submit"
+                style="background: linear-gradient(135deg, #10B981, #059669); color: white; padding: 12px 28px; border: none; border-radius: 8px; font-weight: 700; font-size: 1rem; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 14px rgba(16,185,129,0.35);"
+                onclick="return confirm('¿Confirmas la carga de {{ filas|length }} factores eléctricos? Esto reemplazará los actuales.')">
+            <i class="fas fa-check"></i> Confirmar carga ({{ filas|length }} factores)
+        </button>
+    </form>
+</div>
+
+<script>
+const meses = ['','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+function filtrar() {
+    const sis = document.getElementById('filtroSis').value;
+    const anio = document.getElementById('filtroAnio').value;
+    let visible = 0;
+    document.querySelectorAll('#tablaPreview tbody tr').forEach(tr => {
+        const ok = (!sis || tr.dataset.sis === sis) && (!anio || tr.dataset.anio === anio);
+        tr.style.display = ok ? '' : 'none';
+        if (ok) visible++;
+    });
+    document.getElementById('contadorFiltro').textContent = visible + ' filas visibles';
+}
+filtrar();
+</script>
+{% endblock %}

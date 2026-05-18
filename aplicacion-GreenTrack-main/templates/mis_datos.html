@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% block title %}Mi Cuenta - GreenTrack{% endblock %}
+
+{% block content %}
+<div style="max-width: 760px; margin: 0 auto;">
+
+    <!-- Header -->
+    <div style="margin-bottom: 2rem;">
+        <h1 style="color: #111827; margin: 0; font-size: 1.4rem; display: flex; align-items: center; gap: 10px;">
+            <i class="fas fa-user-circle" style="color: #10B981;"></i> Mi Cuenta
+        </h1>
+        <p style="color: #6B7280; margin: 4px 0 0 0; font-size: 0.88rem;">Información de tu empresa, seguridad y preferencias.</p>
+    </div>
+
+    <!-- Perfil de empresa -->
+    <div style="background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); overflow: hidden; margin-bottom: 1.25rem; border-left: 4px solid #10B981;">
+        <div style="background: linear-gradient(135deg, #059669 0%, #10B981 100%); height: 80px; position: relative;">
+            <div style="position: absolute; bottom: -30px; left: 1.5rem; width: 65px; height: 65px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.12); border: 3px solid white;">
+                <span style="font-size: 1.8rem; font-weight: 800; color: #059669;">{{ datos_usuario['empresa'][0]|upper }}</span>
+            </div>
+        </div>
+        <div style="padding: 2.5rem 1.5rem 1.5rem 1.5rem;">
+            <h2 style="margin: 0 0 2px 0; font-size: 1.3rem; color: #111827; font-weight: 700;">{{ datos_usuario['empresa'] }}</h2>
+            <p style="color: #10B981; font-size: 0.82rem; margin: 0 0 1.5rem 0; font-weight: 600;">
+                <i class="fas fa-check-circle"></i> Cuenta activa
+            </p>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem;">
+
+                <div style="display: flex; align-items: flex-start; gap: 12px;">
+                    <div style="width: 38px; height: 38px; border-radius: 9px; background: #EFF6FF; color: #3B82F6; display: flex; align-items: center; justify-content: center; font-size: 1rem; flex-shrink: 0;">
+                        <i class="fas fa-envelope"></i>
+                    </div>
+                    <div style="min-width: 0;">
+                        <p style="margin: 0; font-size: 0.7rem; color: #9CA3AF; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">Correo</p>
+                        <p style="margin: 2px 0 0 0; font-size: 0.95rem; color: #1F2937; font-weight: 500; word-break: break-all;">{{ datos_usuario['email'] }}</p>
+                    </div>
+                </div>
+
+                <div style="display: flex; align-items: flex-start; gap: 12px;">
+                    <div style="width: 38px; height: 38px; border-radius: 9px; background: #ECFDF5; color: #10B981; display: flex; align-items: center; justify-content: center; font-size: 1rem; flex-shrink: 0;">
+                        <i class="fas fa-id-card"></i>
+                    </div>
+                    <div>
+                        <p style="margin: 0; font-size: 0.7rem; color: #9CA3AF; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">RUT</p>
+                        <p style="margin: 2px 0 0 0; font-size: 0.95rem; color: #1F2937; font-weight: 500;">
+                            {% if datos_usuario['rut'] %}{{ datos_usuario['rut'] }}{% else %}<span style="color: #D1D5DB; font-style: italic;">No registrado</span>{% endif %}
+                        </p>
+                    </div>
+                </div>
+
+                <div style="display: flex; align-items: flex-start; gap: 12px;">
+                    <div style="width: 38px; height: 38px; border-radius: 9px; background: #FEF3C7; color: #D97706; display: flex; align-items: center; justify-content: center; font-size: 1rem; flex-shrink: 0;">
+                        <i class="fas fa-user-tie"></i>
+                    </div>
+                    <div>
+                        <p style="margin: 0; font-size: 0.7rem; color: #9CA3AF; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">Contacto</p>
+                        <p style="margin: 2px 0 0 0; font-size: 0.95rem; color: #1F2937; font-weight: 500;">
+                            {% if datos_usuario['contacto'] %}{{ datos_usuario['contacto'] }}{% else %}<span style="color: #D1D5DB; font-style: italic;">No registrado</span>{% endif %}
+                        </p>
+                    </div>
+                </div>
+
+                {% if datos_usuario['telefono'] %}
+                <div style="display: flex; align-items: flex-start; gap: 12px;">
+                    <div style="width: 38px; height: 38px; border-radius: 9px; background: #F5F3FF; color: #8B5CF6; display: flex; align-items: center; justify-content: center; font-size: 1rem; flex-shrink: 0;">
+                        <i class="fas fa-phone"></i>
+                    </div>
+                    <div>
+                        <p style="margin: 0; font-size: 0.7rem; color: #9CA3AF; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">Teléfono</p>
+                        <p style="margin: 2px 0 0 0; font-size: 0.95rem; color: #1F2937; font-weight: 500;">{{ datos_usuario['telefono'] }}</p>
+                    </div>
+                </div>
+                {% endif %}
+
+            </div>
+
+            <div style="margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid #F3F4F6; display: flex; align-items: center; gap: 10px;">
+                <i class="fas fa-lock" style="color: #D1D5DB; font-size: 0.85rem;"></i>
+                <p style="color: #9CA3AF; font-size: 0.78rem; margin: 0;">Para modificar Razón Social o RUT, contacta al administrador.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cambiar contraseña -->
+    <div style="background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); padding: 1.5rem; margin-bottom: 1.25rem; border-left: 4px solid #6366F1;">
+        <h3 style="margin: 0 0 1.25rem 0; color: #374151; font-size: 0.95rem; display: flex; align-items: center; gap: 8px;">
+            <i class="fas fa-key" style="color: #6366F1;"></i> Cambiar Contraseña
+        </h3>
+        <form action="/cambiar_password" method="POST">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 1rem; margin-bottom: 1.25rem;">
+                <div>
+                    <label style="display: block; font-size: 0.75rem; font-weight: 700; color: #6B7280; text-transform: uppercase; margin-bottom: 5px;">Contraseña actual</label>
+                    <input type="password" name="password_actual" required
+                           style="width: 100%; padding: 9px 12px; border: 1px solid #D1D5DB; border-radius: 7px; font-size: 0.9rem; box-sizing: border-box;">
+                </div>
+                <div>
+                    <label style="display: block; font-size: 0.75rem; font-weight: 700; color: #6B7280; text-transform: uppercase; margin-bottom: 5px;">Nueva contraseña</label>
+                    <input type="password" name="password_nueva" required minlength="6"
+                           style="width: 100%; padding: 9px 12px; border: 1px solid #D1D5DB; border-radius: 7px; font-size: 0.9rem; box-sizing: border-box;">
+                </div>
+                <div>
+                    <label style="display: block; font-size: 0.75rem; font-weight: 700; color: #6B7280; text-transform: uppercase; margin-bottom: 5px;">Confirmar contraseña</label>
+                    <input type="password" name="password_confirmar" required minlength="6"
+                           style="width: 100%; padding: 9px 12px; border: 1px solid #D1D5DB; border-radius: 7px; font-size: 0.9rem; box-sizing: border-box;">
+                </div>
+            </div>
+            <button type="submit"
+                    style="padding: 9px 22px; background: #6366F1; border: none; border-radius: 7px; color: white; font-weight: 700; font-size: 0.88rem; cursor: pointer; display: inline-flex; align-items: center; gap: 7px;">
+                <i class="fas fa-save"></i> Actualizar contraseña
+            </button>
+        </form>
+    </div>
+
+    <!-- Preferencias -->
+    <div style="background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); padding: 1.5rem; border-left: 4px solid #F59E0B;">
+        <h3 style="margin: 0 0 1.25rem 0; color: #374151; font-size: 0.95rem; display: flex; align-items: center; gap: 8px;">
+            <i class="fas fa-sliders-h" style="color: #F59E0B;"></i> Preferencias
+        </h3>
+        <form action="/mi_cuenta/guardar_preferencias" method="POST">
+            <div style="max-width: 280px;">
+                <label style="display: block; font-size: 0.75rem; font-weight: 700; color: #6B7280; text-transform: uppercase; margin-bottom: 5px;">
+                    Año predeterminado en el Dashboard
+                </label>
+                <select name="anio_default" style="width: 100%; padding: 9px 12px; border: 1px solid #D1D5DB; border-radius: 7px; font-size: 0.9rem; background: white; margin-bottom: 1rem;">
+                    <option value="">Mostrar todos los años</option>
+                    {% for a in anios %}
+                    <option value="{{ a }}" {{ 'selected' if datos_usuario['anio_default']|string == a|string }}>{{ a }}</option>
+                    {% endfor %}
+                </select>
+                <p style="color: #9CA3AF; font-size: 0.78rem; margin: 0 0 1rem 0;">Al abrir el dashboard se aplicará este filtro automáticamente.</p>
+            </div>
+            <button type="submit"
+                    style="padding: 9px 22px; background: #F59E0B; border: none; border-radius: 7px; color: white; font-weight: 700; font-size: 0.88rem; cursor: pointer; display: inline-flex; align-items: center; gap: 7px;">
+                <i class="fas fa-save"></i> Guardar preferencias
+            </button>
+        </form>
+    </div>
+
+</div>
+{% endblock %}

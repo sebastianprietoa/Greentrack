@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% block title %}Importación Exitosa - GreenTrack{% endblock %}
+
+{% block content %}
+<div style="max-width: 780px; margin: 0 auto;">
+
+    <!-- Encabezado de éxito -->
+    <div style="background: linear-gradient(135deg, #065F46, #10B981); border-radius: 16px; padding: 2.5rem 2rem; text-align: center; margin-bottom: 2rem; color: white; box-shadow: 0 4px 20px rgba(16,185,129,0.25);">
+        <div style="font-size: 3.5rem; margin-bottom: 1rem;">✅</div>
+        <h1 style="margin: 0 0 0.5rem 0; font-size: 1.8rem; font-weight: 700;">¡Importación Completada!</h1>
+        <p style="margin: 0; opacity: 0.85; font-size: 1rem;">Los registros han sido guardados correctamente en tu empresa.</p>
+    </div>
+
+    <!-- KPIs resultado -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+
+        <div style="background: white; padding: 1.5rem; border-radius: 12px; border-left: 5px solid #10B981; box-shadow: 0 2px 8px rgba(0,0,0,0.06); text-align: center;">
+            <p style="margin: 0 0 6px 0; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: #9CA3AF; letter-spacing: 0.05em;">Registros importados</p>
+            <div style="font-size: 2.5rem; font-weight: 700; color: #10B981;">{{ guardados }}</div>
+            <p style="margin: 2px 0 0 0; font-size: 0.78rem; color: #9CA3AF;">filas guardadas</p>
+        </div>
+
+        <div style="background: white; padding: 1.5rem; border-radius: 12px; border-left: 5px solid #8B5CF6; box-shadow: 0 2px 8px rgba(0,0,0,0.06); text-align: center;">
+            <p style="margin: 0 0 6px 0; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: #9CA3AF; letter-spacing: 0.05em;">Emisiones añadidas</p>
+            <div style="font-size: 2rem; font-weight: 700; color: #8B5CF6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ total_emision | formato_kpi }}</div>
+            <p style="margin: 2px 0 0 0; font-size: 0.78rem; color: #9CA3AF;">{{ total_emision | formato_cl }} kg CO₂e</p>
+        </div>
+
+        <div style="background: white; padding: 1.5rem; border-radius: 12px; border-left: 5px solid #3B82F6; box-shadow: 0 2px 8px rgba(0,0,0,0.06); text-align: center;">
+            <p style="margin: 0 0 6px 0; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: #9CA3AF; letter-spacing: 0.05em;">Fuentes distintas</p>
+            <div style="font-size: 2.5rem; font-weight: 700; color: #3B82F6;">{{ por_fuente | length }}</div>
+            <p style="margin: 2px 0 0 0; font-size: 0.78rem; color: #9CA3AF;">tipos de emisión</p>
+        </div>
+
+    </div>
+
+    <!-- Desglose por fuente -->
+    {% if por_fuente %}
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
+
+        <!-- Gráfico -->
+        <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+            <h3 style="margin: 0 0 1rem 0; color: #374151; font-size: 0.95rem; border-bottom: 1px solid #F3F4F6; padding-bottom: 0.6rem;">
+                <i class="fas fa-chart-pie" style="color: #3B82F6;"></i> Distribución importada
+            </h3>
+            <div style="position: relative; height: 200px;">
+                <canvas id="donutResultado"></canvas>
+            </div>
+        </div>
+
+        <!-- Barras por fuente -->
+        <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+            <h3 style="margin: 0 0 1rem 0; color: #374151; font-size: 0.95rem; border-bottom: 1px solid #F3F4F6; padding-bottom: 0.6rem;">
+                <i class="fas fa-list" style="color: #6B7280;"></i> Por fuente de emisión
+            </h3>
+            {% set colores_fuente = {'Electricidad': '#F59E0B', 'Combustión Fija': '#EF4444', 'Combustible Móvil': '#F97316', 'Refrigerantes': '#3B82F6', 'Residuos': '#10B981'} %}
+            {% for item in por_fuente %}
+            {% set color = colores_fuente.get(item.fuente, '#8B5CF6') %}
+            {% set pct = (item.emision / total_emision * 100) if total_emision > 0 else 0 %}
+            <div style="margin-bottom: 1rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px;">
+                    <span style="font-size: 0.82rem; font-weight: 700; color: #374151;">{{ item.fuente }}</span>
+                    <span style="font-size: 0.75rem; color: #6B7280;">{{ item.count }} reg · {{ item.emision | formato_cl }} kg</span>
+                </div>
+                <div style="background: #F3F4F6; border-radius: 999px; height: 8px; overflow: hidden;">
+                    <div style="background: {{ color }}; width: {{ '%.1f' | format(pct) }}%; height: 100%; border-radius: 999px;"></div>
+                </div>
+                <p style="margin: 2px 0 0 0; font-size: 0.7rem; color: #9CA3AF;">{{ '%.1f' | format(pct) }}% del total importado</p>
+            </div>
+            {% endfor %}
+        </div>
+
+    </div>
+    {% endif %}
+
+    <!-- Acciones -->
+    <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+        <a href="/dashboard" style="padding: 13px 28px; background: #10B981; color: white; border-radius: 10px; text-decoration: none; font-weight: 700; font-size: 0.95rem; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 2px 8px rgba(16,185,129,0.3);">
+            <i class="fas fa-chart-line"></i> Ver Dashboard
+        </a>
+        <a href="/importar" style="padding: 13px 28px; background: white; color: #374151; border: 2px solid #E5E7EB; border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 0.95rem; display: inline-flex; align-items: center; gap: 8px;">
+            <i class="fas fa-upload"></i> Importar más datos
+        </a>
+    </div>
+
+</div>
+
+{% if por_fuente %}
+<script>
+const coloresFuente = {
+    'Electricidad': '#F59E0B',
+    'Combustión Fija': '#EF4444',
+    'Combustible Móvil': '#F97316',
+    'Refrigerantes': '#3B82F6',
+    'Residuos': '#10B981'
+};
+const porFuente = {{ por_fuente | tojson }};
+new Chart(document.getElementById('donutResultado'), {
+    type: 'doughnut',
+    data: {
+        labels: porFuente.map(r => r.fuente),
+        datasets: [{
+            data: porFuente.map(r => r.emision),
+            backgroundColor: porFuente.map(r => coloresFuente[r.fuente] || '#8B5CF6'),
+            borderWidth: 2,
+            borderColor: '#fff'
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '60%',
+        plugins: {
+            legend: { position: 'bottom', labels: { font: { size: 10 }, boxWidth: 10, padding: 8 } },
+            tooltip: {
+                callbacks: {
+                    label: ctx => {
+                        const total = porFuente.reduce((s, r) => s + r.emision, 0);
+                        const pct = total > 0 ? (ctx.parsed / total * 100).toFixed(1) : 0;
+                        return ' ' + new Intl.NumberFormat('es-CL', {minimumFractionDigits: 2}).format(ctx.parsed) + ' kg CO₂e (' + pct + '%)';
+                    }
+                }
+            }
+        }
+    }
+});
+</script>
+{% endif %}
+{% endblock %}

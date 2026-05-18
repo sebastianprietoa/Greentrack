@@ -1,0 +1,522 @@
+{% extends "base.html" %}
+{% block title %}Dashboard - GreenTrack{% endblock %}
+
+{% block content %}
+<div class="dashboard-header" style="background: linear-gradient(135deg, #10B981, #3B82F6); color: white; padding: 2rem; border-radius: 12px; margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+    <div>
+        <h1 style="margin: 0;"><i class="fas fa-tachometer-alt"></i> Dashboard</h1>
+        <p style="margin: 5px 0 0 0; opacity: 0.9;">Empresa: <strong>{{ empresa }}</strong></p>
+    </div>
+    <div style="background: rgba(255,255,255,0.2); padding: 10px 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3);">
+        <form action="/dashboard" method="GET" style="display: flex; align-items: center; gap: 10px; margin: 0;">
+            <i class="fas fa-calendar-alt" style="font-size: 1.2rem;"></i>
+            <label for="anio" style="font-weight: 600; font-size: 0.95rem;">Filtrar periodo:</label>
+            <select name="anio" id="anio" onchange="this.form.submit()" style="padding: 8px 15px; border-radius: 6px; border: none; font-weight: bold; color: #1F2937; background: white; cursor: pointer; outline: none;">
+                <option value="Todos" {% if anio_seleccionado == 'Todos' %}selected{% endif %}>Histórico Completo</option>
+                {% for a in anios_disponibles %}
+                    <option value="{{ a }}" {% if anio_seleccionado == a %}selected{% endif %}>Año {{ a }}</option>
+                {% endfor %}
+            </select>
+        </form>
+    </div>
+</div>
+
+<!-- KPIs principales -->
+<div class="stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+    <div class="stat-card" style="background: white; padding: 1.25rem 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); border-left: 5px solid #10B981;">
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+            <i class="fas fa-leaf" style="color: #10B981; font-size: 1rem;"></i>
+            <p style="margin: 0; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; color: #9CA3AF; letter-spacing: 0.05em;">Emisión Total</p>
+        </div>
+        <div style="font-size: 1.5rem; font-weight: 700; color: #111827; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+            {{ total_emision | formato_kpi }}
+        </div>
+        <p style="color: #6B7280; margin: 4px 0 0 0; font-size: 0.78rem;">kg CO₂e · {{ total_emision | formato_cl }}</p>
+        {% if variacion_pct is not none %}
+        <div style="margin-top: 8px;">
+            {% if variacion_pct > 0 %}
+            <span style="background: #FEF2F2; color: #DC2626; padding: 2px 7px; border-radius: 6px; font-size: 0.75rem; font-weight: 700;">
+                <i class="fas fa-arrow-up"></i> +{{ variacion_pct }}% vs {{ anio_prev }}
+            </span>
+            {% elif variacion_pct < 0 %}
+            <span style="background: #F0FDF4; color: #059669; padding: 2px 7px; border-radius: 6px; font-size: 0.75rem; font-weight: 700;">
+                <i class="fas fa-arrow-down"></i> {{ variacion_pct }}% vs {{ anio_prev }}
+            </span>
+            {% else %}
+            <span style="background: #F3F4F6; color: #6B7280; padding: 2px 7px; border-radius: 6px; font-size: 0.75rem; font-weight: 700;">
+                Sin cambio vs {{ anio_prev }}
+            </span>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="stat-card" style="background: white; padding: 1.25rem 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); border-left: 5px solid #EF4444;">
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+            <i class="fas fa-fire" style="color: #EF4444; font-size: 1rem;"></i>
+            <p style="margin: 0; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; color: #9CA3AF; letter-spacing: 0.05em;">Alcance 1 – Directo</p>
+        </div>
+        <div style="font-size: 1.5rem; font-weight: 700; color: #111827; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+            {% for a in alcances_data %}{% if loop.index == 1 %}{{ a.total | formato_kpi }}{% endif %}{% endfor %}
+        </div>
+        <p style="color: #6B7280; margin: 4px 0 0 0; font-size: 0.78rem;">
+            {% for a in alcances_data %}{% if loop.index == 1 %}{{ a.total | formato_cl }} kg CO₂e{% endif %}{% endfor %}
+        </p>
+    </div>
+
+    <div class="stat-card" style="background: white; padding: 1.25rem 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); border-left: 5px solid #F59E0B;">
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+            <i class="fas fa-bolt" style="color: #F59E0B; font-size: 1rem;"></i>
+            <p style="margin: 0; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; color: #9CA3AF; letter-spacing: 0.05em;">Alcance 2 – Electricidad</p>
+        </div>
+        <div style="font-size: 1.5rem; font-weight: 700; color: #111827; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+            {% for a in alcances_data %}{% if loop.index == 2 %}{{ a.total | formato_kpi }}{% endif %}{% endfor %}
+        </div>
+        <p style="color: #6B7280; margin: 4px 0 0 0; font-size: 0.78rem;">
+            {% for a in alcances_data %}{% if loop.index == 2 %}{{ a.total | formato_cl }} kg CO₂e{% endif %}{% endfor %}
+        </p>
+    </div>
+
+    <div class="stat-card" style="background: white; padding: 1.25rem 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); border-left: 5px solid #10B981;">
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+            <i class="fas fa-recycle" style="color: #10B981; font-size: 1rem;"></i>
+            <p style="margin: 0; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; color: #9CA3AF; letter-spacing: 0.05em;">Alcance 3 – Residuos</p>
+        </div>
+        <div style="font-size: 1.5rem; font-weight: 700; color: #111827; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+            {% for a in alcances_data %}{% if loop.index == 3 %}{{ a.total | formato_kpi }}{% endif %}{% endfor %}
+        </div>
+        <p style="color: #6B7280; margin: 4px 0 0 0; font-size: 0.78rem;">
+            {% for a in alcances_data %}{% if loop.index == 3 %}{{ a.total | formato_cl }} kg CO₂e{% endif %}{% endfor %}
+        </p>
+    </div>
+
+    <div class="stat-card" style="background: white; padding: 1.25rem 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); border-left: 5px solid #6366F1;">
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+            <i class="fas fa-layer-group" style="color: #6366F1; font-size: 1rem;"></i>
+            <p style="margin: 0; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; color: #9CA3AF; letter-spacing: 0.05em;">Registros Totales</p>
+        </div>
+        <div style="font-size: 1.5rem; font-weight: 700; color: #111827; line-height: 1.2;">{{ total_registros }}</div>
+        <p style="color: #6B7280; margin: 4px 0 0 0; font-size: 0.78rem;">Actividades registradas</p>
+    </div>
+</div>
+
+<!-- Acciones rápidas -->
+<div class="quick-actions" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+    <a href="{{ url_for('registro') }}" class="action-card" style="background: white; padding: 1.25rem; border-radius: 12px; text-align: center; text-decoration: none; color: #374151; border: 2px solid #E5E7EB;">
+        <i class="fas fa-plus-circle" style="font-size: 1.8rem; color: #10B981; margin-bottom: 0.75rem; display: block;"></i>
+        <h3 style="margin: 0 0 4px 0; font-size: 0.95rem;">Nuevo Registro</h3>
+        <p style="color: #6B7280; margin: 0; font-size: 0.8rem;">Agregar actividad</p>
+    </a>
+    <a href="{{ url_for('mis_datos') }}" class="action-card" style="background: white; padding: 1.25rem; border-radius: 12px; text-align: center; text-decoration: none; color: #374151; border: 2px solid #E5E7EB;">
+        <i class="fas fa-user-circle" style="font-size: 1.8rem; color: #3B82F6; margin-bottom: 0.75rem; display: block;"></i>
+        <h3 style="margin: 0 0 4px 0; font-size: 0.95rem;">Mis Datos</h3>
+        <p style="color: #6B7280; margin: 0; font-size: 0.8rem;">Info empresa</p>
+    </a>
+    <a href="{{ url_for('exportar') }}" class="action-card" style="background: white; padding: 1.25rem; border-radius: 12px; text-align: center; text-decoration: none; color: #374151; border: 2px solid #E5E7EB;">
+        <i class="fas fa-file-export" style="font-size: 1.8rem; color: #F59E0B; margin-bottom: 0.75rem; display: block;"></i>
+        <h3 style="margin: 0 0 4px 0; font-size: 0.95rem;">Exportar</h3>
+        <p style="color: #6B7280; margin: 0; font-size: 0.8rem;">Descargar Excel</p>
+    </a>
+    <a href="{{ url_for('configuracion') }}" class="action-card" style="background: white; padding: 1.25rem; border-radius: 12px; text-align: center; text-decoration: none; color: #374151; border: 2px solid #E5E7EB;">
+        <i class="fas fa-cog" style="font-size: 1.8rem; color: #6366F1; margin-bottom: 0.75rem; display: block;"></i>
+        <h3 style="margin: 0 0 4px 0; font-size: 0.95rem;">Configuración</h3>
+        <p style="color: #6B7280; margin: 0; font-size: 0.8rem;">Ajustes</p>
+    </a>
+    <a href="/exportar_ghg?anio={{ anio_seleccionado if anio_seleccionado != 'Todos' else '' }}" class="action-card" style="background: #064E3B; padding: 1.25rem; border-radius: 12px; text-align: center; text-decoration: none; color: white; border: 2px solid #064E3B;">
+        <i class="fas fa-file-excel" style="font-size: 1.8rem; color: #6EE7B7; margin-bottom: 0.75rem; display: block;"></i>
+        <h3 style="margin: 0 0 4px 0; font-size: 0.95rem;">GHG Protocol</h3>
+        <p style="color: #A7F3D0; margin: 0; font-size: 0.8rem;">Reporte oficial</p>
+    </a>
+</div>
+
+<!-- Gráficos principales: Tendencia mensual + Distribución por Alcance -->
+{% if tendencia_labels %}
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 2rem; margin-bottom: 2rem;">
+
+    <!-- Tendencia mensual por Alcance -->
+    <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.07);">
+        <h3 style="margin: 0 0 1rem 0; color: #374151; font-size: 1rem; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #F3F4F6; padding-bottom: 0.75rem;">
+            <i class="fas fa-chart-area" style="color: #6366F1;"></i> Tendencia Mensual de Emisiones
+        </h3>
+        <div style="position: relative; height: 280px;">
+            <canvas id="chartTendencia"></canvas>
+        </div>
+    </div>
+
+    <!-- Distribución por Alcance GHG -->
+    <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.07);">
+        <h3 style="margin: 0 0 1rem 0; color: #374151; font-size: 1rem; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #F3F4F6; padding-bottom: 0.75rem;">
+            <i class="fas fa-layer-group" style="color: #10B981;"></i> Por Alcance GHG Protocol
+        </h3>
+        {% set total_alcances = alcances_data | sum(attribute='total') %}
+        {% for alc in alcances_data %}
+        {% set pct = (alc.total / total_alcances * 100) if total_alcances > 0 else 0 %}
+        <div style="margin-bottom: 1.25rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                <span style="font-size: 0.82rem; font-weight: 600; color: #374151;">{{ alc.nombre }}</span>
+                <span style="font-size: 0.8rem; color: #6B7280;">{{ "%.1f"|format(pct) }}%</span>
+            </div>
+            <div style="background: #F3F4F6; border-radius: 999px; height: 10px; overflow: hidden;">
+                <div style="background: {{ alc.color }}; width: {{ "%.1f"|format(pct) }}%; height: 100%; border-radius: 999px; transition: width 0.8s ease;"></div>
+            </div>
+            <div style="font-size: 0.75rem; color: #9CA3AF; margin-top: 2px;">{{ alc.total | formato_cl }} kg CO₂e</div>
+        </div>
+        {% endfor %}
+    </div>
+
+</div>
+{% endif %}
+
+<!-- Distribución por categoría con barras de progreso -->
+{% if categorias_data %}
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
+
+    <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.07);">
+        <h3 style="margin: 0 0 1rem 0; color: #374151; font-size: 1rem; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #F3F4F6; padding-bottom: 0.75rem;">
+            <i class="fas fa-chart-pie" style="color: #F59E0B;"></i> Distribución por Fuente
+        </h3>
+        {% set total_cat = categorias_data | sum(attribute='total') %}
+        {% for cat in categorias_data | sort(attribute='total', reverse=True) %}
+        {% set pct = (cat.total / total_cat * 100) if total_cat > 0 else 0 %}
+        {% set colores_cat = ['#EF4444','#F59E0B','#10B981','#3B82F6','#8B5CF6','#F43F5E','#14B8A6'] %}
+        <div style="margin-bottom: 1rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px;">
+                <span style="font-size: 0.82rem; font-weight: 600; color: #374151;">{{ cat.fuente }}</span>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <span style="font-size: 0.78rem; color: #6B7280;">{{ cat.total | formato_cl }} kg</span>
+                    <span style="font-size: 0.75rem; font-weight: 700; color: {{ colores_cat[loop.index0 % 7] }}; min-width: 38px; text-align: right;">{{ "%.1f"|format(pct) }}%</span>
+                </div>
+            </div>
+            <div style="background: #F3F4F6; border-radius: 999px; height: 8px; overflow: hidden;">
+                <div style="background: {{ colores_cat[loop.index0 % 7] }}; width: {{ "%.1f"|format(pct) }}%; height: 100%; border-radius: 999px; transition: width 0.6s ease;"></div>
+            </div>
+        </div>
+        {% endfor %}
+        {% if total_emision_combustible is defined and total_emision_combustible > 0 %}
+        {% set pct_v = (total_emision_combustible / (total_cat + total_emision_combustible) * 100) %}
+        <div style="margin-bottom: 1rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px;">
+                <span style="font-size: 0.82rem; font-weight: 600; color: #374151;"><i class="fas fa-car" style="font-size: 0.75rem;"></i> Vehículos</span>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <span style="font-size: 0.78rem; color: #6B7280;">{{ total_emision_combustible | formato_cl }} kg</span>
+                    <span style="font-size: 0.75rem; font-weight: 700; color: #DC2626; min-width: 38px; text-align: right;">{{ "%.1f"|format(pct_v) }}%</span>
+                </div>
+            </div>
+            <div style="background: #F3F4F6; border-radius: 999px; height: 8px; overflow: hidden;">
+                <div style="background: #DC2626; width: {{ "%.1f"|format(pct_v) }}%; height: 100%; border-radius: 999px;"></div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.07);">
+        <h3 style="margin: 0 0 1rem 0; color: #374151; font-size: 1rem; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #F3F4F6; padding-bottom: 0.75rem;">
+            <i class="fas fa-chart-donut" style="color: #6366F1;"></i> Gráfico por Categoría
+        </h3>
+        <div style="position: relative; height: 260px;">
+            <canvas id="chartCategorias"></canvas>
+        </div>
+    </div>
+
+</div>
+{% endif %}
+
+<!-- Vehículos -->
+{% if vehiculos_emisiones is defined and vehiculos_emisiones %}
+<div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); margin-bottom: 2rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #F3F4F6; padding-bottom: 0.75rem; margin-bottom: 1rem;">
+        <h3 style="margin: 0; color: #374151; font-size: 1rem; display: flex; align-items: center; gap: 8px;">
+            <i class="fas fa-car" style="color: #3B82F6;"></i> Emisiones por Vehículo
+        </h3>
+    </div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.87rem;">
+                <thead>
+                    <tr style="background: #F9FAFB;">
+                        <th style="padding: 8px 12px; text-align: left; color: #6B7280; font-size: 0.75rem; text-transform: uppercase; border-bottom: 2px solid #E5E7EB;">Patente</th>
+                        <th style="padding: 8px 12px; text-align: left; color: #6B7280; font-size: 0.75rem; text-transform: uppercase; border-bottom: 2px solid #E5E7EB;">Tipo</th>
+                        <th style="padding: 8px 12px; text-align: right; color: #6B7280; font-size: 0.75rem; text-transform: uppercase; border-bottom: 2px solid #E5E7EB;">Emisión (kg)</th>
+                        <th style="padding: 8px 12px; text-align: right; color: #6B7280; font-size: 0.75rem; text-transform: uppercase; border-bottom: 2px solid #E5E7EB;">%</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for vehiculo in vehiculos_emisiones %}
+                    <tr style="border-bottom: 1px solid #F3F4F6;">
+                        <td style="padding: 8px 12px; font-weight: 600; color: #374151;">{{ vehiculo.patente }}</td>
+                        <td style="padding: 8px 12px;"><span style="background: #E5E7EB; color: #6B7280; padding: 2px 8px; border-radius: 10px; font-size: 0.75rem;">{{ vehiculo.tipo }}</span></td>
+                        <td style="padding: 8px 12px; text-align: right; color: #EF4444; font-weight: 600;">{{ vehiculo.total_emision | formato_cl }}</td>
+                        <td style="padding: 8px 12px; text-align: right; color: #10B981; font-weight: 600;">
+                            {% if total_emision_combustible > 0 %}{{ "%.1f"|format(vehiculo.total_emision/total_emision_combustible*100) }}%{% else %}0%{% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div style="position: relative; height: 220px;">
+            <canvas id="chartVehiculos"></canvas>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Últimos registros -->
+{% if ultimos_registros %}
+<div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); margin-bottom: 2rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid #F3F4F6; padding-bottom: 0.75rem;">
+        <h3 style="margin: 0; color: #374151; font-size: 1rem; display: flex; align-items: center; gap: 8px;">
+            <i class="fas fa-history" style="color: #6366F1;"></i> Últimos Registros
+        </h3>
+        <a href="/historial" style="color: #3B82F6; font-weight: 600; text-decoration: none; font-size: 0.85rem;">
+            Ver historial completo <i class="fas fa-arrow-right" style="font-size: 0.8em;"></i>
+        </a>
+    </div>
+    <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.87rem; min-width: 600px;">
+            <thead>
+                <tr style="background: #F9FAFB;">
+                    <th style="padding: 8px 12px; text-align: left; color: #6B7280; font-size: 0.75rem; text-transform: uppercase; border-bottom: 2px solid #E5E7EB;">Fecha</th>
+                    <th style="padding: 8px 12px; text-align: left; color: #6B7280; font-size: 0.75rem; text-transform: uppercase; border-bottom: 2px solid #E5E7EB;">Fuente</th>
+                    <th style="padding: 8px 12px; text-align: left; color: #6B7280; font-size: 0.75rem; text-transform: uppercase; border-bottom: 2px solid #E5E7EB;">Actividad</th>
+                    <th style="padding: 8px 12px; text-align: right; color: #6B7280; font-size: 0.75rem; text-transform: uppercase; border-bottom: 2px solid #E5E7EB;">Cantidad</th>
+                    <th style="padding: 8px 12px; text-align: right; color: #6B7280; font-size: 0.75rem; text-transform: uppercase; border-bottom: 2px solid #E5E7EB;">Emisión</th>
+                    <th style="padding: 8px 12px; text-align: center; color: #6B7280; font-size: 0.75rem; text-transform: uppercase; border-bottom: 2px solid #E5E7EB;">Acción</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for reg in ultimos_registros %}
+                <tr style="border-bottom: 1px solid #F3F4F6;">
+                    <td style="padding: 8px 12px; color: #6B7280; white-space: nowrap;">{{ reg.fecha | string | truncate(10, True, '') }}</td>
+                    <td style="padding: 8px 12px;">
+                        {% if reg.tipo_tabla == 'vehiculo' %}
+                            <span style="background: #FEE2E2; color: #DC2626; padding: 3px 8px; border-radius: 10px; font-size: 0.75rem; font-weight: 700;"><i class="fas fa-gas-pump"></i> Vehículo</span>
+                        {% else %}
+                            <span style="background: #E0F2FE; color: #0369A1; padding: 3px 8px; border-radius: 10px; font-size: 0.75rem; font-weight: 700;">{{ reg.fuente }}</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 8px 12px; color: #374151;">{{ reg.actividad }}</td>
+                    <td style="padding: 8px 12px; text-align: right; color: #374151;">{{ "%.2f"|format(reg.cantidad) }} {{ reg.unidad }}</td>
+                    <td style="padding: 8px 12px; text-align: right; color: #10B981; font-weight: 700;">{{ "%.2f"|format(reg.emision) }} kg</td>
+                    <td style="padding: 8px 12px; text-align: center;">
+                        <a href="{{ url_for('eliminar_cualquier_registro', tipo=reg.tipo_tabla, id=reg.id) }}"
+                           onclick="return confirm('¿Seguro que deseas eliminar este registro de forma permanente?')"
+                           style="color: #EF4444; font-size: 1.1rem; text-decoration: none;" title="Eliminar">
+                            <i class="fas fa-trash-alt"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% else %}
+<div style="text-align: center; padding: 3rem; color: #6B7280; background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.07);">
+    <i class="fas fa-clipboard-list" style="font-size: 3rem; margin-bottom: 1rem; display: block; color: #9CA3AF;"></i>
+    <p style="margin-bottom: 1.5rem;">No hay registros aún. Comienza agregando uno.</p>
+    <a href="{{ url_for('registro') }}" style="display: inline-flex; align-items: center; gap: 10px; background: #10B981; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600;">
+        <i class="fas fa-plus"></i> Crear Primer Registro
+    </a>
+</div>
+{% endif %}
+
+{% if tiene_vehiculos and vehiculos %}
+<div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); margin-bottom: 2rem;">
+    <h3 style="margin: 0 0 1rem 0; color: #374151; font-size: 1rem; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #F3F4F6; padding-bottom: 0.75rem;">
+        <i class="fas fa-car" style="color: #3B82F6;"></i> Vehículos Registrados
+    </h3>
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem;">
+        {% for vehiculo in vehiculos %}
+        <div style="background: #F9FAFB; padding: 1rem; border-radius: 8px; border-left: 4px solid #3B82F6;">
+            <h4 style="margin: 0 0 4px 0; color: #374151; font-size: 0.9rem;">{{ vehiculo[2] }}</h4>
+            <p style="margin: 0; color: #6B7280; font-size: 0.82rem;">{{ vehiculo[3] or 'Sin tipo' }} — {{ vehiculo[4] or '' }} {{ vehiculo[5] or '' }}</p>
+        </div>
+        {% endfor %}
+    </div>
+    <div style="margin-top: 1rem; text-align: center;">
+        <a href="{{ url_for('vehiculos') }}" style="color: #3B82F6; text-decoration: none; font-weight: 500; font-size: 0.88rem;">
+            <i class="fas fa-edit"></i> Gestionar Vehículos
+        </a>
+    </div>
+</div>
+{% endif %}
+
+<script>
+const PALETTE = ['#10B981','#3B82F6','#F59E0B','#EF4444','#8B5CF6','#F43F5E','#14B8A6'];
+
+function formatKg(val) {
+    return new Intl.NumberFormat('es-CL', {minimumFractionDigits: 2, maximumFractionDigits: 2}).format(val) + ' kg CO₂e';
+}
+
+// Hover en action-cards
+document.querySelectorAll('.action-card').forEach(card => {
+    card.addEventListener('mouseenter', function() {
+        this.style.borderColor = '#10B981';
+        this.style.transform = 'translateY(-4px)';
+        this.style.boxShadow = '0 8px 20px rgba(16,185,129,0.12)';
+    });
+    card.addEventListener('mouseleave', function() {
+        this.style.borderColor = '#E5E7EB';
+        this.style.transform = '';
+        this.style.boxShadow = '';
+    });
+});
+document.querySelectorAll('.stat-card').forEach(card => {
+    card.style.transition = 'transform 0.25s, box-shadow 0.25s';
+    card.addEventListener('mouseenter', () => { card.style.transform = 'translateY(-3px)'; card.style.boxShadow = '0 8px 20px rgba(0,0,0,0.12)'; });
+    card.addEventListener('mouseleave', () => { card.style.transform = ''; card.style.boxShadow = ''; });
+});
+
+// Gráfico de tendencia mensual (stacked line por Alcance)
+{% if tendencia_labels %}
+(function() {
+    const labels = {{ tendencia_labels | tojson }};
+    const a1 = {{ tendencia_a1 | tojson }};
+    const a2 = {{ tendencia_a2 | tojson }};
+    const a3 = {{ tendencia_a3 | tojson }};
+
+    new Chart(document.getElementById('chartTendencia'), {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Alcance 1 – Directo',
+                    data: a1,
+                    backgroundColor: '#EF444480',
+                    borderColor: '#EF4444',
+                    borderWidth: 1.5,
+                    borderRadius: 4,
+                    stack: 'alcances'
+                },
+                {
+                    label: 'Alcance 2 – Electricidad',
+                    data: a2,
+                    backgroundColor: '#F59E0B80',
+                    borderColor: '#F59E0B',
+                    borderWidth: 1.5,
+                    borderRadius: 4,
+                    stack: 'alcances'
+                },
+                {
+                    label: 'Alcance 3 – Residuos',
+                    data: a3,
+                    backgroundColor: '#10B98180',
+                    borderColor: '#10B981',
+                    borderWidth: 1.5,
+                    borderRadius: 4,
+                    stack: 'alcances'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 12 } },
+                tooltip: {
+                    callbacks: {
+                        label: ctx => ' ' + ctx.dataset.label + ': ' + formatKg(ctx.parsed.y),
+                        afterBody: function(items) {
+                            const idx = items[0].dataIndex;
+                            const total = a1[idx] + a2[idx] + a3[idx];
+                            return ['', 'Total: ' + formatKg(total)];
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: { grid: { display: false }, stacked: true },
+                y: { beginAtZero: true, stacked: true, grid: { color: '#E5E7EB' },
+                     ticks: { callback: v => v >= 1000 ? (v/1000).toFixed(1) + 'k' : v } }
+            }
+        }
+    });
+})();
+{% endif %}
+
+// Gráfico categorías (doughnut)
+{% if categorias_data %}
+(function() {
+    const labels = [{% for c in categorias_data %}"{{ c.fuente }}",{% endfor %}];
+    const data   = [{% for c in categorias_data %}{{ c.total }},{% endfor %}];
+    {% if total_emision_combustible is defined and total_emision_combustible > 0 %}
+    labels.push('Vehículos');
+    data.push({{ total_emision_combustible }});
+    {% endif %}
+    const total = data.reduce((a, b) => a + b, 0);
+
+    new Chart(document.getElementById('chartCategorias'), {
+        type: 'doughnut',
+        data: {
+            labels: labels,
+            datasets: [{ data: data, backgroundColor: PALETTE, borderWidth: 2, borderColor: '#fff' }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '62%',
+            plugins: {
+                legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 12 } },
+                tooltip: {
+                    callbacks: {
+                        label: ctx => {
+                            const pct = total > 0 ? (ctx.parsed / total * 100).toFixed(1) : 0;
+                            return ' ' + ctx.label + ': ' + formatKg(ctx.parsed) + ' (' + pct + '%)';
+                        }
+                    }
+                }
+            }
+        }
+    });
+})();
+{% endif %}
+
+// Gráfico vehículos (bar)
+{% if vehiculos_emisiones is defined and vehiculos_emisiones %}
+(function() {
+    const vData = {{ vehiculos_emisiones | tojson }};
+    if (!vData || !vData.length) return;
+    new Chart(document.getElementById('chartVehiculos'), {
+        type: 'bar',
+        data: {
+            labels: vData.map(v => v.patente),
+            datasets: [{
+                label: 'kg CO₂e',
+                data: vData.map(v => parseFloat(v.total_emision.toFixed(2))),
+                backgroundColor: '#3B82F6AA',
+                borderColor: '#3B82F6',
+                borderWidth: 1.5,
+                borderRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: { callbacks: { label: ctx => ' ' + formatKg(ctx.parsed.y) } }
+            },
+            scales: {
+                y: { beginAtZero: true, grid: { color: '#E5E7EB' }, ticks: { callback: v => v >= 1000 ? (v/1000).toFixed(1) + 'k' : v } },
+                x: { grid: { display: false } }
+            }
+        }
+    });
+})();
+{% endif %}
+</script>
+
+<style>
+    @media (max-width: 768px) {
+        .stats-grid { grid-template-columns: 1fr 1fr !important; }
+        .quick-actions { grid-template-columns: 1fr 1fr !important; }
+        .dashboard-header { padding: 1.5rem !important; }
+        .dashboard-header h1 { font-size: 1.4rem !important; }
+    }
+    @media (max-width: 500px) {
+        .stats-grid, .quick-actions { grid-template-columns: 1fr !important; }
+    }
+</style>
+{% endblock %}

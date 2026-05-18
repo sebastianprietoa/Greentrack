@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}Dashboard Residuos - EcoTrack{% endblock %}
+
+{% block content %}
+<div style="padding: 2rem; max-width: 1200px; margin: 0 auto;">
+    
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2.5rem; flex-wrap: wrap; gap: 20px;">
+        <div>
+            <h2 style="margin: 0; color: #111827; font-size: 1.8rem;">Análisis de Residuos (Alcance 3)</h2>
+            <p style="color: #6B7280; margin-top: 5px;">Visualización del impacto generado por disposición y tratamiento.</p>
+        </div>
+        
+        <div style="display: flex; align-items: center; gap: 20px;">
+            
+            <a href="/formulario_residuos" style="background: #10B981; color: white; text-decoration: none; padding: 14px 24px; border-radius: 8px; font-weight: 600; font-size: 1rem; transition: background 0.3s; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3); display: inline-flex; align-items: center; gap: 8px;">
+                <i class="fas fa-plus-circle"></i> Agregar Registro
+            </a>
+            
+            <div style="background: white; padding: 1rem 2rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-left: 5px solid #10B981; text-align: center;">
+                <p style="margin: 0; font-size: 0.85rem; color: #6B7280; font-weight: 700; text-transform: uppercase;">Emisión Total</p>
+                <h3 style="margin: 5px 0 0 0; font-size: 1.8rem; color: #111827;">{{ "{:,.2f}".format(total_emision) }} <span style="font-size: 0.9rem; color: #6B7280;">kg CO₂e</span></h3>
+            </div>
+        </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 2rem;">
+        
+        <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+            <h4 style="margin-top: 0; color: #374151; text-align: center;">Emisiones por Clasificación</h4>
+            <div style="position: relative; height: 300px; width: 100%;">
+                <canvas id="graficoCategoria"></canvas>
+            </div>
+        </div>
+
+        <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+            <h4 style="margin-top: 0; color: #374151;">Evolución Mensual de Emisiones</h4>
+            <div style="position: relative; height: 300px; width: 100%;">
+                <canvas id="graficoMeses"></canvas>
+            </div>
+        </div>
+        
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const datosCat = {{ datos_categoria | tojson }};
+    const datosMes = {{ datos_mes | tojson }};
+
+    const paletaVerdes = ['#059669', '#10B981', '#34D399', '#6EE7B7', '#A7F3D0', '#064E3B', '#047857'];
+
+    if (datosCat && datosCat.length > 0) {
+        new Chart(document.getElementById('graficoCategoria'), {
+            type: 'doughnut',
+            data: {
+                labels: datosCat.map(d => d.categoria),
+                datasets: [{
+                    data: datosCat.map(d => d.total),
+                    backgroundColor: paletaVerdes,
+                    borderWidth: 2,
+                    borderColor: '#ffffff'
+                }]
+            },
+            options: { 
+                responsive: true, 
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom' } }
+            }
+        });
+    }
+
+    if (datosMes && datosMes.length > 0) {
+        new Chart(document.getElementById('graficoMeses'), {
+            type: 'bar',
+            data: {
+                labels: datosMes.map(d => d.mes),
+                datasets: [{
+                    label: 'kg CO₂e',
+                    data: datosMes.map(d => d.total),
+                    backgroundColor: '#10B981',
+                    borderRadius: 6,
+                    barPercentage: 0.6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { 
+                    y: { beginAtZero: true, grid: { borderDash: [2, 4], color: '#E5E7EB' } },
+                    x: { grid: { display: false } }
+                },
+                plugins: { legend: { display: false } }
+            }
+        });
+    }
+</script>
+{% endblock %}

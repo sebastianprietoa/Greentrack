@@ -1,0 +1,290 @@
+{% extends "base.html" %}
+
+{% block title %}Combustible Móvil - GreenTrack{% endblock %}
+
+{% block content %}
+<div style="max-width: 1200px; margin: 0 auto;">
+    <div style="margin-bottom: 2rem;">
+        <h1 style="color: #111827; display: flex; align-items: center; gap: 10px;">
+            <i class="fas fa-gas-pump"></i> Consumo de Combustible - Vehículos
+        </h1>
+        <p style="color: #6B7280;">Registro mensual de consumo por vehículo</p>
+    </div>
+
+    <!-- Selección de vehículos -->
+    <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 2rem;">
+        <h2 style="margin-bottom: 1rem; color: #374151;">
+            <i class="fas fa-list"></i> Seleccione Vehículos a Reportar
+        </h2>
+        <p style="color: #6B7280; margin-bottom: 1.5rem;">
+            Seleccione los vehículos para los cuales desea registrar consumo de combustible.
+            El sistema creará una tabla por cada vehículo seleccionado.
+        </p>
+        
+        <div id="listaVehiculosSeleccion" style="margin-bottom: 1.5rem;">
+            <!-- Los vehículos se cargarán aquí -->
+            <p style="color: #6B7280; text-align: center; padding: 1rem;">
+                Cargando vehículos...
+            </p>
+        </div>
+        
+        <button id="btnCrearTablas" style="background: #10B981; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 10px; margin: 0 auto;">
+            <i class="fas fa-table"></i> Crear Tablas de Consumo
+        </button>
+    </div>
+
+    <!-- Tablas de consumo por vehículo -->
+    <div id="tablasConsumo" style="display: none;">
+        <!-- Las tablas se generarán aquí dinámicamente -->
+    </div>
+
+    <!-- Botón para guardar todo -->
+    <div style="margin-top: 2rem; text-align: center;">
+        <button id="btnGuardarTodo" style="background: #3B82F6; color: white; border: none; padding: 14px 40px; border-radius: 8px; font-size: 1.1rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 10px;">
+            <i class="fas fa-save"></i> Guardar Todos los Registros
+        </button>
+    </div>
+</div>
+
+<script>
+// Cargar vehículos de la empresa
+async function cargarVehiculos() {
+    try {
+        const response = await fetch('/api/vehiculos');
+        const vehiculos = await response.json();
+        
+        const contenedor = document.getElementById('listaVehiculosSeleccion');
+        contenedor.innerHTML = '';
+        
+        if (vehiculos.length === 0) {
+            contenedor.innerHTML = `
+                <div style="background: #FEF3C7; border: 1px solid #FCD34D; border-radius: 10px; padding: 1.5rem; text-align: center;">
+                    <i class="fas fa-exclamation-triangle" style="font-size: 2rem; color: #D97706; margin-bottom: 0.75rem; display: block;"></i>
+                    <p style="color: #92400E; font-weight: 600; margin: 0 0 0.5rem 0;">No hay vehículos registrados</p>
+                    <p style="color: #78350F; font-size: 0.9rem; margin: 0 0 1rem 0;">Debes registrar al menos un vehículo antes de ingresar consumo de combustible.</p>
+                    <a href="{{ url_for('vehiculos') }}" style="background: #D97706; color: white; padding: 8px 20px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 0.9rem;">
+                        <i class="fas fa-plus"></i> Ir a Registrar Vehículos
+                    </a>
+                </div>
+            `;
+            document.getElementById('btnCrearTablas').style.display = 'none';
+            document.getElementById('btnGuardarTodo').style.display = 'none';
+            return;
+        }
+        
+        vehiculos.forEach(vehiculo => {
+            const div = document.createElement('div');
+            div.className = 'vehiculo-checkbox';
+            div.style.cssText = `
+                display: flex;
+                align-items: center;
+                gap: 1rem;
+                padding: 1rem;
+                background: #F9FAFB;
+                border-radius: 8px;
+                margin-bottom: 0.5rem;
+            `;
+            
+            div.innerHTML = `
+                <input type="checkbox" id="vehiculo_${vehiculo.id}" value="${vehiculo.id}" 
+                       style="width: 18px; height: 18px;">
+                <label for="vehiculo_${vehiculo.id}" style="flex: 1; font-weight: 600; color: #374151;">
+                    ${vehiculo.patente} - ${vehiculo.tipo || 'Sin tipo'}
+                </label>
+                <span style="color: #6B7280; font-size: 0.9rem;">
+                    ${vehiculo.marca || ''} ${vehiculo.modelo || ''}
+                </span>
+            `;
+            
+            contenedor.appendChild(div);
+        });
+    } catch (error) {
+        console.error('Error al cargar vehículos:', error);
+    }
+}
+
+// Crear tablas para los vehículos seleccionados
+document.getElementById('btnCrearTablas').addEventListener('click', function() {
+    const vehiculosSeleccionados = Array.from(document.querySelectorAll('input[type="checkbox"]:checked'))
+        .map(checkbox => {
+            const id = checkbox.value;
+            const label = checkbox.nextElementSibling.textContent.trim();
+            return { id, label };
+        });
+    
+    if (vehiculosSeleccionados.length === 0) {
+        alert('Seleccione al menos un vehículo');
+        return;
+    }
+    
+    const tablasContenedor = document.getElementById('tablasConsumo');
+    tablasContenedor.innerHTML = '';
+    tablasContenedor.style.display = 'block';
+    
+    vehiculosSeleccionados.forEach((vehiculo, index) => {
+        const tablaDiv = document.createElement('div');
+        tablaDiv.className = 'tabla-consumo';
+        tablaDiv.dataset.vehiculoId = vehiculo.id;
+        tablaDiv.style.cssText = `
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        `;
+        
+        tablaDiv.innerHTML = `
+            <h3 style="margin-bottom: 1.5rem; color: #374151; display: flex; align-items: center; gap: 10px;">
+                <i class="fas fa-car"></i> ${vehiculo.label}
+                <input type="hidden" name="vehiculo_id[]" value="${vehiculo.id}">
+            </h3>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+                <div>
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #374151;">Tipo de Combustible</label>
+                    <select name="combustible_${vehiculo.id}" style="width: 100%; padding: 10px 14px; border: 2px solid #E5E7EB; border-radius: 8px; font-size: 1rem;">
+                        <option value="diesel">Diésel</option>
+                        <option value="bencina">Bencina</option>
+                        <option value="gas_natural">Gas Natural</option>
+                        <option value="glp">GLP</option>
+                        <option value="electricidad">Electricidad</option>
+                        <option value="otro">Otro</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #374151;">Unidad de Medida</label>
+                    <select name="unidad_${vehiculo.id}" style="width: 100%; padding: 10px 14px; border: 2px solid #E5E7EB; border-radius: 8px; font-size: 1rem;">
+                        <option value="litros">Litros (L)</option>
+                        <option value="kg">Kilogramos (kg)</option>
+                        <option value="m3">Metros cúbicos (m³)</option>
+                        <option value="kwh">Kilovatios-hora (kWh)</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #374151;">Cantidad</label>
+                    <input type="number" name="cantidad_${vehiculo.id}" step="0.01" min="0.01" 
+                           style="width: 100%; padding: 10px 14px; border: 2px solid #E5E7EB; border-radius: 8px; font-size: 1rem;" 
+                           placeholder="Ej: 150.5">
+                </div>
+                
+                <div>
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #374151;">Costo (opcional)</label>
+                    <input type="number" name="costo_${vehiculo.id}" step="0.01" min="0"
+                           style="width: 100%; padding: 10px 14px; border: 2px solid #E5E7EB; border-radius: 8px; font-size: 1rem;" 
+                           placeholder="Ej: 150000">
+                </div>
+            </div>
+            
+            <div>
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #374151;">Período (Mes/Año)</label>
+                <input type="month" name="periodo_${vehiculo.id}" 
+                       style="width: 100%; max-width: 300px; padding: 10px 14px; border: 2px solid #E5E7EB; border-radius: 8px; font-size: 1rem;">
+            </div>
+        `;
+        
+        tablasContenedor.appendChild(tablaDiv);
+    });
+    
+    // Desplazar hacia las tablas
+    tablasContenedor.scrollIntoView({ behavior: 'smooth' });
+});
+
+// Guardar todos los registros
+document.getElementById('btnGuardarTodo').addEventListener('click', async function() {
+    const btn = this;
+    const registros = [];
+    const tablas = document.querySelectorAll('.tabla-consumo');
+    let hayErrores = false;
+
+    // Limpiar errores previos
+    document.querySelectorAll('.tabla-consumo input, .tabla-consumo select').forEach(el => {
+        el.style.border = '2px solid #E5E7EB';
+    });
+    document.querySelectorAll('.msg-error-campo').forEach(el => el.remove());
+
+    tablas.forEach(tabla => {
+        const vehiculoId = tabla.dataset.vehiculoId;
+        const cantidadInput = tabla.querySelector(`input[name="cantidad_${vehiculoId}"]`);
+        const periodoInput = tabla.querySelector(`input[name="periodo_${vehiculoId}"]`);
+        const cantidad = parseFloat(cantidadInput.value) || 0;
+        const periodo = periodoInput.value;
+
+        // Validación visual
+        if (!periodo) {
+            periodoInput.style.border = '2px solid #EF4444';
+            const msg = document.createElement('p');
+            msg.className = 'msg-error-campo';
+            msg.style.cssText = 'color:#EF4444;font-size:0.8rem;margin:3px 0 0 0;';
+            msg.textContent = 'El período es obligatorio';
+            periodoInput.parentNode.appendChild(msg);
+            hayErrores = true;
+        }
+        if (cantidad <= 0) {
+            cantidadInput.style.border = '2px solid #EF4444';
+            const msg = document.createElement('p');
+            msg.className = 'msg-error-campo';
+            msg.style.cssText = 'color:#EF4444;font-size:0.8rem;margin:3px 0 0 0;';
+            msg.textContent = 'Ingresa una cantidad mayor a 0';
+            cantidadInput.parentNode.appendChild(msg);
+            hayErrores = true;
+        }
+
+        if (cantidad > 0 && periodo) {
+            const combustible = tabla.querySelector(`select[name="combustible_${vehiculoId}"]`).value;
+            const unidad = tabla.querySelector(`select[name="unidad_${vehiculoId}"]`).value;
+            const costo = parseFloat(tabla.querySelector(`input[name="costo_${vehiculoId}"]`).value) || 0;
+            registros.push({
+                vehiculo_id: parseInt(vehiculoId),
+                combustible,
+                unidad,
+                cantidad,
+                costo,
+                periodo
+            });
+        }
+    });
+
+    if (hayErrores || registros.length === 0) {
+        if (registros.length === 0 && !hayErrores)
+            alert('Complete al menos un registro con cantidad y período válidos');
+        return;
+    }
+
+    // Estado de carga
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando…';
+
+    try {
+        const response = await fetch('/api/combustible/movil', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ registros })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            let msg = `✅ Se guardaron ${result.guardados} registro(s) correctamente.`;
+            if (result.errores && result.errores.length > 0)
+                msg += `\n⚠️ Advertencias:\n- ${result.errores.join('\n- ')}`;
+            alert(msg);
+            window.location.href = "{{ url_for('dashboard') }}";
+        } else {
+            alert('❌ Error al guardar:\n' + result.message);
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-save"></i> Guardar Todos los Registros';
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('❌ Error de conexión al guardar los registros. Intenta de nuevo.');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-save"></i> Guardar Todos los Registros';
+    }
+});
+
+// Inicializar
+document.addEventListener('DOMContentLoaded', cargarVehiculos);
+</script>
+{% endblock %}

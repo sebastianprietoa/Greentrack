@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}Reporte: {{ empresa }} - EcoTrack{% endblock %}
+
+{% block content %}
+<div style="padding: 2rem; max-width: 1200px; margin: 0 auto;">
+    
+    <div style="margin-bottom: 1.5rem;">
+        <a href="/admin/empresas" style="color: #6B7280; text-decoration: none; font-weight: 500; display: inline-flex; align-items: center; gap: 8px;">
+            <i class="fas fa-arrow-left"></i> Volver al Panel de Control
+        </a>
+    </div>
+
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 20px;">
+        <div>
+            <span style="background: #1E40AF; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase;">Vista de Administrador</span>
+            <h2 style="margin: 10px 0 0 0; color: #111827; font-size: 2rem;">Reporte de {{ empresa }}</h2>
+            <p style="color: #6B7280; margin-top: 5px;">Auditoría de emisiones y registros. Total de operaciones: {{ kpis['total_reg'] }}</p>
+        </div>
+        
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <a href="/admin/exportar/{{ empresa }}" style="background: #10B981; color: white; text-decoration: none; padding: 12px 20px; border-radius: 8px; font-weight: 600; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.2); display: flex; align-items: center; gap: 8px;">
+                <i class="fas fa-download"></i> Descargar Data (Excel)
+            </a>
+            
+            <div style="background: white; padding: 1rem 2rem; border-radius: 12px; border-left: 5px solid #3B82F6; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+                <p style="margin: 0; font-size: 0.85rem; color: #6B7280; font-weight: 700;">HUELLA TOTAL</p>
+                <h3 style="margin: 5px 0 0 0; font-size: 1.8rem; color: #111827;">{{ "{:,.2f}".format(kpis['total_emi'] or 0) }} <span style="font-size: 0.9rem; color: #6B7280;">kg CO₂e</span></h3>
+            </div>
+        </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 2rem;">
+        
+        <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+            <h4 style="margin-top: 0; color: #374151; text-align: center;">Distribución por Fuente</h4>
+            <div style="position: relative; height: 300px; width: 100%;">
+                <canvas id="graficoFuentes"></canvas>
+            </div>
+        </div>
+
+        <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+            <h4 style="margin-top: 0; color: #374151;">Histórico de Emisiones Generales</h4>
+            <div style="position: relative; height: 300px; width: 100%;">
+                <canvas id="graficoMeses"></canvas>
+            </div>
+        </div>
+        
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const datosFuente = {{ datos_fuente | tojson }};
+    const datosMes = {{ datos_mes | tojson }};
+
+    if (datosFuente && datosFuente.length > 0) {
+        new Chart(document.getElementById('graficoFuentes'), {
+            type: 'doughnut',
+            data: {
+                labels: datosFuente.map(d => d.fuente),
+                datasets: [{
+                    data: datosFuente.map(d => d.total),
+                    backgroundColor: ['#EF4444', '#F59E0B', '#3B82F6', '#10B981', '#8B5CF6'],
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+    }
+
+    if (datosMes && datosMes.length > 0) {
+        new Chart(document.getElementById('graficoMeses'), {
+            type: 'bar',
+            data: {
+                labels: datosMes.map(d => d.mes),
+                datasets: [{
+                    label: 'kg CO₂e',
+                    data: datosMes.map(d => d.total),
+                    backgroundColor: '#3B82F6',
+                    borderRadius: 4
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+    }
+</script>
+{% endblock %}

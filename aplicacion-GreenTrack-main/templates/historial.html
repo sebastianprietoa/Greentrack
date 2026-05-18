@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+{% block title %}Historial - GreenTrack{% endblock %}
+
+{% block content %}
+
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+    <div>
+        <h1 style="margin: 0; color: #111827; font-size: 1.4rem; display: flex; align-items: center; gap: 10px;">
+            <i class="fas fa-list-alt" style="color: #3B82F6;"></i> Historial de Actividades
+        </h1>
+        <p style="color: #6B7280; margin: 3px 0 0 0; font-size: 0.88rem;">{{ empresa }} — {{ total | formato_cl }} registro(s) encontrado(s)</p>
+    </div>
+    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+        <a href="/exportar_ghg" style="background: #064E3B; color: white; padding: 9px 16px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 0.88rem; display: flex; align-items: center; gap: 7px;">
+            <i class="fas fa-file-excel"></i> Descargar GHG Protocol
+        </a>
+        <a href="/dashboard" style="background: white; border: 1px solid #D1D5DB; padding: 9px 16px; border-radius: 8px; color: #374151; text-decoration: none; font-weight: 600; font-size: 0.88rem;">
+            <i class="fas fa-arrow-left"></i> Dashboard
+        </a>
+    </div>
+</div>
+
+<!-- Barra de filtros -->
+<form method="GET" action="/historial" id="formFiltros">
+<div style="background: white; padding: 1.25rem 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-bottom: 1.5rem; display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end;">
+
+    <div style="flex: 1; min-width: 160px;">
+        <label style="display: block; font-size: 0.75rem; font-weight: 700; color: #6B7280; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 5px;">Búsqueda</label>
+        <div style="position: relative;">
+            <i class="fas fa-search" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #9CA3AF; font-size: 0.8rem;"></i>
+            <input type="text" name="q" value="{{ filtro_q }}" placeholder="Fuente, actividad, categoría…"
+                   style="width: 100%; padding: 8px 10px 8px 30px; border: 1px solid #D1D5DB; border-radius: 7px; font-size: 0.88rem; box-sizing: border-box; outline: none;">
+        </div>
+    </div>
+
+    <div style="min-width: 140px;">
+        <label style="display: block; font-size: 0.75rem; font-weight: 700; color: #6B7280; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 5px;">Alcance</label>
+        <select name="alcance" style="width: 100%; padding: 8px 10px; border: 1px solid #D1D5DB; border-radius: 7px; font-size: 0.88rem; background: white;">
+            <option value="">Todos</option>
+            {% for a in alcances_disponibles %}
+            <option value="{{ a }}" {% if filtro_alcance == a %}selected{% endif %}>{{ a }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div style="min-width: 170px;">
+        <label style="display: block; font-size: 0.75rem; font-weight: 700; color: #6B7280; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 5px;">Fuente</label>
+        <select name="fuente" style="width: 100%; padding: 8px 10px; border: 1px solid #D1D5DB; border-radius: 7px; font-size: 0.88rem; background: white;">
+            <option value="">Todas</option>
+            {% for f in fuentes_disponibles %}
+            <option value="{{ f }}" {% if filtro_fuente == f %}selected{% endif %}>{{ f }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div style="min-width: 100px;">
+        <label style="display: block; font-size: 0.75rem; font-weight: 700; color: #6B7280; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 5px;">Año</label>
+        <select name="anio" style="width: 100%; padding: 8px 10px; border: 1px solid #D1D5DB; border-radius: 7px; font-size: 0.88rem; background: white;">
+            <option value="">Todos</option>
+            {% for a in anios_disponibles %}
+            <option value="{{ a }}" {% if filtro_anio == a %}selected{% endif %}>{{ a }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div style="display: flex; gap: 6px;">
+        <button type="submit" style="padding: 8px 18px; background: #3B82F6; color: white; border: none; border-radius: 7px; font-weight: 600; font-size: 0.88rem; cursor: pointer;">
+            <i class="fas fa-filter"></i> Filtrar
+        </button>
+        {% if filtro_alcance or filtro_fuente or filtro_anio or filtro_q %}
+        <a href="/historial" style="padding: 8px 14px; background: #F3F4F6; color: #6B7280; border-radius: 7px; font-weight: 600; font-size: 0.88rem; text-decoration: none; display: flex; align-items: center; gap: 5px;">
+            <i class="fas fa-times"></i> Limpiar
+        </a>
+        {% endif %}
+    </div>
+
+</div>
+</form>
+
+<!-- Tabla -->
+<div style="background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); overflow: hidden;">
+    <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.87rem; min-width: 750px;">
+            <thead>
+                <tr style="background: #F9FAFB;">
+                    <th style="padding: 10px 14px; text-align: left; color: #6B7280; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid #E5E7EB; white-space: nowrap;">Fecha</th>
+                    <th style="padding: 10px 14px; text-align: left; color: #6B7280; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid #E5E7EB;">Alcance</th>
+                    <th style="padding: 10px 14px; text-align: left; color: #6B7280; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid #E5E7EB;">Fuente</th>
+                    <th style="padding: 10px 14px; text-align: left; color: #6B7280; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid #E5E7EB;">Categoría / Actividad</th>
+                    <th style="padding: 10px 14px; text-align: right; color: #6B7280; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid #E5E7EB;">Cantidad</th>
+                    <th style="padding: 10px 14px; text-align: right; color: #6B7280; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid #E5E7EB;">Huella CO₂e</th>
+                    <th style="padding: 10px 14px; text-align: center; color: #6B7280; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid #E5E7EB;"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% set colores_alcance = {'Alcance 1': '#EF4444', 'Alcance 2': '#F59E0B', 'Alcance 3': '#10B981'} %}
+                {% set bg_alcance = {'Alcance 1': '#FEF2F2', 'Alcance 2': '#FFFBEB', 'Alcance 3': '#F0FDF4'} %}
+                {% for reg in registros %}
+                <tr style="border-bottom: 1px solid #F3F4F6;" onmouseover="this.style.background='#FAFAFA'" onmouseout="this.style.background=''">
+                    <td style="padding: 10px 14px; color: #6B7280; white-space: nowrap; font-size: 0.82rem;">
+                        {{ reg.fecha | string | truncate(10, True, '') }}
+                    </td>
+                    <td style="padding: 10px 14px;">
+                        {% if reg.fuente in ('Combustión Fija', 'Combustible Móvil', 'Combustión Estacionaria', 'Refrigerantes', 'Fugas de Refrigerantes') %}
+                            {% set alc = 'Alcance 1' %}
+                        {% elif reg.fuente == 'Electricidad' %}
+                            {% set alc = 'Alcance 2' %}
+                        {% elif reg.fuente == 'Residuos' %}
+                            {% set alc = 'Alcance 3' %}
+                        {% else %}
+                            {% set alc = reg.alcance or '—' %}
+                        {% endif %}
+                        <span style="background: {{ bg_alcance.get(alc, '#F3F4F6') }}; color: {{ colores_alcance.get(alc, '#6B7280') }}; padding: 2px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 700; white-space: nowrap;">
+                            {{ alc }}
+                        </span>
+                    </td>
+                    <td style="padding: 10px 14px;">
+                        <span style="background: #EFF6FF; color: #1E40AF; padding: 2px 9px; border-radius: 8px; font-size: 0.75rem; font-weight: 700;">{{ reg.fuente or '—' }}</span>
+                    </td>
+                    <td style="padding: 10px 14px; color: #374151;">
+                        {% if reg.categoria %}
+                        <div style="font-weight: 600; font-size: 0.85rem;">{{ reg.categoria }}</div>
+                        {% endif %}
+                        {% if reg.actividad and reg.actividad != reg.categoria %}
+                        <div style="font-size: 0.78rem; color: #9CA3AF; margin-top: 1px;">{{ reg.actividad }}</div>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 10px 14px; text-align: right; color: #374151; font-weight: 600; white-space: nowrap;">
+                        {% if reg.cantidad and reg.cantidad > 0 %}
+                            {{ "%.4g" | format(reg.cantidad) }} <span style="color: #9CA3AF; font-weight: 400; font-size: 0.8rem;">{{ reg.unidad or '' }}</span>
+                        {% else %}
+                            <span style="color: #D1D5DB;">—</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 10px 14px; text-align: right; font-weight: 700; white-space: nowrap;">
+                        {% if reg.emision and reg.emision > 0 %}
+                            <span style="color: #10B981;">{{ reg.emision | formato_cl }}</span>
+                            <span style="color: #9CA3AF; font-weight: 400; font-size: 0.78rem;"> kg</span>
+                        {% else %}
+                            <span style="color: #D1D5DB;">0.00 kg</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 10px 14px; text-align: center;">
+                        <a href="{{ url_for('eliminar_cualquier_registro', tipo=reg.tipo_tabla, id=reg.id) }}"
+                           onclick="return confirm('¿Eliminar este registro permanentemente?')"
+                           style="color: #EF4444; text-decoration: none; opacity: 0.6; transition: opacity 0.2s;"
+                           onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'"
+                           title="Eliminar">
+                            <i class="fas fa-trash-alt"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" style="padding: 4rem; text-align: center; color: #9CA3AF;">
+                        <i class="fas fa-search" style="font-size: 2.5rem; display: block; margin-bottom: 1rem; color: #E5E7EB;"></i>
+                        {% if filtro_alcance or filtro_fuente or filtro_anio or filtro_q %}
+                            No hay registros que coincidan con los filtros aplicados.
+                        {% else %}
+                            No hay registros aún.
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Paginación -->
+    <div style="padding: 1rem 1.5rem; border-top: 1px solid #F3F4F6; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+        <span style="color: #6B7280; font-size: 0.85rem;">
+            {{ total | formato_cl }} registro(s) · Página <strong>{{ pagina }}</strong> de <strong>{{ total_paginas }}</strong>
+        </span>
+        {% if total_paginas > 1 %}
+        <div style="display: flex; gap: 4px; align-items: center; flex-wrap: wrap;">
+            {% set qs = '&alcance=' ~ filtro_alcance ~ '&fuente=' ~ filtro_fuente ~ '&anio=' ~ filtro_anio ~ '&q=' ~ filtro_q %}
+            {% if pagina > 1 %}
+            <a href="?pagina={{ pagina - 1 }}{{ qs }}" style="padding: 6px 12px; border: 1px solid #D1D5DB; border-radius: 6px; color: #374151; text-decoration: none; font-size: 0.85rem; background: white;">← Anterior</a>
+            {% endif %}
+            {% for p in range([1, pagina - 2]|max, [total_paginas + 1, pagina + 3]|min) %}
+            <a href="?pagina={{ p }}{{ qs }}" style="padding: 6px 11px; border: 1px solid {% if p == pagina %}#3B82F6{% else %}#D1D5DB{% endif %}; border-radius: 6px; color: {% if p == pagina %}white{% else %}#374151{% endif %}; background: {% if p == pagina %}#3B82F6{% else %}white{% endif %}; text-decoration: none; font-size: 0.85rem; font-weight: {% if p == pagina %}700{% else %}400{% endif %};">{{ p }}</a>
+            {% endfor %}
+            {% if pagina < total_paginas %}
+            <a href="?pagina={{ pagina + 1 }}{{ qs }}" style="padding: 6px 12px; border: 1px solid #D1D5DB; border-radius: 6px; color: #374151; text-decoration: none; font-size: 0.85rem; background: white;">Siguiente →</a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}

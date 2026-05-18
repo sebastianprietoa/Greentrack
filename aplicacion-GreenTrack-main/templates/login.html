@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+{% block title %}Iniciar Sesión - GreenTrack{% endblock %}
+
+{% block content %}
+<style>
+    .login-wrap {
+        min-height: calc(100vh - 4rem);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .login-card {
+        width: 100%;
+        max-width: 440px;
+        background: white;
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: 0 24px 64px rgba(0,0,0,0.13);
+    }
+    .login-top {
+        background: linear-gradient(135deg, #0D1F19 0%, #134E35 100%);
+        padding: 2.5rem 2rem;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+    }
+    .login-top::before {
+        content: '';
+        position: absolute;
+        top: -60px; right: -60px;
+        width: 200px; height: 200px;
+        background: rgba(52,211,153,0.07);
+        border-radius: 50%;
+    }
+    .login-top::after {
+        content: '';
+        position: absolute;
+        bottom: -40px; left: -40px;
+        width: 160px; height: 160px;
+        background: rgba(52,211,153,0.05);
+        border-radius: 50%;
+    }
+    .login-top h1 {
+        color: #34D399;
+        font-size: 1.8rem;
+        font-weight: 800;
+        margin: 0 0 4px 0;
+        letter-spacing: -0.03em;
+        position: relative; z-index: 1;
+    }
+    .login-top p {
+        color: rgba(255,255,255,0.55);
+        font-size: 0.85rem;
+        margin: 0;
+        position: relative; z-index: 1;
+    }
+    .login-body { padding: 2rem; }
+    .login-body h2 {
+        color: #111827;
+        font-size: 1.15rem;
+        font-weight: 700;
+        margin: 0 0 0.25rem 0;
+    }
+    .login-body .subtitle {
+        color: #9CA3AF;
+        font-size: 0.85rem;
+        margin: 0 0 1.75rem 0;
+    }
+    .field-label {
+        display: block;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 6px;
+    }
+    .field-input {
+        width: 100%;
+        padding: 11px 14px;
+        border: 1.5px solid #E5E7EB;
+        border-radius: 10px;
+        font-size: 0.95rem;
+        font-family: 'Inter', sans-serif;
+        color: #111827;
+        outline: none;
+        transition: border-color 0.15s, box-shadow 0.15s;
+        box-sizing: border-box;
+        background: #FAFAFA;
+    }
+    .field-input:focus {
+        border-color: #34D399;
+        box-shadow: 0 0 0 3px rgba(52,211,153,0.12);
+        background: white;
+    }
+    .login-btn {
+        width: 100%;
+        padding: 13px;
+        background: linear-gradient(135deg, #10B981, #059669);
+        color: white;
+        border: none;
+        border-radius: 10px;
+        font-weight: 700;
+        font-size: 0.98rem;
+        font-family: 'Inter', sans-serif;
+        cursor: pointer;
+        transition: all 0.2s;
+        box-shadow: 0 4px 14px rgba(16,185,129,0.35);
+        letter-spacing: 0.01em;
+    }
+    .login-btn:hover {
+        background: linear-gradient(135deg, #059669, #047857);
+        box-shadow: 0 6px 20px rgba(16,185,129,0.45);
+        transform: translateY(-1px);
+    }
+    .login-footer {
+        margin-top: 1.5rem;
+        padding-top: 1.25rem;
+        border-top: 1px solid #F3F4F6;
+        text-align: center;
+        color: #9CA3AF;
+        font-size: 0.8rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+    }
+</style>
+
+<div class="login-wrap">
+    <div class="login-card">
+        <div class="login-top">
+            <img src="{{ url_for('static', filename='GT_Blanco.png') }}" alt="GreenTrack" style="height: 80px; object-fit: contain; margin: 0 auto 1rem auto; display: block; position: relative; z-index: 1;">
+            <h1>GreenTrack</h1>
+            <p>Sistema de Gestión de Huella de Carbono</p>
+        </div>
+
+        <div class="login-body">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}" style="margin-bottom: 1.25rem; font-size: 0.88rem;">
+                            <i class="fas fa-exclamation-circle"></i> {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <h2>Iniciar Sesión</h2>
+            <p class="subtitle">Ingresa tus credenciales para continuar</p>
+
+            <form method="POST" action="/">
+                <div style="margin-bottom: 1.1rem;">
+                    <label class="field-label">Correo electrónico</label>
+                    <input type="email" name="email" class="field-input" placeholder="correo@empresa.cl" required autofocus>
+                </div>
+                <div style="margin-bottom: 1.5rem;">
+                    <label class="field-label">Contraseña</label>
+                    <input type="password" name="password" class="field-input" placeholder="••••••••" required>
+                </div>
+                <button type="submit" class="login-btn">
+                    <i class="fas fa-sign-in-alt" style="margin-right: 8px;"></i> Ingresar
+                </button>
+            </form>
+
+            <div class="login-footer">
+                <i class="fas fa-lock"></i>
+                Plataforma de acceso exclusivo. Contacta al Administrador para solicitar acceso.
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

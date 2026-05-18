@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+{% block title %}Reporte: {{ empresa }} - GreenTrack{% endblock %}
+
+{% block content %}
+
+<div style="margin-bottom: 1.5rem;">
+    <a href="/admin/empresas" style="color: #6B7280; text-decoration: none; font-weight: 500; display: inline-flex; align-items: center; gap: 8px;">
+        <i class="fas fa-arrow-left"></i> Volver al Panel de Control
+    </a>
+</div>
+
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 20px;">
+    <div>
+        <span style="background: #1E40AF; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase;">Vista de Administrador</span>
+        <h2 style="margin: 10px 0 0 0; color: #111827; font-size: 2rem;">{{ empresa }}</h2>
+        <p style="color: #6B7280; margin-top: 5px;">Total de registros: {{ kpis['total_reg'] }}</p>
+    </div>
+    <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+        <button onclick="document.getElementById('modalExportarDetalle').style.display='flex'"
+           style="background: #10B981; color: white; border: none; padding: 10px 18px; border-radius: 8px; font-weight: 600; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+            <i class="fas fa-file-excel"></i> Descargar Excel
+        </button>
+        <a href="/admin/exportar_ghg_global"
+           style="background: #064E3B; color: white; text-decoration: none; padding: 10px 18px; border-radius: 8px; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+            <i class="fas fa-globe"></i> GHG Global
+        </a>
+        <div style="background: white; padding: 1rem 1.5rem; border-radius: 12px; border-left: 5px solid #3B82F6; box-shadow: 0 2px 6px rgba(0,0,0,0.07);">
+            <p style="margin: 0; font-size: 0.8rem; color: #6B7280; font-weight: 700; text-transform: uppercase;">Huella Total</p>
+            <h3 style="margin: 4px 0 0 0; font-size: 1.8rem; color: #111827;">
+                {{ "{:,.1f}".format(kpis['total_emi'] or 0) }}
+                <span style="font-size: 0.85rem; color: #6B7280;">kg CO₂e</span>
+            </h3>
+        </div>
+    </div>
+</div>
+
+{% if datos_fuente or datos_mes %}
+<div style="display: grid; grid-template-columns: 1fr 2fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+
+    <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">
+        <h4 style="margin: 0 0 1rem 0; color: #374151; text-align: center; font-size: 0.95rem;">Distribución por Fuente</h4>
+        {% if datos_fuente %}
+        <div style="position: relative; height: 280px;">
+            <canvas id="graficoFuentes"></canvas>
+        </div>
+        {% else %}
+        <div style="height: 280px; display: flex; align-items: center; justify-content: center; color: #9CA3AF;">
+            <p>Sin datos de fuente</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">
+        <h4 style="margin: 0 0 1rem 0; color: #374151; font-size: 0.95rem;">Histórico Mensual de Emisiones</h4>
+        {% if datos_mes %}
+        <div style="position: relative; height: 280px;">
+            <canvas id="graficoMeses"></canvas>
+        </div>
+        {% else %}
+        <div style="height: 280px; display: flex; align-items: center; justify-content: center; color: #9CA3AF;">
+            <p>Sin datos históricos</p>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+{% else %}
+<div style="background: white; padding: 3rem; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); text-align: center; color: #9CA3AF;">
+    <i class="fas fa-chart-bar" style="font-size: 2.5rem; margin-bottom: 1rem; display: block;"></i>
+    <p>Esta empresa aún no tiene registros de emisiones.</p>
+</div>
+{% endif %}
+
+<script>
+const COLORES = ['#10B981','#3B82F6','#F59E0B','#EF4444','#8B5CF6','#14B8A6','#F97316','#EC4899'];
+
+{% if datos_fuente %}
+(function() {
+    const datos = {{ datos_fuente | tojson }};
+    if (!datos || datos.length === 0) return;
+    new Chart(document.getElementById('graficoFuentes'), {
+        type: 'doughnut',
+        data: {
+            labels: datos.map(d => d.fuente),
+            datasets: [{
+                data: datos.map(d => parseFloat(d.total) || 0),
+                backgroundColor: COLORES,
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom', labels: { font: { size: 11 }, padding: 12 } },
+                tooltip: {
+                    callbacks: {
+                        label: ctx => ctx.label + ': ' + ctx.parsed.toLocaleString('es-CL') + ' kg CO₂e'
+                    }
+                }
+            }
+        }
+    });
+})();
+{% endif %}
+
+{% if datos_mes %}
+(function() {
+    const datos = {{ datos_mes | tojson }};
+    if (!datos || datos.length === 0) return;
+    new Chart(document.getElementById('graficoMeses'), {
+        type: 'bar',
+        data: {
+            labels: datos.map(d => d.mes),
+            datasets: [{
+                label: 'kg CO₂e',
+                data: datos.map(d => parseFloat(d.total) || 0),
+                backgroundColor: '#3B82F6BB',
+                borderColor: '#3B82F6',
+                borderWidth: 1,
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: ctx => ctx.parsed.y.toLocaleString('es-CL') + ' kg CO₂e'
+                    }
+                }
+            },
+            scales: {
+                y: { beginAtZero: true, ticks: { callback: v => v.toLocaleString('es-CL') } },
+                x: { ticks: { maxRotation: 45, font: { size: 11 } } }
+            }
+        }
+    });
+})();
+{% endif %}
+</script>
+
+<!-- Modal Exportar con filtros -->
+<div id="modalExportarDetalle" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1100; align-items:center; justify-content:center; padding:1rem;">
+    <div style="background:white; border-radius:14px; padding:2rem; max-width:460px; width:100%; box-shadow:0 20px 60px rgba(0,0,0,0.2); position:relative;">
+        <button onclick="document.getElementById('modalExportarDetalle').style.display='none'"
+                style="position:absolute; top:1rem; right:1rem; background:none; border:none; font-size:1.2rem; color:#9CA3AF; cursor:pointer;">
+            <i class="fas fa-times"></i>
+        </button>
+        <h2 style="margin:0 0 1.5rem 0; color:#111827; font-size:1.1rem; display:flex; align-items:center; gap:8px;">
+            <i class="fas fa-file-excel" style="color:#10B981;"></i> Exportar datos — {{ empresa }}
+        </h2>
+        <form method="GET" action="/admin/exportar/{{ empresa }}">
+            <div style="margin-bottom:1rem;">
+                <label style="display:block; font-size:0.75rem; font-weight:700; color:#6B7280; text-transform:uppercase; margin-bottom:5px;">Año</label>
+                <select name="anio" style="width:100%; padding:9px 12px; border:1px solid #D1D5DB; border-radius:7px; font-size:0.9rem; background:white;">
+                    <option value="Todos">Todos los años</option>
+                    {% for a in anios_disponibles %}
+                    <option value="{{ a }}">{{ a }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div style="margin-bottom:1rem;">
+                <label style="display:block; font-size:0.75rem; font-weight:700; color:#6B7280; text-transform:uppercase; margin-bottom:5px;">Fuente</label>
+                <select name="fuente" style="width:100%; padding:9px 12px; border:1px solid #D1D5DB; border-radius:7px; font-size:0.9rem; background:white;">
+                    <option value="">Todas las fuentes</option>
+                    {% for f in fuentes_disponibles %}
+                    <option value="{{ f }}">{{ f }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div style="margin-bottom:1.5rem;">
+                <label style="display:block; font-size:0.75rem; font-weight:700; color:#6B7280; text-transform:uppercase; margin-bottom:5px;">Alcance</label>
+                <select name="alcance" style="width:100%; padding:9px 12px; border:1px solid #D1D5DB; border-radius:7px; font-size:0.9rem; background:white;">
+                    <option value="">Todos los alcances</option>
+                    <option value="Alcance 1">Alcance 1 — Directo</option>
+                    <option value="Alcance 2">Alcance 2 — Electricidad</option>
+                    <option value="Alcance 3">Alcance 3 — Residuos</option>
+                </select>
+            </div>
+            <div style="display:flex; gap:10px; justify-content:flex-end;">
+                <button type="button" onclick="document.getElementById('modalExportarDetalle').style.display='none'"
+                        style="padding:9px 18px; border:1px solid #D1D5DB; border-radius:7px; background:white; color:#374151; font-weight:600; cursor:pointer;">
+                    Cancelar
+                </button>
+                <button type="submit"
+                        style="padding:9px 22px; background:#10B981; border:none; border-radius:7px; color:white; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:8px;">
+                    <i class="fas fa-download"></i> Descargar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+<script>
+document.getElementById('modalExportarDetalle').addEventListener('click', function(e) {
+    if (e.target === this) this.style.display = 'none';
+});
+</script>
+{% endblock %}

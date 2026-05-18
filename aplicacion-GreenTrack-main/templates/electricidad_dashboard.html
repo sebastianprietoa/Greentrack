@@ -1,0 +1,310 @@
+{% extends "base.html" %}
+{% block title %}Dashboard Electricidad - GreenTrack{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+    <div>
+        <h1 style="color: #111827; margin: 0;"><i class="fas fa-bolt" style="color: #F59E0B;"></i> Electricidad (Alcance 2)</h1>
+        <p style="color: #6B7280; margin: 4px 0 0 0; font-size: 0.9rem;">Emisiones calculadas bajo metodología GHG Protocol – Enfoque dual</p>
+    </div>
+    <a href="{{ url_for('registro') }}" style="background: #F59E0B; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+        <i class="fas fa-plus"></i> Registrar Consumo
+    </a>
+</div>
+
+<!-- KPIs -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+
+    <div style="background: white; padding: 1.25rem 1.5rem; border-radius: 12px; border-left: 5px solid #6366F1; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+            <i class="fas fa-store" style="color: #6366F1; font-size: 0.95rem;"></i>
+            <p style="margin: 0; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: #9CA3AF; letter-spacing: 0.05em;">Emisión – Mercado</p>
+        </div>
+        <div style="font-size: 1.5rem; font-weight: 700; color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ total_mercado | formato_kpi }}</div>
+        <p style="margin: 3px 0 0 0; color: #9CA3AF; font-size: 0.75rem;">{{ total_mercado | formato_cl }} kg CO₂e</p>
+        <p style="margin: 6px 0 0 0; font-size: 0.72rem; color: #6B7280;">Factor residual · valor oficial</p>
+    </div>
+
+    <div style="background: white; padding: 1.25rem 1.5rem; border-radius: 12px; border-left: 5px solid #10B981; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+            <i class="fas fa-map-marker-alt" style="color: #10B981; font-size: 0.95rem;"></i>
+            <p style="margin: 0; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: #9CA3AF; letter-spacing: 0.05em;">Emisión – Ubicación</p>
+        </div>
+        <div style="font-size: 1.5rem; font-weight: 700; color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ total_ubicacion | formato_kpi }}</div>
+        <p style="margin: 3px 0 0 0; color: #9CA3AF; font-size: 0.75rem;">{{ total_ubicacion | formato_cl }} kg CO₂e</p>
+        <p style="margin: 6px 0 0 0; font-size: 0.72rem; color: #6B7280;">Factor mensual del sistema</p>
+    </div>
+
+    <div style="background: white; padding: 1.25rem 1.5rem; border-radius: 12px; border-left: 5px solid #F59E0B; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+            <i class="fas fa-bolt" style="color: #F59E0B; font-size: 0.95rem;"></i>
+            <p style="margin: 0; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: #9CA3AF; letter-spacing: 0.05em;">Consumo Total</p>
+        </div>
+        <div style="font-size: 1.5rem; font-weight: 700; color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ total_kwh | formato_kpi }}</div>
+        <p style="margin: 3px 0 0 0; color: #9CA3AF; font-size: 0.75rem;">{{ total_kwh | formato_cl }} kWh</p>
+        <p style="margin: 6px 0 0 0; font-size: 0.72rem; color: #6B7280;">kWh registrados</p>
+    </div>
+
+    {% if total_mercado > 0 and total_ubicacion > 0 %}
+    {% set diferencia = total_mercado - total_ubicacion %}
+    <div style="background: white; padding: 1.25rem 1.5rem; border-radius: 12px; border-left: 5px solid {% if diferencia < 0 %}#10B981{% else %}#EF4444{% endif %}; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+            <i class="fas fa-balance-scale" style="color: #6B7280; font-size: 0.95rem;"></i>
+            <p style="margin: 0; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: #9CA3AF; letter-spacing: 0.05em;">Diferencia M vs U</p>
+        </div>
+        <div style="font-size: 1.5rem; font-weight: 700; color: {% if diferencia < 0 %}#059669{% else %}#DC2626{% endif %}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+            {% if diferencia < 0 %}-{{ (diferencia * -1) | formato_kpi }}{% else %}+{{ diferencia | formato_kpi }}{% endif %}
+        </div>
+        <p style="margin: 3px 0 0 0; color: #9CA3AF; font-size: 0.75rem;">
+            {% if diferencia < 0 %}{{ (diferencia * -1) | formato_cl }}{% else %}{{ diferencia | formato_cl }}{% endif %} kg CO₂e
+        </p>
+        <p style="margin: 6px 0 0 0; font-size: 0.72rem; color: #6B7280;">
+            {% if diferencia < 0 %}Mercado menor que ubicación{% else %}Mercado mayor que ubicación{% endif %}
+        </p>
+    </div>
+    {% endif %}
+
+    {% if total_irec > 0 %}
+    <div style="background: white; padding: 1.25rem 1.5rem; border-radius: 12px; border-left: 5px solid #059669; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+            <i class="fas fa-certificate" style="color: #059669; font-size: 0.95rem;"></i>
+            <p style="margin: 0; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: #9CA3AF; letter-spacing: 0.05em;">Registros con IREC</p>
+        </div>
+        <div style="font-size: 1.5rem; font-weight: 700; color: #111827;">{{ total_irec }}</div>
+        <p style="margin: 3px 0 0 0; color: #9CA3AF; font-size: 0.75rem;">certificados ERNC</p>
+        <p style="margin: 6px 0 0 0; font-size: 0.72rem; color: #059669;">Factor mercado = 0 aplicado</p>
+    </div>
+    {% endif %}
+
+</div>
+
+<!-- Fila 1: Tendencia mensual + Distribución por sistema -->
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 2rem; margin-bottom: 2rem;">
+
+    <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+        <h3 style="margin: 0 0 1rem 0; color: #374151; font-size: 1rem; border-bottom: 1px solid #F3F4F6; padding-bottom: 0.75rem;">
+            <i class="fas fa-chart-area" style="color: #6366F1;"></i> Tendencia Mensual — kWh y Emisiones
+        </h3>
+        {% if tendencia_elec %}
+        <div style="position: relative; height: 260px;">
+            <canvas id="chartTendenciaElec"></canvas>
+        </div>
+        {% else %}
+        <div style="text-align: center; padding: 3rem; color: #9CA3AF;">
+            <i class="fas fa-chart-area" style="font-size: 2rem; display: block; margin-bottom: 0.5rem;"></i>
+            <p style="margin: 0;">Sin datos de tendencia</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+        <h3 style="margin: 0 0 1rem 0; color: #374151; font-size: 1rem; border-bottom: 1px solid #F3F4F6; padding-bottom: 0.75rem;">
+            <i class="fas fa-network-wired" style="color: #F59E0B;"></i> Emisión por Sistema
+        </h3>
+        {% if grafico_data %}
+        {% set total_sist = namespace(v=0) %}
+        {% for item in grafico_data %}{% set total_sist.v = total_sist.v + (item.total or 0) %}{% endfor %}
+        {% set colores_sist = ['#6366F1','#10B981','#F59E0B','#3B82F6'] %}
+        {% for item in grafico_data %}
+        {% set pct = (item.total / total_sist.v * 100) if total_sist.v > 0 else 0 %}
+        <div style="margin-bottom: 1rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px;">
+                <span style="font-size: 0.82rem; font-weight: 700; color: #374151;">{{ item.sistema or item.categoria or 'Sin sistema' }}</span>
+                <span style="font-size: 0.75rem; font-weight: 700; color: {{ colores_sist[loop.index0 % 4] }};">{{ "%.1f"|format(pct) }}%</span>
+            </div>
+            <div style="background: #F3F4F6; border-radius: 999px; height: 8px; overflow: hidden;">
+                <div style="background: {{ colores_sist[loop.index0 % 4] }}; width: {{ "%.1f"|format(pct) }}%; height: 100%; border-radius: 999px;"></div>
+            </div>
+            <p style="margin: 2px 0 0 0; font-size: 0.72rem; color: #9CA3AF;">{{ item.total | formato_cl }} kg CO₂e</p>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div style="text-align: center; padding: 3rem; color: #9CA3AF;">
+            <i class="fas fa-chart-pie" style="font-size: 2rem; display: block; margin-bottom: 0.5rem;"></i>
+            <p style="margin: 0; font-size: 0.9rem;">Sin datos aún</p>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+
+<!-- Tabla de registros -->
+<div style="background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); overflow: hidden; margin-bottom: 2rem;">
+    <div style="padding: 1rem 1.5rem; border-bottom: 1px solid #F3F4F6; display: flex; justify-content: space-between; align-items: center;">
+        <h3 style="margin: 0; color: #374151; font-size: 1rem;">
+            <i class="fas fa-list" style="color: #6B7280;"></i> Historial de Registros
+        </h3>
+        <span style="font-size: 0.8rem; color: #9CA3AF;">Últimos 20 registros</span>
+    </div>
+
+    {% if registros %}
+    <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.84rem;">
+            <thead>
+                <tr style="background: #F9FAFB;">
+                    <th style="padding: 10px 14px; text-align: left; color: #6B7280; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid #E5E7EB; white-space: nowrap;">Fecha</th>
+                    <th style="padding: 10px 14px; text-align: left; color: #6B7280; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid #E5E7EB;">Sistema</th>
+                    <th style="padding: 10px 14px; text-align: left; color: #6B7280; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid #E5E7EB;">Origen</th>
+                    <th style="padding: 10px 14px; text-align: center; color: #6B7280; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid #E5E7EB;">IREC</th>
+                    <th style="padding: 10px 14px; text-align: right; color: #6B7280; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid #E5E7EB;">kWh</th>
+                    <th style="padding: 10px 14px; text-align: right; color: #6366F1; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid #6366F1; border-left: 2px solid #EEF2FF;">Factor M</th>
+                    <th style="padding: 10px 14px; text-align: right; color: #6366F1; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid #6366F1;">CO₂e Mercado</th>
+                    <th style="padding: 10px 14px; text-align: right; color: #10B981; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid #10B981; border-left: 2px solid #ECFDF5;">Factor U</th>
+                    <th style="padding: 10px 14px; text-align: right; color: #10B981; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid #10B981;">CO₂e Ubic.</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for reg in registros %}
+                {% set sistema_val = reg.sistema if reg.sistema else reg.categoria %}
+                {% set es_ernc = reg.origen_energia == 'ERNC' %}
+                {% set tiene_irec_val = reg.tiene_irec == 'Si' %}
+                {% set factor_merc = reg.factor or 0 %}
+                {% set emision_merc = reg.emision or 0 %}
+                {% set factor_ubic = reg.factor_ubicacion or 0 %}
+                {% set emision_ubic = reg.emision_ubicacion or 0 %}
+                <tr style="border-bottom: 1px solid #F3F4F6;">
+                    <td style="padding: 9px 14px; color: #6B7280; white-space: nowrap; font-size: 0.82rem;">{{ reg.fecha[:7] }}</td>
+                    <td style="padding: 9px 14px;">
+                        {% if sistema_val in ['SEN', 'SEM', 'SEA', 'SM Los Lagos'] %}
+                        <span style="background: #EFF6FF; color: #1E40AF; padding: 2px 8px; border-radius: 8px; font-size: 0.75rem; font-weight: 700;">{{ sistema_val }}</span>
+                        {% else %}
+                        <span style="font-size: 0.82rem; color: #374151; font-weight: 500;">{{ sistema_val }}</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 9px 14px;">
+                        {% if es_ernc %}
+                        <span style="background: #D1FAE5; color: #065F46; padding: 2px 8px; border-radius: 8px; font-size: 0.72rem; font-weight: 700;"><i class="fas fa-leaf"></i> ERNC</span>
+                        {% else %}
+                        <span style="background: #E0E7FF; color: #3730A3; padding: 2px 8px; border-radius: 8px; font-size: 0.72rem; font-weight: 700;"><i class="fas fa-plug"></i> Conv.</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 9px 14px; text-align: center;">
+                        {% if tiene_irec_val %}
+                        <span style="background: #F0FDF4; color: #059669; padding: 2px 7px; border-radius: 8px; font-size: 0.72rem; font-weight: 700;"><i class="fas fa-certificate"></i> Sí</span>
+                        {% else %}
+                        <span style="color: #D1D5DB; font-size: 0.82rem;">—</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 9px 14px; text-align: right; color: #374151; font-weight: 600; font-size: 0.82rem;">{{ "%.1f"|format(reg.cantidad) }}</td>
+                    <td style="padding: 9px 14px; text-align: right; border-left: 2px solid #EEF2FF; font-family: monospace; font-size: 0.78rem;">
+                        {% if es_ernc and tiene_irec_val %}
+                        <span style="color: #059669; font-weight: 700;">0,000000</span>
+                        {% else %}
+                        <span style="color: #6366F1; font-weight: 700;">{{ "%.6f"|format(factor_merc) }}</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 9px 14px; text-align: right; font-weight: 700; font-size: 0.82rem;">
+                        {% if es_ernc and tiene_irec_val %}
+                        <span style="color: #059669;">0,0000</span>
+                        {% else %}
+                        <span style="color: #6366F1;">{{ "%.4f"|format(emision_merc) }}</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 9px 14px; text-align: right; border-left: 2px solid #ECFDF5; font-family: monospace; font-size: 0.78rem;">
+                        <span style="color: #10B981; font-weight: 700;">{{ "%.6f"|format(factor_ubic) }}</span>
+                    </td>
+                    <td style="padding: 9px 14px; text-align: right; font-weight: 700; color: #10B981; font-size: 0.82rem;">{{ "%.4f"|format(emision_ubic) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div style="text-align: center; padding: 3rem; color: #6B7280;">
+        <i class="fas fa-plug" style="font-size: 2.5rem; margin-bottom: 1rem; color: #E5E7EB; display: block;"></i>
+        <p style="margin: 0 0 1rem 0;">Aún no hay registros de electricidad.</p>
+        <a href="{{ url_for('registro') }}" style="background: #F59E0B; color: white; padding: 8px 18px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 6px;">
+            <i class="fas fa-plus"></i> Registrar primer consumo
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+{% if tendencia_elec %}
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const formatKg = val => new Intl.NumberFormat('es-CL', {minimumFractionDigits:2, maximumFractionDigits:2}).format(val);
+    const datos = {{ tendencia_elec | tojson }};
+    const labels = datos.map(d => d.mes);
+    const kwh    = datos.map(d => parseFloat(d.kwh || 0).toFixed(2));
+    const emM    = datos.map(d => parseFloat(d.emision_mercado || 0).toFixed(4));
+    const emU    = datos.map(d => parseFloat(d.emision_ubicacion || 0).toFixed(4));
+
+    new Chart(document.getElementById('chartTendenciaElec'), {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'CO₂e Mercado (kg)',
+                    data: emM,
+                    backgroundColor: '#6366F180',
+                    borderColor: '#6366F1',
+                    borderWidth: 1.5,
+                    borderRadius: 4,
+                    yAxisID: 'yEmision',
+                    order: 1
+                },
+                {
+                    label: 'CO₂e Ubicación (kg)',
+                    data: emU,
+                    backgroundColor: '#10B98160',
+                    borderColor: '#10B981',
+                    borderWidth: 1.5,
+                    borderRadius: 4,
+                    yAxisID: 'yEmision',
+                    order: 2
+                },
+                {
+                    label: 'kWh consumidos',
+                    data: kwh,
+                    type: 'line',
+                    borderColor: '#F59E0B',
+                    backgroundColor: 'transparent',
+                    borderWidth: 2,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#F59E0B',
+                    tension: 0.3,
+                    yAxisID: 'yKwh',
+                    order: 0
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 12 } },
+                tooltip: {
+                    callbacks: {
+                        label: ctx => {
+                            if (ctx.dataset.label.includes('kWh')) return ' ' + ctx.dataset.label + ': ' + formatKg(ctx.parsed.y) + ' kWh';
+                            return ' ' + ctx.dataset.label + ': ' + formatKg(ctx.parsed.y) + ' kg CO₂e';
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: { grid: { display: false } },
+                yEmision: {
+                    position: 'left',
+                    beginAtZero: true,
+                    grid: { color: '#E5E7EB' },
+                    title: { display: true, text: 'kg CO₂e', font: { size: 10 }, color: '#9CA3AF' },
+                    ticks: { callback: v => v >= 1000 ? (v/1000).toFixed(1)+'k' : v, font: { size: 10 } }
+                },
+                yKwh: {
+                    position: 'right',
+                    beginAtZero: true,
+                    grid: { drawOnChartArea: false },
+                    title: { display: true, text: 'kWh', font: { size: 10 }, color: '#9CA3AF' },
+                    ticks: { callback: v => v >= 1000 ? (v/1000).toFixed(1)+'k' : v, font: { size: 10 } }
+                }
+            }
+        }
+    });
+});
+</script>
+{% endif %}
+{% endblock %}

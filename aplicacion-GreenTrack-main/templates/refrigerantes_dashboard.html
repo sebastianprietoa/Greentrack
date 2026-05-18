@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+{% block title %}Refrigerantes - GreenTrack{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+    <div>
+        <h1 style="color: #111827; margin: 0;"><i class="fas fa-snowflake" style="color: #3B82F6;"></i> Fugas y Refrigerantes (Alcance 1)</h1>
+        <p style="color: #6B7280; margin: 4px 0 0 0; font-size: 0.9rem;">Control de emisiones por recargas de gases refrigerantes y extintores.</p>
+    </div>
+    <a href="/registro" style="background: #3B82F6; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+        <i class="fas fa-plus"></i> Nuevo Registro
+    </a>
+</div>
+
+<!-- KPIs -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+
+    <div style="background: white; padding: 1.25rem 1.5rem; border-radius: 12px; border-left: 5px solid #3B82F6; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+            <i class="fas fa-smog" style="color: #3B82F6; font-size: 0.95rem;"></i>
+            <p style="margin: 0; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: #9CA3AF; letter-spacing: 0.05em;">Emisión Total</p>
+        </div>
+        <div style="font-size: 1.5rem; font-weight: 700; color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ total_refrigerantes | formato_kpi }}</div>
+        <p style="margin: 3px 0 0 0; color: #9CA3AF; font-size: 0.75rem;">{{ total_refrigerantes | formato_cl }} kg CO₂e</p>
+    </div>
+
+    <div style="background: white; padding: 1.25rem 1.5rem; border-radius: 12px; border-left: 5px solid #8B5CF6; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+            <i class="fas fa-atom" style="color: #8B5CF6; font-size: 0.95rem;"></i>
+            <p style="margin: 0; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: #9CA3AF; letter-spacing: 0.05em;">Tipos de Gas</p>
+        </div>
+        <div style="font-size: 1.5rem; font-weight: 700; color: #111827;">{{ total_gases_distintos }}</div>
+        <p style="margin: 3px 0 0 0; color: #9CA3AF; font-size: 0.75rem;">gases distintos registrados</p>
+    </div>
+
+    {% if gas_top %}
+    <div style="background: white; padding: 1.25rem 1.5rem; border-radius: 12px; border-left: 5px solid #EF4444; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+            <i class="fas fa-exclamation-triangle" style="color: #EF4444; font-size: 0.95rem;"></i>
+            <p style="margin: 0; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: #9CA3AF; letter-spacing: 0.05em;">Gas más emisor</p>
+        </div>
+        <div style="font-size: 1rem; font-weight: 700; color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ gas_top.categoria }}</div>
+        <p style="margin: 3px 0 0 0; color: #9CA3AF; font-size: 0.75rem;">{{ gas_top.total | formato_cl }} kg CO₂e</p>
+    </div>
+    {% endif %}
+
+    <div style="background: white; padding: 1.25rem 1.5rem; border-radius: 12px; border-left: 5px solid #10B981; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+            <i class="fas fa-calendar-alt" style="color: #10B981; font-size: 0.95rem;"></i>
+            <p style="margin: 0; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: #9CA3AF; letter-spacing: 0.05em;">Meses registrados</p>
+        </div>
+        <div style="font-size: 1.5rem; font-weight: 700; color: #111827;">{{ datos_meses | length }}</div>
+        <p style="margin: 3px 0 0 0; color: #9CA3AF; font-size: 0.75rem;">meses con actividad</p>
+    </div>
+
+</div>
+
+<!-- Gráficos: donut gases + tendencia mensual -->
+<div style="display: grid; grid-template-columns: 1fr 2fr; gap: 2rem; margin-bottom: 2rem;">
+
+    <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+        <h3 style="margin: 0 0 1rem 0; color: #374151; font-size: 1rem; border-bottom: 1px solid #F3F4F6; padding-bottom: 0.75rem;">
+            <i class="fas fa-chart-pie" style="color: #3B82F6;"></i> Emisiones por Gas
+        </h3>
+        {% if datos_gases %}
+        {% set total_gases = datos_gases | sum(attribute='total') %}
+        {% set colores_g = ['#3B82F6','#8B5CF6','#10B981','#F59E0B','#EF4444','#14B8A6','#F43F5E'] %}
+        {% for gas in datos_gases %}
+        {% set pct = (gas.total / total_gases * 100) if total_gases > 0 else 0 %}
+        <div style="margin-bottom: 1rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px;">
+                <span style="font-size: 0.8rem; font-weight: 700; color: #374151; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 60%;">{{ gas.categoria }}</span>
+                <span style="font-size: 0.75rem; font-weight: 700; color: {{ colores_g[loop.index0 % 7] }}; white-space: nowrap;">{{ "%.1f"|format(pct) }}%</span>
+            </div>
+            <div style="background: #F3F4F6; border-radius: 999px; height: 8px; overflow: hidden;">
+                <div style="background: {{ colores_g[loop.index0 % 7] }}; width: {{ "%.1f"|format(pct) }}%; height: 100%; border-radius: 999px;"></div>
+            </div>
+            <p style="margin: 2px 0 0 0; font-size: 0.72rem; color: #9CA3AF;">{{ gas.total | formato_cl }} kg CO₂e</p>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div style="text-align: center; padding: 3rem; color: #9CA3AF;">
+            <i class="fas fa-chart-pie" style="font-size: 2rem; display: block; margin-bottom: 0.5rem;"></i>
+            <p style="margin: 0; font-size: 0.9rem;">Sin datos aún</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+        <h3 style="margin: 0 0 1rem 0; color: #374151; font-size: 1rem; border-bottom: 1px solid #F3F4F6; padding-bottom: 0.75rem;">
+            <i class="fas fa-chart-bar" style="color: #8B5CF6;"></i> Histórico Mensual de Emisiones
+        </h3>
+        {% if datos_meses %}
+        <div style="position: relative; height: 260px; width: 100%;">
+            <canvas id="graficoMesesRef"></canvas>
+        </div>
+        {% else %}
+        <div style="text-align: center; padding: 3rem; color: #9CA3AF;">
+            <i class="fas fa-chart-bar" style="font-size: 2rem; display: block; margin-bottom: 0.5rem;"></i>
+            <p style="margin: 0; font-size: 0.9rem;">Sin datos de tendencia</p>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+
+<!-- Tabla últimas recargas -->
+<div style="background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); overflow: hidden;">
+    <div style="padding: 1rem 1.5rem; border-bottom: 1px solid #F3F4F6; display: flex; justify-content: space-between; align-items: center;">
+        <h3 style="margin: 0; color: #374151; font-size: 1rem;">
+            <i class="fas fa-list" style="color: #6B7280;"></i> Últimas Recargas Reportadas
+        </h3>
+        <span style="font-size: 0.8rem; color: #9CA3AF;">Últimos 10 registros</span>
+    </div>
+    <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.87rem;">
+            <thead>
+                <tr style="background: #F9FAFB;">
+                    <th style="padding: 10px 14px; text-align: left; color: #6B7280; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid #E5E7EB;">Fecha</th>
+                    <th style="padding: 10px 14px; text-align: left; color: #6B7280; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid #E5E7EB;">Tipo de Gas</th>
+                    <th style="padding: 10px 14px; text-align: right; color: #6B7280; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid #E5E7EB;">Cantidad</th>
+                    <th style="padding: 10px 14px; text-align: right; color: #6B7280; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid #E5E7EB;">Huella CO₂e</th>
+                    <th style="padding: 10px 14px; text-align: left; color: #6B7280; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid #E5E7EB;">Impacto relativo</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if registros %}
+                {% set max_em = registros | map(attribute='emision') | max %}
+                {% for reg in registros %}
+                {% set pct_reg = (reg.emision / max_em * 100) if max_em and max_em > 0 else 0 %}
+                <tr style="border-bottom: 1px solid #F3F4F6;">
+                    <td style="padding: 10px 14px; color: #6B7280; white-space: nowrap; font-size: 0.82rem;">{{ reg.fecha | mes_anio }}</td>
+                    <td style="padding: 10px 14px;">
+                        <span style="background: #EFF6FF; color: #1E40AF; padding: 3px 9px; border-radius: 8px; font-size: 0.75rem; font-weight: 700;">{{ reg.categoria }}</span>
+                    </td>
+                    <td style="padding: 10px 14px; text-align: right; color: #374151; font-weight: 600;">
+                        {% if reg.cantidad and reg.cantidad > 0 %}
+                            {{ "%.4g" | format(reg.cantidad) }} <span style="color: #9CA3AF; font-weight: 400;">{{ reg.unidad or 'kg' }}</span>
+                        {% else %}
+                            <span style="color: #9CA3AF; font-style: italic;">—</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 10px 14px; text-align: right; color: #EF4444; font-weight: 700;">{{ reg.emision | formato_cl }} kg</td>
+                    <td style="padding: 10px 14px; min-width: 120px;">
+                        <div style="background: #F3F4F6; border-radius: 999px; height: 7px; overflow: hidden;">
+                            <div style="background: #3B82F6; width: {{ "%.1f"|format(pct_reg) }}%; height: 100%; border-radius: 999px;"></div>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+                {% else %}
+                <tr>
+                    <td colspan="5" style="padding: 3rem; text-align: center; color: #6B7280;">
+                        <i class="fas fa-clipboard-list" style="font-size: 2rem; color: #D1D5DB; margin-bottom: 10px; display: block;"></i>
+                        Aún no hay registros de refrigerantes.
+                    </td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% if datos_meses %}
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const formatKg = val => new Intl.NumberFormat('es-CL', {minimumFractionDigits:2, maximumFractionDigits:2}).format(val);
+    const datosMeses = {{ datos_meses | tojson }};
+    const total = datosMeses.reduce((s, d) => s + d.total, 0);
+
+    new Chart(document.getElementById('graficoMesesRef'), {
+        type: 'bar',
+        data: {
+            labels: datosMeses.map(d => d.mes),
+            datasets: [{
+                label: 'kg CO₂e',
+                data: datosMeses.map(d => d.total),
+                backgroundColor: '#3B82F680',
+                borderColor: '#3B82F6',
+                borderWidth: 1.5,
+                borderRadius: 6,
+                barPercentage: 0.65
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: ctx => ' ' + formatKg(ctx.parsed.y) + ' kg CO₂e',
+                        afterLabel: ctx => {
+                            const pct = total > 0 ? (ctx.parsed.y / total * 100).toFixed(1) : 0;
+                            return ' ' + pct + '% del total';
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: { grid: { display: false } },
+                y: {
+                    beginAtZero: true,
+                    grid: { color: '#E5E7EB', borderDash: [2, 4] },
+                    ticks: { callback: v => v >= 1000 ? (v/1000).toFixed(1)+'k' : v }
+                }
+            }
+        }
+    });
+});
+</script>
+{% endif %}
+{% endblock %}

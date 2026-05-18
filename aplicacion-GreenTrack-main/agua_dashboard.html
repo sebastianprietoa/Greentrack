@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block title %}Emisiones al Agua - EcoTrack{% endblock %}
+
+{% block content %}
+<div style="max-width: 1200px; margin: 0 auto;">
+    <div class="dashboard-header" style="background: linear-gradient(135deg, #3B82F6, #06B6D4); color: white; padding: 2rem; border-radius: 12px; margin-bottom: 2rem;">
+        <h1><i class="fas fa-tint"></i> Emisiones al Agua</h1>
+        <p>Gestión de consumo, afluentes y costos relacionados con agua</p>
+    </div>
+
+    <!-- Estadísticas Rápidas -->
+    <div class="stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+        <div class="stat-card" style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: center;">
+            <i class="fas fa-co2" style="font-size: 2.5rem; color: #06B6D4; margin-bottom: 1rem;"></i>
+            <h3 style="margin-bottom: 0.5rem; color: #374151;">Emisión Total Agua</h3>
+            <div class="stat-value" style="font-size: 2rem; font-weight: 700; color: #111827; margin: 0.5rem 0;">
+                {{ "%.2f"|format(total_emision) }} kg
+            </div>
+            <p style="color: #6B7280; margin: 0;">CO₂ equivalente</p>
+        </div>
+        
+        <div class="stat-card" style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: center;">
+            <i class="fas fa-dollar-sign" style="font-size: 2.5rem; color: #10B981; margin-bottom: 1rem;"></i>
+            <h3 style="margin-bottom: 0.5rem; color: #374151;">Costos Totales</h3>
+            <div class="stat-value" style="font-size: 1.5rem; font-weight: 700; color: #111827; margin: 0.5rem 0;">
+                ${{ "%.0f"|format(total_usd) }} USD
+            </div>
+            <p style="color: #6B7280; margin: 0;">${{ "%.0f"|format(total_clp) }} CLP</p>
+        </div>
+    </div>
+
+    <!-- Acciones Rápidas -->
+    <div class="quick-actions" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin: 2rem 0;">
+        <a href="{{ url_for('agua_registro') }}" class="action-card" style="background: white; padding: 1.5rem; border-radius: 12px; text-align: center; text-decoration: none; color: #374151; transition: all 0.3s; border: 2px solid #E5E7EB;">
+            <i class="fas fa-plus-circle" style="font-size: 2rem; color: #3B82F6; margin-bottom: 1rem;"></i>
+            <h3 style="margin-bottom: 0.5rem;">Nuevo Registro</h3>
+            <p style="color: #6B7280; margin: 0;">Agregar datos de agua</p>
+        </a>
+        
+        <a href="{{ url_for('agua_reporte') }}" class="action-card" style="background: white; padding: 1.5rem; border-radius: 12px; text-align: center; text-decoration: none; color: #374151; transition: all 0.3s; border: 2px solid #E5E7EB;">
+            <i class="fas fa-file-alt" style="font-size: 2rem; color: #10B981; margin-bottom: 1rem;"></i>
+            <h3 style="margin-bottom: 0.5rem;">Ver Reporte</h3>
+            <p style="color: #6B7280; margin: 0;">Con costos detallados</p>
+        </a>
+    </div>
+
+    <!-- Últimos Registros -->
+    {% if consumo_data %}
+    <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 2rem;">
+        <h2 style="margin-bottom: 1.5rem; color: #111827; display: flex; align-items: center; gap: 10px;">
+            <i class="fas fa-history"></i> Últimos Registros de Consumo
+        </h2>
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background: #F9FAFB;">
+                        <th style="padding: 1rem; text-align: left; font-weight: 600; color: #374151;">Fecha</th>
+                        <th style="padding: 1rem; text-align: left; font-weight: 600; color: #374151;">Agua Embotellada (L)</th>
+                        <th style="padding: 1rem; text-align: left; font-weight: 600; color: #374151;">Hielo Comprado (kg)</th>
+                        <th style="padding: 1rem; text-align: left; font-weight: 600; color: #374151;">Hielo Producido (kg)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for reg in consumo_data %}
+                    <tr style="border-bottom: 1px solid #E5E7EB;">
+                        <td style="padding: 1rem; color: #374151;">{{ reg[0][:10] }}</td>
+                        <td style="padding: 1rem; color: #374151;">{{ "%.0f"|format(reg[1] or 0) }}</td>
+                        <td style="padding: 1rem; color: #374151;">{{ "%.0f"|format(reg[2] or 0) }}</td>
+                        <td style="padding: 1rem; color: #374151;">{{ "%.0f"|format(reg[3] or 0) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Distribución por Cuenca -->
+    {% if cuencas_data %}
+    <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+        <h2 style="margin-bottom: 1.5rem; color: #111827; display: flex; align-items: center; gap: 10px;">
+            <i class="fas fa-water"></i> Distribución por Cuenca Destino
+        </h2>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+            {% for cuenca, cantidad in cuencas_data %}
+            <div style="background: #F0F9FF; padding: 1rem; border-radius: 8px; border-left: 4px solid #3B82F6;">
+                <h3 style="margin-bottom: 0.5rem; color: #1E40AF;">{{ cuenca }}</h3>
+                <p style="font-size: 1.5rem; font-weight: 700; color: #111827; margin: 0;">
+                    {{ "%.0f"|format(cantidad) }} m³
+                </p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

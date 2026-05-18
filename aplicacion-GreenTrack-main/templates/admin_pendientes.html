@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+{% block title %}Validar PDFs - GreenTrack{% endblock %}
+
+{% block content %}
+<div style="padding: 0;">
+
+    <div style="margin-bottom: 1.5rem;">
+        <a href="/admin/dashboard" style="display: inline-flex; align-items: center; gap: 8px; color: #6366F1; text-decoration: none; font-weight: 500;">
+            <i class="fas fa-arrow-left"></i> Volver al Dashboard Admin
+        </a>
+    </div>
+
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <h2 style="margin: 0 0 0.25rem 0; color: #111827; display: flex; align-items: center; gap: 10px;">
+                <i class="fas fa-clock" style="color: #F59E0B;"></i> Validación de PDFs
+            </h2>
+            <p style="color: #6B7280; margin: 0; font-size: 0.9rem;">Revisa y aprueba o rechaza los archivos enviados por las empresas.</p>
+        </div>
+        {% set pendientes_count = envios | selectattr('estado', 'equalto', 'pendiente') | list | length %}
+        {% if pendientes_count > 0 %}
+        <div style="background: #FEF3C7; border: 1px solid #FCD34D; padding: 0.6rem 1.2rem; border-radius: 8px; font-weight: 700; color: #92400E;">
+            <i class="fas fa-exclamation-triangle"></i> {{ pendientes_count }} pendiente(s) de revisión
+        </div>
+        {% endif %}
+    </div>
+
+    {% if not envios %}
+    <div style="background: white; padding: 3rem 2rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center;">
+        <i class="fas fa-check-double" style="font-size: 3rem; color: #D1D5DB; margin-bottom: 1rem; display: block;"></i>
+        <h3 style="color: #374151; margin: 0 0 0.5rem 0;">Sin envíos por revisar</h3>
+        <p style="color: #6B7280; margin: 0;">Las empresas aún no han subido archivos PDF para validación.</p>
+    </div>
+    {% else %}
+
+    {% for envio in envios %}
+    <div style="background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-bottom: 2rem; overflow: hidden; border-left: 5px solid {% if envio.estado == 'pendiente' %}#F59E0B{% elif envio.estado == 'aprobado' %}#10B981{% else %}#EF4444{% endif %};">
+
+        <!-- Cabecera del envío -->
+        <div style="padding: 1.25rem 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; background: #FAFAFA; border-bottom: 1px solid #F3F4F6;">
+            <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                <div style="width: 36px; height: 36px; border-radius: 8px; background: #EEF2FF; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                    <i class="fas fa-building" style="color: #6366F1;"></i>
+                </div>
+                <div>
+                    <p style="margin: 0; font-weight: 700; color: #111827; font-size: 1rem;">{{ envio.empresa }}</p>
+                    <p style="margin: 0; color: #6B7280; font-size: 0.82rem;">
+                        <i class="fas fa-file-pdf" style="color: #EF4444;"></i> {{ envio.nombre_archivo }}
+                        &nbsp;·&nbsp; {{ envio.fecha_subida }}
+                        &nbsp;·&nbsp;
+                        {% if envio.tipo == 'sinader' %}
+                            <span style="background: #DBEAFE; color: #1E40AF; padding: 2px 8px; border-radius: 10px; font-size: 0.75rem; font-weight: 700;">SINADER</span>
+                        {% else %}
+                            <span style="background: #FEE2E2; color: #991B1B; padding: 2px 8px; border-radius: 10px; font-size: 0.75rem; font-weight: 700;">SIDREP</span>
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                {% if envio.estado == 'pendiente' %}
+                    <span style="background: #FEF3C7; color: #92400E; padding: 5px 12px; border-radius: 20px; font-size: 0.82rem; font-weight: 700;"><i class="fas fa-hourglass-half"></i> Pendiente</span>
+                {% elif envio.estado == 'aprobado' %}
+                    <span style="background: #D1FAE5; color: #065F46; padding: 5px 12px; border-radius: 20px; font-size: 0.82rem; font-weight: 700;"><i class="fas fa-check-circle"></i> Aprobado · {{ envio.fecha_revision }}</span>
+                {% else %}
+                    <span style="background: #FEE2E2; color: #991B1B; padding: 5px 12px; border-radius: 20px; font-size: 0.82rem; font-weight: 700;"><i class="fas fa-times-circle"></i> Rechazado · {{ envio.fecha_revision }}</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Previsualización de datos -->
+        <div style="padding: 1.5rem;">
+            {% set con_factor = envio.filas | selectattr('factor', '>', 0) | list | length %}
+            {% set sin_factor = envio.filas | length - con_factor %}
+            <div style="display: flex; gap: 0.75rem; margin-bottom: 1rem; flex-wrap: wrap;">
+                <div style="background: #D1FAE5; padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.85rem; font-weight: 700; color: #065F46;">
+                    <i class="fas fa-list"></i> {{ envio.filas | length }} filas
+                </div>
+                <div style="background: #D1FAE5; padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.85rem; font-weight: 700; color: #065F46;">
+                    <i class="fas fa-check"></i> {{ con_factor }} con factor
+                </div>
+                {% if sin_factor > 0 %}
+                <div style="background: #FEF3C7; padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.85rem; font-weight: 700; color: #92400E;">
+                    <i class="fas fa-exclamation-triangle"></i> {{ sin_factor }} sin factor
+                </div>
+                {% endif %}
+                <div style="background: #EFF6FF; padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.85rem; font-weight: 700; color: #1E40AF;">
+                    Total: {{ "%.2f"|format(envio.filas | sum(attribute='emision')) }} kg CO₂e
+                </div>
+            </div>
+
+            <div style="overflow-x: auto; margin-bottom: 1.25rem;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.83rem;">
+                    <thead>
+                        <tr style="background: #F3F4F6; color: #374151;">
+                            <th style="padding: 8px 10px; text-align: left; border-bottom: 2px solid #E5E7EB;">Residuo (PDF)</th>
+                            <th style="padding: 8px 10px; text-align: left; border-bottom: 2px solid #E5E7EB;">Equivalente Chile</th>
+                            <th style="padding: 8px 10px; text-align: left; border-bottom: 2px solid #E5E7EB;">Tratamiento</th>
+                            <th style="padding: 8px 10px; text-align: right; border-bottom: 2px solid #E5E7EB;">Cantidad (kg)</th>
+                            <th style="padding: 8px 10px; text-align: right; border-bottom: 2px solid #E5E7EB;">Factor</th>
+                            <th style="padding: 8px 10px; text-align: right; border-bottom: 2px solid #E5E7EB;">Emisión (kg CO₂e)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in envio.filas %}
+                        <tr style="border-bottom: 1px solid #F3F4F6; {% if r.factor == 0 %}background: #FFFBEB;{% endif %}">
+                            <td style="padding: 7px 10px; color: #6B7280; max-width: 180px; word-break: break-word;">{{ r.categoria }}</td>
+                            <td style="padding: 7px 10px; font-weight: 600; color: #111827; max-width: 200px; word-break: break-word;">
+                                {% if r.nombre_chile %}{{ r.nombre_chile }}{% else %}<span style="color: #D97706; font-style: italic;">{{ r.defra_cat }}</span>{% endif %}
+                            </td>
+                            <td style="padding: 7px 10px;">
+                                {% if r.tratamiento %}<span style="color: #374151;">{{ r.tratamiento }}</span>{% else %}<span style="color: #9CA3AF; font-style: italic;">No especificado</span>{% endif %}
+                            </td>
+                            <td style="padding: 7px 10px; text-align: right;">{{ "%.2f"|format(r.cantidad) }}</td>
+                            <td style="padding: 7px 10px; text-align: right;">
+                                {% if r.factor > 0 %}<span style="color: #059669; font-weight: 600;">{{ r.factor }}</span>{% else %}<span style="color: #D97706;">—</span>{% endif %}
+                            </td>
+                            <td style="padding: 7px 10px; text-align: right; font-weight: 700;">
+                                {% if r.emision > 0 %}{{ "%.4f"|format(r.emision) }}{% else %}<span style="color: #D97706;">0</span>{% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Acciones (solo si está pendiente) -->
+            {% if envio.estado == 'pendiente' %}
+            <div style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-start; padding-top: 1rem; border-top: 1px solid #F3F4F6;">
+                <form method="POST" action="/admin/aprobar_pdf/{{ envio.id }}">
+                    <button type="submit" style="background: #10B981; color: white; border: none; padding: 10px 24px; border-radius: 8px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 0.95rem;">
+                        <i class="fas fa-check-circle"></i> Aprobar y Guardar
+                    </button>
+                </form>
+                <form method="POST" action="/admin/rechazar_pdf/{{ envio.id }}" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                    <input type="text" name="motivo" placeholder="Motivo del rechazo (opcional)"
+                           style="padding: 9px 14px; border: 2px solid #E5E7EB; border-radius: 8px; font-size: 0.9rem; min-width: 240px;">
+                    <button type="submit" style="background: #EF4444; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 0.95rem;"
+                            onclick="return confirm('¿Rechazar este envío?')">
+                        <i class="fas fa-times-circle"></i> Rechazar
+                    </button>
+                </form>
+            </div>
+            {% elif envio.estado == 'rechazado' and envio.motivo_rechazo %}
+            <div style="background: #FEF2F2; border: 1px solid #FECACA; border-radius: 8px; padding: 0.75rem 1rem; margin-top: 0.75rem;">
+                <p style="margin: 0; color: #991B1B; font-size: 0.88rem;"><strong>Motivo del rechazo:</strong> {{ envio.motivo_rechazo }}</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+
+    {% endif %}
+</div>
+{% endblock %}

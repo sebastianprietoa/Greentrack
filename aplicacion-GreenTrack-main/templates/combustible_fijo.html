@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+
+{% block title %}Combustible Fuentes Fijas - GreenTrack{% endblock %}
+
+{% block content %}
+<div style="max-width: 1000px; margin: 0 auto;">
+    <div style="margin-bottom: 2rem;">
+        <h1 style="color: #111827; display: flex; align-items: center; gap: 10px;">
+            <i class="fas fa-fire"></i> Combustible - Fuentes Fijas
+        </h1>
+        <p style="color: #6B7280;">Registro de consumo en calderas, generadores y equipos fijos</p>
+    </div>
+
+    <!-- Navegación entre tipos de combustible -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+        <a href="{{ url_for('combustible_movil') }}" 
+           style="background: white; padding: 1.5rem; border-radius: 12px; text-align: center; text-decoration: none; color: #374151; border: 2px solid #E5E7EB; transition: all 0.3s;">
+            <i class="fas fa-car" style="font-size: 2rem; color: #3B82F6; margin-bottom: 1rem;"></i>
+            <h3 style="margin-bottom: 0.5rem;">Vehículos</h3>
+            <p style="color: #6B7280; margin: 0;">Combustible para transporte</p>
+        </a>
+        
+        <a href="{{ url_for('combustible_fijo') }}" 
+           style="background: white; padding: 1.5rem; border-radius: 12px; text-align: center; text-decoration: none; color: #374151; border: 2px solid #10B981; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.1); transition: all 0.3s;">
+            <i class="fas fa-fire" style="font-size: 2rem; color: #10B981; margin-bottom: 1rem;"></i>
+            <h3 style="margin-bottom: 0.5rem;">Fuentes Fijas</h3>
+            <p style="color: #6B7280; margin: 0;">Calderas, generadores</p>
+        </a>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for cat, msg in messages %}
+        <div style="background: {% if cat == 'success' %}#D1FAE5{% else %}#FEE2E2{% endif %}; color: {% if cat == 'success' %}#065F46{% else %}#991B1B{% endif %}; padding: 1rem 1.25rem; border-radius: 8px; margin-bottom: 1.5rem; font-weight: 600;">
+            <i class="fas fa-{% if cat == 'success' %}check-circle{% else %}exclamation-circle{% endif %}"></i> {{ msg }}
+        </div>
+        {% endfor %}
+    {% endif %}
+    {% endwith %}
+
+    <!-- Formulario para combustible fijo -->
+    <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+        <h2 style="margin-bottom: 1.5rem; color: #374151;">
+            <i class="fas fa-plus-circle"></i> Nuevo Registro de Combustible
+        </h2>
+        
+        <form method="POST" action="/api/combustible/fijo">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+                <div>
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #374151;">Unidad de Consumo</label>
+                    <input type="text" name="unidad_consumo" required 
+                           placeholder="Ej: Caldera Principal" 
+                           style="width: 100%; padding: 10px 14px; border: 2px solid #E5E7EB; border-radius: 8px; font-size: 1rem;">
+                </div>
+                
+                <div>
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #374151;">Tipo de Combustible</label>
+                    <select name="combustible" style="width: 100%; padding: 10px 14px; border: 2px solid #E5E7EB; border-radius: 8px; font-size: 1rem;">
+                        <option value="diesel">Diésel</option>
+                        <option value="petroleo">Petróleo</option>
+                        <option value="gas_natural">Gas Natural</option>
+                        <option value="carbon">Carbón</option>
+                        <option value="gas_lp">Gas LP</option>
+                        <option value="otro">Otro</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #374151;">Unidad de Medida</label>
+                    <select name="unidad" style="width: 100%; padding: 10px 14px; border: 2px solid #E5E7EB; border-radius: 8px; font-size: 1rem;">
+                        <option value="litros">Litros (L)</option>
+                        <option value="kg">Kilogramos (kg)</option>
+                        <option value="m3">Metros cúbicos (m³)</option>
+                        <option value="ton">Toneladas (ton)</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+                <div>
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #374151;">Cantidad</label>
+                    <input type="number" name="cantidad" step="0.01" min="0.01" required 
+                           style="width: 100%; padding: 10px 14px; border: 2px solid #E5E7EB; border-radius: 8px; font-size: 1rem;">
+                </div>
+                
+                <div>
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #374151;">Costo ($)</label>
+                    <input type="number" name="costo" step="0.01" min="0" 
+                           style="width: 100%; padding: 10px 14px; border: 2px solid #E5E7EB; border-radius: 8px; font-size: 1rem;">
+                </div>
+                
+                <div>
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #374151;">Período (Mes)</label>
+                    <input type="month" name="periodo" required 
+                           style="width: 100%; padding: 10px 14px; border: 2px solid #E5E7EB; border-radius: 8px; font-size: 1rem;">
+                </div>
+            </div>
+            
+            <div style="margin-bottom: 1.5rem;">
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #374151;">Uso Final (opcional)</label>
+                <input type="text" name="uso_final" 
+                       placeholder="Ej: Generación eléctrica, Calefacción" 
+                       style="width: 100%; padding: 10px 14px; border: 2px solid #E5E7EB; border-radius: 8px; font-size: 1rem;">
+            </div>
+            
+            <button type="submit" style="background: #10B981; color: white; border: none; padding: 12px 30px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 10px;">
+                <i class="fas fa-save"></i> Guardar Registro
+            </button>
+        </form>
+    </div>
+</div>
+
+<script>
+// Validación del formulario
+document.querySelector('form').addEventListener('submit', function(e) {
+    const cantidad = parseFloat(document.querySelector('input[name="cantidad"]').value);
+    const periodo = document.querySelector('input[name="periodo"]').value;
+    
+    if (cantidad <= 0) {
+        e.preventDefault();
+        alert('La cantidad debe ser mayor a 0');
+        return false;
+    }
+    
+    if (!periodo) {
+        e.preventDefault();
+        alert('Seleccione un período');
+        return false;
+    }
+    
+    return true;
+});
+</script>
+{% endblock %}

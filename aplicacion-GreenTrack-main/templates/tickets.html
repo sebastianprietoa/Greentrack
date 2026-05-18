@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+{% block title %}Soporte - GreenTrack{% endblock %}
+
+{% block content %}
+<div style="max-width: 820px; margin: 0 auto;">
+
+    <!-- Header -->
+    <div style="margin-bottom: 2rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <h1 style="color: #111827; margin: 0; font-size: 1.4rem; display: flex; align-items: center; gap: 10px;">
+                <i class="fas fa-headset" style="color: #EC4899;"></i> Soporte / Tickets
+            </h1>
+            <p style="color: #6B7280; margin: 4px 0 0 0; font-size: 0.88rem;">Envía una consulta o problema al equipo de GreenTrack.</p>
+        </div>
+        <button onclick="document.getElementById('modalNuevo').style.display='flex'"
+                style="background: #EC4899; border: none; padding: 10px 20px; border-radius: 8px; color: white; cursor: pointer; font-weight: 600; font-size: 0.9rem; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 8px rgba(236,72,153,0.3);">
+            <i class="fas fa-plus"></i> Nuevo Ticket
+        </button>
+    </div>
+
+    <!-- Lista de tickets -->
+    {% if tickets %}
+    <div style="display: flex; flex-direction: column; gap: 1rem;">
+        {% for t in tickets %}
+        {% set color_estado = {'Abierto': '#EF4444', 'En proceso': '#F59E0B', 'Cerrado': '#10B981'} %}
+        {% set bg_estado = {'Abierto': '#FEF2F2', 'En proceso': '#FEF3C7', 'Cerrado': '#D1FAE5'} %}
+        {% set color_prio = {'Alta': '#EF4444', 'Normal': '#6366F1', 'Baja': '#9CA3AF'} %}
+        <div style="background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); overflow: hidden; border-left: 4px solid {{ color_estado.get(t.estado, '#9CA3AF') }};">
+            <div style="padding: 1.25rem 1.5rem;">
+                <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
+                    <div>
+                        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 4px;">
+                            <span style="font-weight: 700; color: #111827; font-size: 0.95rem;">{{ t.asunto }}</span>
+                            <span style="background: {{ bg_estado.get(t.estado, '#F3F4F6') }}; color: {{ color_estado.get(t.estado, '#6B7280') }}; font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 20px;">{{ t.estado }}</span>
+                            <span style="color: {{ color_prio.get(t.prioridad, '#9CA3AF') }}; font-size: 0.72rem; font-weight: 600;">
+                                <i class="fas fa-flag"></i> {{ t.prioridad }}
+                            </span>
+                        </div>
+                        <p style="color: #6B7280; font-size: 0.82rem; margin: 0;">
+                            <i class="fas fa-calendar-alt"></i> {{ t.fecha_creacion }}
+                            &nbsp;·&nbsp; #{{ t.id }}
+                        </p>
+                    </div>
+                    <button onclick="toggleDetalle('det-{{ t.id }}')"
+                            style="background: #F3F4F6; border: none; padding: 6px 14px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; color: #374151; cursor: pointer; flex-shrink: 0;">
+                        <i class="fas fa-chevron-down" id="ico-{{ t.id }}"></i> Ver detalle
+                    </button>
+                </div>
+            </div>
+
+            <div id="det-{{ t.id }}" style="display: none; padding: 0 1.5rem 1.25rem 1.5rem; border-top: 1px solid #F3F4F6;">
+                <div style="padding-top: 1rem;">
+                    <p style="font-size: 0.82rem; font-weight: 700; color: #9CA3AF; text-transform: uppercase; margin: 0 0 4px 0;">Descripción</p>
+                    <p style="color: #374151; font-size: 0.9rem; margin: 0 0 1rem 0; white-space: pre-wrap;">{{ t.descripcion }}</p>
+                </div>
+                {% if t.respuesta %}
+                <div style="background: #F0FDF4; border: 1px solid #A7F3D0; border-radius: 8px; padding: 1rem;">
+                    <p style="font-size: 0.78rem; font-weight: 700; color: #065F46; margin: 0 0 6px 0;">
+                        <i class="fas fa-reply"></i> RESPUESTA DE GREENTRACK
+                        {% if t.fecha_respuesta %}<span style="font-weight: 400; color: #6B7280;"> · {{ t.fecha_respuesta }}</span>{% endif %}
+                    </p>
+                    <p style="color: #065F46; font-size: 0.9rem; margin: 0; white-space: pre-wrap;">{{ t.respuesta }}</p>
+                </div>
+                {% else %}
+                <div style="background: #FEF3C7; border-radius: 8px; padding: 10px 14px; font-size: 0.82rem; color: #92400E;">
+                    <i class="fas fa-clock"></i> Aún no hay respuesta. Te notificaremos cuando el equipo responda.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% else %}
+    <div style="background: white; border-radius: 12px; padding: 3rem; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+        <i class="fas fa-ticket-alt" style="font-size: 3rem; color: #E5E7EB; margin-bottom: 1rem; display: block;"></i>
+        <p style="color: #6B7280; font-size: 1rem; margin: 0;">Aún no has enviado ningún ticket.</p>
+        <p style="color: #9CA3AF; font-size: 0.88rem; margin: 6px 0 0 0;">Usa el botón <strong>Nuevo Ticket</strong> para contactar al equipo de soporte.</p>
+    </div>
+    {% endif %}
+
+</div>
+
+<!-- Modal Nuevo Ticket -->
+<div id="modalNuevo" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 1100; align-items: center; justify-content: center; padding: 1rem;">
+    <div style="background: white; border-radius: 14px; padding: 2rem; max-width: 540px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,0.2); position: relative;">
+        <button onclick="document.getElementById('modalNuevo').style.display='none'"
+                style="position: absolute; top: 1rem; right: 1rem; background: none; border: none; font-size: 1.2rem; color: #9CA3AF; cursor: pointer;">
+            <i class="fas fa-times"></i>
+        </button>
+        <h2 style="margin: 0 0 1.5rem 0; color: #111827; font-size: 1.15rem; display: flex; align-items: center; gap: 8px;">
+            <i class="fas fa-headset" style="color: #EC4899;"></i> Nuevo Ticket de Soporte
+        </h2>
+        <form method="POST" action="/tickets/nuevo">
+            <div style="margin-bottom: 1rem;">
+                <label style="display: block; font-size: 0.78rem; font-weight: 700; color: #6B7280; text-transform: uppercase; margin-bottom: 5px;">Asunto *</label>
+                <input type="text" name="asunto" required maxlength="120" placeholder="Describe brevemente el problema…"
+                       style="width: 100%; padding: 10px 12px; border: 1px solid #D1D5DB; border-radius: 7px; font-size: 0.9rem; box-sizing: border-box;">
+            </div>
+            <div style="margin-bottom: 1rem;">
+                <label style="display: block; font-size: 0.78rem; font-weight: 700; color: #6B7280; text-transform: uppercase; margin-bottom: 5px;">Descripción *</label>
+                <textarea name="descripcion" required rows="5" placeholder="Explica en detalle qué ocurrió, qué pasos seguiste y cualquier mensaje de error…"
+                          style="width: 100%; padding: 10px 12px; border: 1px solid #D1D5DB; border-radius: 7px; font-size: 0.9rem; box-sizing: border-box; resize: vertical;"></textarea>
+            </div>
+            <div style="margin-bottom: 1.5rem;">
+                <label style="display: block; font-size: 0.78rem; font-weight: 700; color: #6B7280; text-transform: uppercase; margin-bottom: 5px;">Prioridad</label>
+                <select name="prioridad" style="width: 100%; padding: 10px 12px; border: 1px solid #D1D5DB; border-radius: 7px; font-size: 0.9rem; background: white;">
+                    <option value="Baja">Baja — duda general o sugerencia</option>
+                    <option value="Normal" selected>Normal — problema que puedo esperar</option>
+                    <option value="Alta">Alta — bloquea mi trabajo</option>
+                </select>
+            </div>
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button type="button" onclick="document.getElementById('modalNuevo').style.display='none'"
+                        style="padding: 10px 18px; border: 1px solid #D1D5DB; border-radius: 7px; background: white; color: #374151; font-weight: 600; cursor: pointer;">
+                    Cancelar
+                </button>
+                <button type="submit"
+                        style="padding: 10px 22px; background: #EC4899; border: none; border-radius: 7px; color: white; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                    <i class="fas fa-paper-plane"></i> Enviar Ticket
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function toggleDetalle(id) {
+    const el = document.getElementById(id);
+    const ticketId = id.replace('det-', '');
+    const ico = document.getElementById('ico-' + ticketId);
+    if (el.style.display === 'none') {
+        el.style.display = 'block';
+        ico.classList.replace('fa-chevron-down', 'fa-chevron-up');
+    } else {
+        el.style.display = 'none';
+        ico.classList.replace('fa-chevron-up', 'fa-chevron-down');
+    }
+}
+// Cerrar modal al hacer click fuera
+document.getElementById('modalNuevo').addEventListener('click', function(e) {
+    if (e.target === this) this.style.display = 'none';
+});
+</script>
+{% endblock %}

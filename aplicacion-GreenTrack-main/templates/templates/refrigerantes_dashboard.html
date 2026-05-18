@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block title %}Refrigerantes - EcoTrack{% endblock %}
+
+{% block content %}
+<div style="padding: 1rem; max-width: 1200px; margin: 0 auto;">
+    
+    <div style="margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+        <div>
+            <h1 style="color: #111827; margin: 0;">Fugas y Refrigerantes</h1>
+            <p style="color: #6B7280; margin-top: 5px;">Control de emisiones por recargas de gases refrigerantes y extintores.</p>
+        </div>
+        <a href="/registro" style="background: #10B981; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.2);">
+            <i class="fas fa-plus"></i> Nuevo Registro
+        </a>
+    </div>
+
+    <div style="background: white; padding: 1.5rem; border-radius: 12px; border-left: 5px solid #3B82F6; margin-bottom: 2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+        <h3 style="margin: 0; color: #6B7280; font-size: 0.9rem; text-transform: uppercase;">Total Emisiones Generadas</h3>
+        <h2 style="margin: 5px 0 0 0; color: #111827; font-size: 2.5rem;">{{ "{:,.2f}".format(total_refrigerantes) }} <span style="font-size: 1rem; color: #6B7280;">kg CO₂e</span></h2>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 2rem; margin-bottom: 2rem;">
+        
+        <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+            <h4 style="text-align: center; margin-top: 0; color: #374151;">Emisiones por Tipo de Gas</h4>
+            <div style="position: relative; height: 300px; width: 100%;">
+                <canvas id="graficoGases"></canvas>
+            </div>
+        </div>
+
+        <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+            <h4 style="text-align: center; margin-top: 0; color: #374151;">Histórico Mensual</h4>
+            <div style="position: relative; height: 300px; width: 100%;">
+                <canvas id="graficoMesesRef"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div style="background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); overflow: hidden;">
+        <div style="padding: 1.5rem; border-bottom: 1px solid #F3F4F6;">
+            <h3 style="margin: 0; color: #111827;">Últimas recargas reportadas</h3>
+        </div>
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                <thead style="background: #F9FAFB;">
+                    <tr>
+                        <th style="padding: 1rem; color: #6B7280; font-size: 0.85rem;">Fecha</th>
+                        <th style="padding: 1rem; color: #6B7280; font-size: 0.85rem;">Tipo de Gas</th>
+                        <th style="padding: 1rem; color: #6B7280; font-size: 0.85rem;">Cantidad Recargada</th>
+                        <th style="padding: 1rem; color: #6B7280; font-size: 0.85rem;">Huella (kg CO₂e)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for reg in registros %}
+                    <tr style="border-bottom: 1px solid #F3F4F6;">
+                        <td style="padding: 1rem; color: #4B5563;">{{ reg.fecha | mes_anio }}</td>
+                        <td style="padding: 1rem; font-weight: 600; color: #111827;">{{ reg.categoria }}</td>
+                        <td style="padding: 1rem; color: #4B5563;">{{ reg.cantidad }} {{ reg.unidad }}</td>
+                        <td style="padding: 1rem; color: #EF4444; font-weight: 600;">{{ reg.emision | formato_cl }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="4" style="padding: 2rem; text-align: center; color: #6B7280;">
+                            <i class="fas fa-clipboard-list" style="font-size: 2rem; color: #D1D5DB; margin-bottom: 10px;"></i><br>
+                            Aún no hay registros de refrigerantes en esta empresa.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const datosGases = {{ datos_gases | tojson }};
+    const datosMeses = {{ datos_meses | tojson }};
+
+    if(datosGases && datosGases.length > 0) {
+        new Chart(document.getElementById('graficoGases'), {
+            type: 'doughnut',
+            data: {
+                labels: datosGases.map(d => d.categoria),
+                datasets: [{
+                    data: datosGases.map(d => d.total),
+                    backgroundColor: ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6']
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+    }
+
+    if(datosMeses && datosMeses.length > 0) {
+        new Chart(document.getElementById('graficoMesesRef'), {
+            type: 'bar',
+            data: {
+                labels: datosMeses.map(d => d.mes),
+                datasets: [{
+                    label: 'Emisión (kg CO₂e)',
+                    data: datosMeses.map(d => d.total),
+                    backgroundColor: '#3B82F6',
+                    borderRadius: 4
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+    }
+</script>
+{% endblock %}

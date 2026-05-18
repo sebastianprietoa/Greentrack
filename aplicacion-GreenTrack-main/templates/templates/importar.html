@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}Carga Masiva - EcoTrack{% endblock %}
+
+{% block content %}
+<div style="max-width: 800px; margin: 0 auto;">
+    
+    <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+        <h2 style="margin-bottom: 1.5rem; color: #111827; border-bottom: 2px solid #F3F4F6; padding-bottom: 1rem;">
+            <i class="fas fa-file-upload" style="color: #3B82F6;"></i> Carga Masiva de Registros
+        </h2>
+
+        <p style="color: #4B5563; margin-bottom: 2rem;">
+            Sube múltiples registros de consumo al mismo tiempo utilizando una planilla de Excel. Sigue estos dos pasos para asegurar que tus datos se carguen correctamente.
+        </p>
+
+        <div style="background: #F9FAFB; border: 1px solid #E5E7EB; padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem;">
+            <h3 style="margin-top: 0; color: #374151; display: flex; align-items: center; gap: 10px;">
+                <span style="background: #3B82F6; color: white; width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 0.9rem;">1</span>
+                Descargar Plantilla
+            </h3>
+            <p style="color: #6B7280; margin-bottom: 1rem;">
+                Descarga nuestro formato de Excel predeterminado. Incluye un ejemplo en la primera fila para guiarte. No modifiques los nombres de las columnas.
+            </p>
+            <a href="{{ url_for('descargar_plantilla') }}" class="btn-secondary" style="background: #10B981; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; display: inline-block; font-weight: 600;">
+                <i class="fas fa-download"></i> Descargar Plantilla .xlsx
+            </a>
+        </div>
+
+        <div style="background: #F9FAFB; border: 1px solid #E5E7EB; padding: 1.5rem; border-radius: 8px;">
+            <h3 style="margin-top: 0; color: #374151; display: flex; align-items: center; gap: 10px;">
+                <span style="background: #3B82F6; color: white; width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 0.9rem;">2</span>
+                Subir Archivo Completado
+            </h3>
+            <p style="color: #6B7280; margin-bottom: 1.5rem;">
+                Una vez que hayas llenado la plantilla con tus datos, súbela aquí. El sistema calculará automáticamente las emisiones.
+            </p>
+            
+            <form method="POST" action="/importar" enctype="multipart/form-data">
+                <div style="border: 2px dashed #D1D5DB; padding: 2rem; text-align: center; border-radius: 8px; background: white; margin-bottom: 1.5rem;">
+                    <i class="fas fa-cloud-upload-alt" style="font-size: 3rem; color: #9CA3AF; margin-bottom: 1rem;"></i>
+                    <br>
+                    <input type="file" name="archivo" accept=".xlsx, .xls" required style="margin-top: 10px;">
+                </div>
+                
+                <button type="submit" class="btn-primary" style="width: 100%; padding: 14px; background: #3B82F6; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 1.1rem;">
+                    <i class="fas fa-upload"></i> Procesar y Cargar Datos
+                </button>
+            </form>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

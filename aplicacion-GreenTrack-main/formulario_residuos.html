@@ -1,0 +1,333 @@
+{% extends "base.html" %}
+
+{% block title %}Registro de Residuos - EcoTrack{% endblock %}
+
+{% block content %}
+<div style="max-width: 1200px; margin: 0 auto;">
+    <div style="margin-bottom: 2rem;">
+        <a href="{{ url_for('residuos_dashboard') }}" style="display: inline-flex; align-items: center; gap: 8px; color: #10B981; text-decoration: none; font-weight: 500;">
+            <i class="fas fa-arrow-left"></i> Volver al Dashboard de Residuos
+        </a>
+    </div>
+    
+    <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+        <h1 style="margin-bottom: 0.5rem; color: #111827; display: flex; align-items: center; gap: 10px;">
+            <i class="fas fa-recycle" style="color: #10B981;"></i> Formulario de Gestión de Residuos
+        </h1>
+        <p style="color: #6B7280; margin-bottom: 2rem;">Complete según las instrucciones del formulario de residuos</p>
+        
+        <form method="POST" id="residuosForm">
+            <!-- Paso 1: Ventanilla Única -->
+            <div style="margin-bottom: 2.5rem; padding: 1.5rem; background: #F0F9FF; border-radius: 8px;">
+                <h2 style="margin-bottom: 1rem; color: #1E40AF; display: flex; align-items: center; gap: 10px;">
+                    <i class="fas fa-file-alt"></i> 1. Reporte de Ventanilla Única
+                </h2>
+                
+                <div style="margin-bottom: 1.5rem;">
+                    <label style="display: block; margin-bottom: 1rem; font-weight: 600; color: #374151;">
+                        ¿Tiene reporte de Ventanilla Única (SINADER)?
+                    </label>
+                    <div style="display: flex; gap: 2rem;">
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                            <input type="radio" name="tiene_reporte" value="si" onchange="toggleReporte(true)">
+                            <span>Sí</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                            <input type="radio" name="tiene_reporte" value="no" checked onchange="toggleReporte(false)">
+                            <span>No</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div id="reporte_section" style="display: none;">
+                    <div style="margin-bottom: 1rem;">
+                        <label for="link_reporte" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #374151;">
+                            Link del documento SINADER *
+                        </label>
+                        <input type="url" id="link_reporte" name="link_reporte" 
+                               placeholder="https://ejemplo.com/documento-sinader.pdf"
+                               style="width: 100%; padding: 12px 16px; border: 2px solid #E5E7EB; border-radius: 8px; font-size: 1rem;">
+                        <p style="font-size: 0.9rem; color: #6B7280; margin-top: 0.25rem;">
+                            Debe contener la información oficial de residuos de la empresa
+                        </p>
+                    </div>
+                    
+                    <button type="submit" style="background: #3B82F6; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                        <i class="fas fa-save"></i> Guardar Link del Reporte
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Paso 2: Tabla Manual -->
+            <div id="tabla_section">
+                <div style="margin-bottom: 2rem; padding: 1.5rem; background: #FEF3C7; border-radius: 8px;">
+                    <h2 style="margin-bottom: 1rem; color: #92400E; display: flex; align-items: center; gap: 10px;">
+                        <i class="fas fa-table"></i> 2. Registro Manual de Residuos
+                    </h2>
+                    <p style="color: #6B7280; margin-bottom: 1.5rem;">
+                        Complete la tabla con la información de residuos según las instrucciones:
+                    </p>
+                    
+                    <ol style="margin-left: 1.5rem; color: #374151; margin-bottom: 1.5rem;">
+                        <li>Debe seleccionar el <strong>MENÚ</strong> en la primera columna con el formato "año mes". Ejemplo: <em>2024 Enero</em></li>
+                        <li>Seleccione desde la lista <strong>TIPO de residuo</strong></li>
+                        <li>Ingrese la <strong>CANTIDAD en toneladas</strong></li>
+                        <li>Ingrese el <strong>TIPO de tratamiento</strong>. Ejemplo: Reciclaje, vertedero, etc.</li>
+                        <li><strong>COSTO y destino</strong> son opcionales</li>
+                    </ol>
+                </div>
+                
+                <!-- Tabla de Registros -->
+                <div style="overflow-x: auto; margin-bottom: 2rem;">
+                    <table style="width: 100%; border-collapse: collapse; min-width: 800px;">
+                        <thead>
+                            <tr style="background: #10B981; color: white;">
+                                <th style="padding: 1rem; text-align: left; font-weight: 600;">MENÚ (año mes) *</th>
+                                <th style="padding: 1rem; text-align: left; font-weight: 600;">TIPO de residuo *</th>
+                                <th style="padding: 1rem; text-align: left; font-weight: 600;">CANTIDAD (ton) *</th>
+                                <th style="padding: 1rem; text-align: left; font-weight: 600;">TIPO de tratamiento</th>
+                                <th style="padding: 1rem; text-align: left; font-weight: 600;">COSTO (opcional)</th>
+                                <th style="padding: 1rem; text-align: left; font-weight: 600;">Destino (opcional)</th>
+                                <th style="padding: 1rem; text-align: left; font-weight: 600;">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla_residuos">
+                            <!-- Fila inicial -->
+                            <tr>
+                                <td style="padding: 0.5rem; border: 1px solid #E5E7EB;">
+                                    <input type="text" name="periodo[]" placeholder="2024 Enero" required
+                                           style="width: 100%; padding: 8px; border: 1px solid #D1D5DB; border-radius: 4px;">
+                                </td>
+                                <td style="padding: 0.5rem; border: 1px solid #E5E7EB;">
+                                    <select name="tipo_residuo[]" required
+                                            style="width: 100%; padding: 8px; border: 1px solid #D1D5DB; border-radius: 4px;">
+                                        <option value="">Seleccionar</option>
+                                        <option value="Residuos sólidos industriales">Residuos sólidos industriales</option>
+                                        <option value="Residuos peligrosos">Residuos peligrosos</option>
+                                        <option value="Residuos no peligrosos">Residuos no peligrosos</option>
+                                        <option value="Residuos domiciliarios">Residuos domiciliarios</option>
+                                        <option value="Residuos de construcción">Residuos de construcción</option>
+                                        <option value="Residuos electrónicos">Residuos electrónicos</option>
+                                        <option value="Residuos orgánicos">Residuos orgánicos</option>
+                                        <option value="Residuos plásticos">Residuos plásticos</option>
+                                        <option value="Residuos metálicos">Residuos metálicos</option>
+                                        <option value="Otro">Otro</option>
+                                    </select>
+                                </td>
+                                <td style="padding: 0.5rem; border: 1px solid #E5E7EB;">
+                                    <input type="number" name="cantidad[]" step="0.01" min="0" placeholder="0.00" required
+                                           style="width: 100%; padding: 8px; border: 1px solid #D1D5DB; border-radius: 4px;">
+                                </td>
+                                <td style="padding: 0.5rem; border: 1px solid #E5E7EB;">
+                                    <select name="tratamiento[]"
+                                            style="width: 100%; padding: 8px; border: 1px solid #D1D5DB; border-radius: 4px;">
+                                        <option value="">Seleccionar</option>
+                                        <option value="Reciclaje">Reciclaje</option>
+                                        <option value="Vertedero">Vertedero</option>
+                                        <option value="Incineração">Incineração</option>
+                                        <option value="Compostaje">Compostaje</option>
+                                        <option value="Tratamiento especial">Tratamiento especial</option>
+                                        <option value="Reutilización">Reutilización</option>
+                                        <option value="Otro">Otro</option>
+                                    </select>
+                                </td>
+                                <td style="padding: 0.5rem; border: 1px solid #E5E7EB;">
+                                    <input type="number" name="costo[]" step="0.01" min="0" placeholder="0.00"
+                                           style="width: 100%; padding: 8px; border: 1px solid #D1D5DB; border-radius: 4px;">
+                                </td>
+                                <td style="padding: 0.5rem; border: 1px solid #E5E7EB;">
+                                    <input type="text" name="destino[]" placeholder="Ej: Empresa de reciclaje"
+                                           style="width: 100%; padding: 8px; border: 1px solid #D1D5DB; border-radius: 4px;">
+                                </td>
+                                <td style="padding: 0.5rem; border: 1px solid #E5E7EB; text-align: center;">
+                                    <button type="button" onclick="eliminarFila(this)" 
+                                            style="background: #EF4444; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div style="display: flex; gap: 1rem; margin-bottom: 2rem;">
+                    <button type="button" onclick="agregarFila()" 
+                            style="background: #10B981; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-plus"></i> Agregar Fila
+                    </button>
+                    
+                    <button type="button" onclick="calcularTotal()"
+                            style="background: #3B82F6; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-calculator"></i> Calcular Total
+                    </button>
+                </div>
+                
+                <!-- Total Calculado -->
+                <div id="total_container" style="display: none; margin-bottom: 2rem; padding: 1rem; background: #D1FAE5; border-radius: 8px;">
+                    <h3 style="margin-bottom: 0.5rem; color: #065F46;">Total de Residuos:</h3>
+                    <div style="display: flex; align-items: baseline; gap: 10px;">
+                        <span id="total_residuos" style="font-size: 1.5rem; font-weight: 700; color: #111827;">0.00</span>
+                        <span style="color: #6B7280;">toneladas</span>
+                    </div>
+                </div>
+                
+                <!-- Botón de Guardar -->
+                <div style="text-align: center;">
+                    <button type="submit" 
+                            style="background: #10B981; color: white; border: none; padding: 14px 40px; border-radius: 8px; font-size: 1.1rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 10px;">
+                        <i class="fas fa-save"></i> Guardar Registro de Residuos
+                    </button>
+                    <p style="color: #6B7280; margin-top: 1rem; font-size: 0.9rem;">
+                        Se guardarán todas las filas completadas de la tabla
+                    </p>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // Mostrar/ocultar secciones según reporte
+    function toggleReporte(tieneReporte) {
+        const reporteSection = document.getElementById('reporte_section');
+        const tablaSection = document.getElementById('tabla_section');
+        
+        if (tieneReporte) {
+            reporteSection.style.display = 'block';
+            tablaSection.style.display = 'none';
+            document.getElementById('link_reporte').required = true;
+        } else {
+            reporteSection.style.display = 'none';
+            tablaSection.style.display = 'block';
+            document.getElementById('link_reporte').required = false;
+        }
+    }
+    
+    // Agregar nueva fila a la tabla
+    function agregarFila() {
+        const tbody = document.getElementById('tabla_residuos');
+        const fila = tbody.rows[0].cloneNode(true);
+        
+        // Limpiar valores de la nueva fila
+        const inputs = fila.querySelectorAll('input, select');
+        inputs.forEach(input => {
+            if (input.tagName === 'INPUT') {
+                input.value = '';
+            } else if (input.tagName === 'SELECT') {
+                input.selectedIndex = 0;
+            }
+        });
+        
+        tbody.appendChild(fila);
+    }
+    
+    // Eliminar fila
+    function eliminarFila(boton) {
+        const fila = boton.closest('tr');
+        if (document.getElementById('tabla_residuos').rows.length > 1) {
+            fila.remove();
+        } else {
+            alert('Debe haber al menos una fila en la tabla');
+        }
+    }
+    
+    // Calcular total de residuos
+    function calcularTotal() {
+        let total = 0;
+        const cantidadInputs = document.querySelectorAll('input[name="cantidad[]"]');
+        
+        cantidadInputs.forEach(input => {
+            const valor = parseFloat(input.value) || 0;
+            total += valor;
+        });
+        
+        const totalContainer = document.getElementById('total_container');
+        const totalSpan = document.getElementById('total_residuos');
+        
+        totalSpan.textContent = total.toFixed(2);
+        totalContainer.style.display = 'block';
+        
+        alert(`Total calculado: ${total.toFixed(2)} toneladas\nFilas: ${cantidadInputs.length}`);
+    }
+    
+    // Validar formato de período (año mes)
+    document.addEventListener('input', function(e) {
+        if (e.target.name === 'periodo[]') {
+            const valor = e.target.value.trim();
+            // Validar formato básico: 4 dígitos + espacio + texto
+            if (valor && !/^\d{4}\s+[a-zA-ZáéíóúÁÉÍÓÚñÑ]+/.test(valor)) {
+                e.target.style.borderColor = '#EF4444';
+                e.target.setCustomValidity('Formato debe ser "2024 Enero"');
+            } else {
+                e.target.style.borderColor = '#10B981';
+                e.target.setCustomValidity('');
+            }
+        }
+    });
+    
+    // Validar formulario antes de enviar
+    document.getElementById('residuosForm').addEventListener('submit', function(e) {
+        const tieneReporte = document.querySelector('input[name="tiene_reporte"]:checked').value;
+        
+        if (tieneReporte === 'si') {
+            const link = document.getElementById('link_reporte').value;
+            if (!link) {
+                e.preventDefault();
+                alert('Por favor ingrese el link del reporte SINADER');
+                return false;
+            }
+        } else {
+            // Validar que al menos una fila tenga datos
+            const periodos = document.querySelectorAll('input[name="periodo[]"]');
+            let tieneDatos = false;
+            
+            periodos.forEach(input => {
+                if (input.value.trim()) {
+                    tieneDatos = true;
+                }
+            });
+            
+            if (!tieneDatos) {
+                e.preventDefault();
+                alert('Debe completar al menos una fila de la tabla');
+                return false;
+            }
+        }
+        
+        return true;
+    });
+    
+    // Inicializar
+    document.addEventListener('DOMContentLoaded', function() {
+        toggleReporte(false);
+    });
+</script>
+
+<style>
+    @media (max-width: 768px) {
+        table {
+            font-size: 0.9rem;
+        }
+        
+        th, td {
+            padding: 0.5rem !important;
+        }
+        
+        input, select {
+            font-size: 0.9rem !important;
+            padding: 6px !important;
+        }
+    }
+    
+    input:focus, select:focus {
+        outline: none;
+        border-color: #10B981 !important;
+        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1) !important;
+    }
+    
+    button:hover {
+        opacity: 0.9;
+        transform: translateY(-2px);
+    }
+</style>
+{% endblock %}

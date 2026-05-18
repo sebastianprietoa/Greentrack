@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+{% block title %}Tickets de Soporte - GreenTrack{% endblock %}
+
+{% block content %}
+<div style="max-width: 1000px; margin: 0 auto;">
+
+    <!-- Header -->
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <h1 style="color: #111827; margin: 0; font-size: 1.4rem; display: flex; align-items: center; gap: 10px;">
+                <i class="fas fa-headset" style="color: #EC4899;"></i> Tickets de Soporte
+            </h1>
+            <p style="color: #6B7280; margin: 4px 0 0 0; font-size: 0.88rem;">Gestiona las consultas y problemas enviados por los clientes.</p>
+        </div>
+        <!-- KPI chips -->
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <span style="background: #FEF2F2; color: #EF4444; font-size: 0.8rem; font-weight: 700; padding: 5px 12px; border-radius: 20px; border: 1px solid #FECACA;">
+                <i class="fas fa-circle" style="font-size: 0.5rem; vertical-align: middle;"></i> Abiertos: {{ conteos.get('Abierto', 0) }}
+            </span>
+            <span style="background: #FEF3C7; color: #D97706; font-size: 0.8rem; font-weight: 700; padding: 5px 12px; border-radius: 20px; border: 1px solid #FDE68A;">
+                <i class="fas fa-circle" style="font-size: 0.5rem; vertical-align: middle;"></i> En proceso: {{ conteos.get('En proceso', 0) }}
+            </span>
+            <span style="background: #D1FAE5; color: #065F46; font-size: 0.8rem; font-weight: 700; padding: 5px 12px; border-radius: 20px; border: 1px solid #A7F3D0;">
+                <i class="fas fa-circle" style="font-size: 0.5rem; vertical-align: middle;"></i> Cerrados: {{ conteos.get('Cerrado', 0) }}
+            </span>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <form method="GET" action="/admin/tickets" style="background: white; padding: 1.25rem 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-bottom: 1.5rem; display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end;">
+        <div style="flex: 1; min-width: 180px;">
+            <label style="display: block; font-size: 0.72rem; font-weight: 700; color: #9CA3AF; text-transform: uppercase; margin-bottom: 5px;">Buscar empresa</label>
+            <input type="text" name="empresa" value="{{ filtro_empresa }}" placeholder="Nombre empresa…"
+                   style="width: 100%; padding: 8px 12px; border: 1px solid #D1D5DB; border-radius: 7px; font-size: 0.88rem; box-sizing: border-box;">
+        </div>
+        <div style="min-width: 160px;">
+            <label style="display: block; font-size: 0.72rem; font-weight: 700; color: #9CA3AF; text-transform: uppercase; margin-bottom: 5px;">Estado</label>
+            <select name="estado" style="padding: 8px 12px; border: 1px solid #D1D5DB; border-radius: 7px; font-size: 0.88rem; background: white; min-width: 160px;">
+                <option value="">Todos</option>
+                <option value="Abierto" {{ 'selected' if filtro_estado == 'Abierto' }}>Abierto</option>
+                <option value="En proceso" {{ 'selected' if filtro_estado == 'En proceso' }}>En proceso</option>
+                <option value="Cerrado" {{ 'selected' if filtro_estado == 'Cerrado' }}>Cerrado</option>
+            </select>
+        </div>
+        <div style="display: flex; gap: 8px;">
+            <button type="submit" style="padding: 8px 18px; background: #6366F1; border: none; border-radius: 7px; color: white; font-weight: 600; font-size: 0.88rem; cursor: pointer;">
+                <i class="fas fa-search"></i> Filtrar
+            </button>
+            {% if filtro_estado or filtro_empresa %}
+            <a href="/admin/tickets" style="padding: 8px 14px; border: 1px solid #D1D5DB; border-radius: 7px; color: #6B7280; font-weight: 600; font-size: 0.88rem; text-decoration: none; display: flex; align-items: center; gap: 6px;">
+                <i class="fas fa-times"></i> Limpiar
+            </a>
+            {% endif %}
+        </div>
+    </form>
+
+    <!-- Tickets -->
+    {% if tickets %}
+    <div style="display: flex; flex-direction: column; gap: 1rem;">
+        {% for t in tickets %}
+        {% set color_estado = {'Abierto': '#EF4444', 'En proceso': '#F59E0B', 'Cerrado': '#10B981'} %}
+        {% set bg_estado = {'Abierto': '#FEF2F2', 'En proceso': '#FEF3C7', 'Cerrado': '#D1FAE5'} %}
+        {% set color_prio = {'Alta': '#EF4444', 'Normal': '#6366F1', 'Baja': '#9CA3AF'} %}
+        <div style="background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); overflow: hidden; border-left: 4px solid {{ color_estado.get(t.estado, '#9CA3AF') }};">
+            <div style="padding: 1.25rem 1.5rem;">
+                <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
+                    <div style="flex: 1; min-width: 0;">
+                        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 4px;">
+                            <span style="font-weight: 700; color: #111827; font-size: 0.95rem;">{{ t.asunto }}</span>
+                            <span style="background: {{ bg_estado.get(t.estado, '#F3F4F6') }}; color: {{ color_estado.get(t.estado, '#6B7280') }}; font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 20px;">{{ t.estado }}</span>
+                            <span style="color: {{ color_prio.get(t.prioridad, '#9CA3AF') }}; font-size: 0.72rem; font-weight: 600;">
+                                <i class="fas fa-flag"></i> {{ t.prioridad }}
+                            </span>
+                        </div>
+                        <p style="color: #6B7280; font-size: 0.82rem; margin: 0;">
+                            <i class="fas fa-building" style="color: #8B5CF6;"></i>
+                            <strong style="color: #374151;">{{ t.empresa }}</strong>
+                            &nbsp;·&nbsp; <i class="fas fa-calendar-alt"></i> {{ t.fecha_creacion }}
+                            &nbsp;·&nbsp; #{{ t.id }}
+                        </p>
+                    </div>
+                    <button onclick="toggleAdmin('adm-{{ t.id }}')"
+                            style="background: #F3F4F6; border: none; padding: 6px 14px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; color: #374151; cursor: pointer; flex-shrink: 0;">
+                        <i class="fas fa-reply" style="color: #EC4899;"></i> Responder
+                    </button>
+                </div>
+            </div>
+
+            <div id="adm-{{ t.id }}" style="display: none; background: #F9FAFB; border-top: 1px solid #F3F4F6; padding: 1.25rem 1.5rem;">
+                <!-- Descripción del cliente -->
+                <div style="margin-bottom: 1.25rem;">
+                    <p style="font-size: 0.72rem; font-weight: 700; color: #9CA3AF; text-transform: uppercase; margin: 0 0 4px 0;">Mensaje del cliente</p>
+                    <div style="background: white; border: 1px solid #E5E7EB; border-radius: 8px; padding: 0.875rem; font-size: 0.88rem; color: #374151; white-space: pre-wrap;">{{ t.descripcion }}</div>
+                </div>
+
+                {% if t.respuesta %}
+                <!-- Respuesta previa -->
+                <div style="background: #F0FDF4; border: 1px solid #A7F3D0; border-radius: 8px; padding: 0.875rem; margin-bottom: 1.25rem;">
+                    <p style="font-size: 0.72rem; font-weight: 700; color: #065F46; margin: 0 0 4px 0; text-transform: uppercase;">
+                        Respuesta enviada {% if t.fecha_respuesta %}<span style="font-weight: 400; color: #6B7280;">({{ t.fecha_respuesta }})</span>{% endif %}
+                    </p>
+                    <p style="color: #065F46; font-size: 0.88rem; margin: 0; white-space: pre-wrap;">{{ t.respuesta }}</p>
+                </div>
+                {% endif %}
+
+                <!-- Formulario de respuesta -->
+                <form method="POST" action="/admin/tickets/{{ t.id }}/responder">
+                    <div style="margin-bottom: 0.875rem;">
+                        <label style="display: block; font-size: 0.72rem; font-weight: 700; color: #6B7280; text-transform: uppercase; margin-bottom: 5px;">
+                            {% if t.respuesta %}Actualizar respuesta{% else %}Escribir respuesta{% endif %}
+                        </label>
+                        <textarea name="respuesta" rows="4" required
+                                  style="width: 100%; padding: 10px 12px; border: 1px solid #D1D5DB; border-radius: 7px; font-size: 0.88rem; box-sizing: border-box; resize: vertical;"
+                                  placeholder="Escribe tu respuesta al cliente…">{{ t.respuesta or '' }}</textarea>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                        <div>
+                            <label style="font-size: 0.72rem; font-weight: 700; color: #6B7280; text-transform: uppercase; margin-right: 8px;">Estado</label>
+                            <select name="estado" style="padding: 7px 12px; border: 1px solid #D1D5DB; border-radius: 7px; font-size: 0.85rem; background: white;">
+                                <option value="Abierto" {{ 'selected' if t.estado == 'Abierto' }}>Abierto</option>
+                                <option value="En proceso" {{ 'selected' if t.estado == 'En proceso' }}>En proceso</option>
+                                <option value="Cerrado" {{ 'selected' if t.estado == 'Cerrado' }}>Cerrado</option>
+                            </select>
+                        </div>
+                        <button type="submit"
+                                style="padding: 8px 20px; background: #EC4899; border: none; border-radius: 7px; color: white; font-weight: 700; font-size: 0.88rem; cursor: pointer; display: flex; align-items: center; gap: 7px;">
+                            <i class="fas fa-paper-plane"></i> Enviar Respuesta
+                        </button>
+                        <button type="button" onclick="toggleAdmin('adm-{{ t.id }}')"
+                                style="padding: 8px 14px; border: 1px solid #D1D5DB; background: white; border-radius: 7px; color: #6B7280; font-size: 0.85rem; cursor: pointer;">
+                            Cancelar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% else %}
+    <div style="background: white; border-radius: 12px; padding: 3rem; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+        <i class="fas fa-ticket-alt" style="font-size: 3rem; color: #E5E7EB; margin-bottom: 1rem; display: block;"></i>
+        <p style="color: #6B7280; font-size: 1rem; margin: 0;">
+            {% if filtro_estado or filtro_empresa %}
+            No hay tickets que coincidan con los filtros.
+            {% else %}
+            No hay tickets de soporte registrados.
+            {% endif %}
+        </p>
+    </div>
+    {% endif %}
+
+</div>
+
+<script>
+function toggleAdmin(id) {
+    const el = document.getElementById(id);
+    el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+</script>
+{% endblock %}
