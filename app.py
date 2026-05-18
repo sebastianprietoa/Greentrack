@@ -8,12 +8,14 @@ import os
 import io
 import json
 import tempfile
-import bcrypt
 from extractor_sinader import extract_sinader_data
 from extractor_sidrep import extract_sidrep_data, clasificar_defra
+from auth_utils import hash_password, verify_password
+from routes import register_blueprints
 
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "clave_segura_provisional")
+register_blueprints(app)
 
 @app.context_processor
 def inject_pendientes_count():
@@ -297,47 +299,6 @@ def init_db():
 
     conn.commit()
     conn.close()
-
-def hash_password(password):
-    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-
-def verify_password(password, hashed):
-    if hashed and (hashed.startswith('$2b$') or hashed.startswith('$2a$')):
-        return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
-    # Fallback SHA-256 para cuentas creadas antes de la migración
-    return hashlib.sha256(password.encode()).hexdigest() == hashed
-
-
-# ================= RUTAS AUTENTICACIÓN =================
-@app.route("/", methods=["GET", "POST"])
-def inicio():
-    if 'user_id' in session:
-        return redirect("/admin/dashboard" if session.get('es_admin') == 1 else "/dashboard")
-    
-    if request.method == "POST":
-        email = request.form.get("email")
-        password = request.form.get("password")
-        conn = get_db()
-        cursor = conn.cursor()
-        cursor.execute("SELECT id, empresa, password, es_admin FROM usuarios WHERE email = %s", (email,))
-        user = cursor.fetchone()
-        conn.close()
-        
-        if user and verify_password(password, user[2]):
-            session['user_id'] = user[0]
-            session['empresa'] = user[1]
-            session['es_admin'] = user[3]
-            return redirect("/admin/dashboard" if user[3] == 1 else "/dashboard")
-        else:
-            flash("Credenciales incorrectas", "error")
-    return render_template("login.html")
-
-@app.route("/logout")
-def logout():
-    session.clear()
-    flash("Sesión cerrada", "info")
-    return redirect("/")
-
 
 # ================= DASHBOARD PRINCIPAL =================
 @app.route("/dashboard")
