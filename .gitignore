@@ -23,6 +23,7 @@ env/
 *.sql
 *.backup
 greentrack_backup*.dump
+greenetrack_backup*.dump
 
 # Logs
 *.log

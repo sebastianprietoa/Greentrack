@@ -1047,6 +1047,82 @@ def formulario_residuos():
     return render_template("formulario_residuos.html", factores=get_factores_residuos())
 
 # ================= REGISTRO MANUAL GENERAL =================
+def _parse_float_input(value, default=0.0):
+    try:
+        return float(str(value).replace(',', '.'))
+    except:
+        return default
+
+
+def _meses_entre(mes_inicio, mes_fin):
+    inicio = datetime.strptime(f"{mes_inicio}-01", "%Y-%m-%d")
+    fin = datetime.strptime(f"{mes_fin}-01", "%Y-%m-%d")
+    if inicio > fin:
+        raise ValueError("El mes de inicio debe ser anterior o igual al mes final.")
+
+    meses = []
+    actual = inicio
+    while actual <= fin:
+        meses.append(actual.strftime("%Y-%m"))
+        if actual.month == 12:
+            actual = actual.replace(year=actual.year + 1, month=1)
+        else:
+            actual = actual.replace(month=actual.month + 1)
+    return meses
+
+
+def _resolver_datos_alcance1(form):
+    categoria = form.get('combustible')
+    unidad = form.get('unidad')
+    actividad = "Consumo general"
+
+    if categoria == 'Otros':
+        categoria = form.get('otro_combustible')
+        factor = _parse_float_input(form.get('otro_factor', '0'))
+    else:
+        factor = _parse_float_input(form.get('factor_oculto', '0'))
+
+    return categoria, unidad, actividad, factor
+
+
+def _calcular_factores_electricos(cursor, sistema, anio_reg, mes_reg, origen, tiene_irec):
+    cursor.execute(
+        "SELECT factor_emision_avg FROM factores_electricos WHERE sistema = %s AND anio = %s AND mes = %s",
+        (sistema, anio_reg, mes_reg)
+    )
+    res_ub = cursor.fetchone()
+    if not res_ub:
+        cursor.execute(
+            "SELECT factor_emision_avg FROM factores_electricos WHERE sistema = %s ORDER BY anio DESC, mes DESC LIMIT 1",
+            (sistema,)
+        )
+        res_ub = cursor.fetchone()
+    factor_ubicacion = float(res_ub[0]) if res_ub and res_ub[0] is not None else 0.0
+
+    if origen == 'ERNC' and tiene_irec == 'Si':
+        factor_mercado = 0.0
+    else:
+        cursor.execute(
+            "SELECT factor_emision_avg FROM factores_electricos WHERE LOWER(sistema) = 'residual' AND anio = %s AND mes = %s",
+            (anio_reg, mes_reg)
+        )
+        res_merc = cursor.fetchone()
+        if not res_merc:
+            cursor.execute(
+                "SELECT factor_emision_avg FROM factores_electricos WHERE LOWER(sistema) = 'residual' ORDER BY anio DESC, mes DESC LIMIT 1"
+            )
+            res_merc = cursor.fetchone()
+        if not res_merc:
+            cursor.execute(
+                "SELECT factor_emision_avg FROM factores_electricos WHERE sistema = %s ORDER BY ABS(anio - %s) ASC, ABS(mes - %s) ASC LIMIT 1",
+                (sistema, anio_reg, mes_reg)
+            )
+            res_merc = cursor.fetchone()
+        factor_mercado = float(res_merc[0]) if res_merc and res_merc[0] is not None else 0.0
+
+    return factor_ubicacion, factor_mercado
+
+
 @app.route('/registro', methods=['GET', 'POST'])
 def registro():
     if 'user_id' not in session:
@@ -1055,8 +1131,9 @@ def registro():
     if request.method == 'POST':
         empresa = session.get('empresa')
         alcance = request.form.get('alcance_oculto', 'Alcance 1')
+        modo_registro = request.form.get('modo_registro', 'individual')
         
-        fecha_raw = request.form.get('fecha')
+        fecha_raw = request.form.get('fecha') or ''
         if len(fecha_raw) == 7:
             fecha = f"{fecha_raw}-01"
         else:
@@ -1064,14 +1141,141 @@ def registro():
 
         area = request.form.get('area')
         fuente = request.form.get('fuente')
-        
-        try:
-            cantidad = float(str(request.form.get('cantidad', '0')).replace(',', '.'))
-        except:
-            cantidad = 0.0
 
+        cantidad = _parse_float_input(request.form.get('cantidad', '0'))
+        
         conn = get_db()
         cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+
+        if alcance == 'Alcance 1' and modo_registro == 'multiple':
+            fecha_inicio = request.form.get('fecha_inicio')
+            fecha_fin = request.form.get('fecha_fin')
+            cantidades_lote = request.form.getlist('batch_cantidad[]')
+
+            if not fecha_inicio or not fecha_fin:
+                conn.close()
+                flash("Debes seleccionar un mes de inicio y un mes de final.", "error")
+                return redirect("/registro")
+
+            try:
+                meses_lote = _meses_entre(fecha_inicio, fecha_fin)
+            except ValueError as exc:
+                conn.close()
+                flash(str(exc), "error")
+                return redirect("/registro")
+
+            if not area:
+                conn.close()
+                flash("Completa el área o instalación antes de guardar el lote.", "error")
+                return redirect("/registro")
+
+            if len(cantidades_lote) != len(meses_lote):
+                conn.close()
+                flash("La tabla generada no coincide con el rango seleccionado.", "error")
+                return redirect("/registro")
+
+            categoria, unidad, actividad, factor = _resolver_datos_alcance1(request.form)
+            if not categoria or not unidad:
+                conn.close()
+                flash("Completa la categoría y la unidad antes de guardar el lote.", "error")
+                return redirect("/registro")
+
+            try:
+                for idx, mes in enumerate(meses_lote):
+                    cantidad_raw = str(cantidades_lote[idx]).strip()
+                    if not cantidad_raw:
+                        raise ValueError(f"Falta completar la cantidad del mes {mes}.")
+                    cantidad_lote = float(cantidad_raw.replace(',', '.'))
+                    fecha_lote = f"{mes}-01"
+                    emision_lote = round(cantidad_lote * factor, 4)
+                    cursor.execute("""
+                        INSERT INTO registros (fecha, empresa, area, alcance, fuente, categoria, actividad, unidad, cantidad, factor, emision)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    """, (fecha_lote, empresa, area, alcance, fuente, categoria, actividad, unidad, cantidad_lote, factor, emision_lote))
+                conn.commit()
+            except Exception as exc:
+                conn.rollback()
+                conn.close()
+                flash(f"No se pudo guardar el lote: {exc}", "error")
+                return redirect("/registro")
+
+            conn.close()
+            flash(f"Se guardaron {len(meses_lote)} registros entre {fecha_inicio} y {fecha_fin}.", "success")
+            return redirect("/dashboard")
+
+        if alcance == 'Alcance 2' and modo_registro == 'multiple':
+            fecha_inicio = request.form.get('fecha_inicio')
+            fecha_fin = request.form.get('fecha_fin')
+            cantidades_lote = request.form.getlist('batch_cantidad[]')
+            origen = request.form.get('origen_energia')
+            sistema = request.form.get('sistema_elec')
+            tiene_irec = request.form.get('tiene_irec', 'No')
+
+            if not fecha_inicio or not fecha_fin:
+                conn.close()
+                flash("Debes seleccionar un mes de inicio y un mes de final.", "error")
+                return redirect("/registro")
+
+            try:
+                meses_lote = _meses_entre(fecha_inicio, fecha_fin)
+            except ValueError as exc:
+                conn.close()
+                flash(str(exc), "error")
+                return redirect("/registro")
+
+            if not area:
+                conn.close()
+                flash("Completa la instalación o sucursal antes de guardar el lote.", "error")
+                return redirect("/registro")
+
+            if not origen or not sistema:
+                conn.close()
+                flash("Completa el origen de energía y el sistema antes de guardar el lote.", "error")
+                return redirect("/registro")
+
+            if len(cantidades_lote) != len(meses_lote):
+                conn.close()
+                flash("La tabla generada no coincide con el rango seleccionado.", "error")
+                return redirect("/registro")
+
+            categoria = f"Electricidad {sistema}"
+            unidad = "kWh"
+            actividad = "Consumo de red eléctrica"
+
+            archivo_irec = request.files.get('certificado_irec')
+            if tiene_irec == 'Si' and archivo_irec and archivo_irec.filename:
+                fecha_consumo_irec = f"{meses_lote[0]}-01"
+                cursor.execute(
+                    "INSERT INTO irec_certificados (empresa, fecha_consumo, filename, contenido, fecha_subida) VALUES (%s, %s, %s, %s, %s)",
+                    (empresa, fecha_consumo_irec, archivo_irec.filename, psycopg2.Binary(archivo_irec.read()), datetime.now().strftime("%Y-%m-%d %H:%M"))
+                )
+
+            try:
+                for idx, mes in enumerate(meses_lote):
+                    cantidad_raw = str(cantidades_lote[idx]).strip()
+                    if not cantidad_raw:
+                        raise ValueError(f"Falta completar la cantidad del mes {mes}.")
+                    cantidad_lote = float(cantidad_raw.replace(',', '.'))
+                    fecha_lote = f"{mes}-01"
+                    fecha_dt = datetime.strptime(fecha_lote, "%Y-%m-%d")
+                    anio_reg, mes_reg = fecha_dt.year, fecha_dt.month
+                    factor_ubicacion, factor = _calcular_factores_electricos(cursor, sistema, anio_reg, mes_reg, origen, tiene_irec)
+                    emision_ubicacion = round(cantidad_lote * factor_ubicacion, 4)
+                    emision = round(cantidad_lote * factor, 4)
+                    cursor.execute("""
+                        INSERT INTO registros (fecha, empresa, area, alcance, fuente, categoria, actividad, unidad, cantidad, factor, emision, emision_ubicacion, origen_energia, tiene_irec, sistema)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    """, (fecha_lote, empresa, area, alcance, fuente, categoria, actividad, unidad, cantidad_lote, factor, emision, emision_ubicacion, origen, tiene_irec, sistema))
+                conn.commit()
+            except Exception as exc:
+                conn.rollback()
+                conn.close()
+                flash(f"No se pudo guardar el lote eléctrico: {exc}", "error")
+                return redirect("/registro")
+
+            conn.close()
+            flash(f"Se guardaron {len(meses_lote)} consumos eléctricos entre {fecha_inicio} y {fecha_fin}.", "success")
+            return redirect("/electricidad")
 
         if alcance == 'Alcance 2':
             origen = request.form.get('origen_energia')
@@ -1085,43 +1289,8 @@ def registro():
             fecha_dt = datetime.strptime(fecha, "%Y-%m-%d")
             anio_reg, mes_reg = fecha_dt.year, fecha_dt.month
 
-            # Factor ubicación: buscar por año/mes exacto, si no existe usar el más reciente del mismo sistema
-            cursor.execute(
-                "SELECT factor_emision_avg FROM factores_electricos WHERE sistema = %s AND anio = %s AND mes = %s",
-                (sistema, anio_reg, mes_reg)
-            )
-            res_ub = cursor.fetchone()
-            if not res_ub:
-                cursor.execute(
-                    "SELECT factor_emision_avg FROM factores_electricos WHERE sistema = %s ORDER BY anio DESC, mes DESC LIMIT 1",
-                    (sistema,)
-                )
-                res_ub = cursor.fetchone()
-            factor_ubicacion = float(res_ub[0]) if res_ub and res_ub[0] is not None else 0.0
+            factor_ubicacion, factor = _calcular_factores_electricos(cursor, sistema, anio_reg, mes_reg, origen, tiene_irec)
             emision_ubicacion = round(cantidad * factor_ubicacion, 4)
-
-            # Factor mercado: 0 si ERNC + IREC válido, residual en caso contrario
-            if origen == 'ERNC' and tiene_irec == 'Si':
-                factor = 0.0
-            else:
-                cursor.execute(
-                    "SELECT factor_emision_avg FROM factores_electricos WHERE LOWER(sistema) = 'residual' AND anio = %s AND mes = %s",
-                    (anio_reg, mes_reg)
-                )
-                res_merc = cursor.fetchone()
-                if not res_merc:
-                    cursor.execute(
-                        "SELECT factor_emision_avg FROM factores_electricos WHERE LOWER(sistema) = 'residual' ORDER BY anio DESC, mes DESC LIMIT 1"
-                    )
-                    res_merc = cursor.fetchone()
-                if not res_merc:
-                    # Fallback final: factor SEN más cercano
-                    cursor.execute(
-                        "SELECT factor_emision_avg FROM factores_electricos WHERE sistema = %s ORDER BY ABS(anio - %s) ASC, ABS(mes - %s) ASC LIMIT 1",
-                        (sistema, anio_reg, mes_reg)
-                    )
-                    res_merc = cursor.fetchone()
-                factor = float(res_merc[0]) if res_merc and res_merc[0] is not None else 0.0
 
             emision = round(cantidad * factor, 4)
 
@@ -1134,21 +1303,7 @@ def registro():
                 )
 
         else:
-            categoria = request.form.get('combustible')
-            unidad = request.form.get('unidad')
-            actividad = "Consumo general"
-            
-            if categoria == 'Otros':
-                categoria = request.form.get('otro_combustible')
-                try:
-                    factor = float(str(request.form.get('otro_factor', '0')).replace(',', '.'))
-                except:
-                    factor = 0.0
-            else:
-                try:
-                    factor = float(str(request.form.get('factor_oculto', '0')).replace(',', '.'))
-                except:
-                    factor = 0.0
+            categoria, unidad, actividad, factor = _resolver_datos_alcance1(request.form)
                 
             emision = cantidad * factor
 
@@ -1186,7 +1341,7 @@ def registro():
             _seen_cu.add(_key)
             factores_db.append(_f)
 
-    nombres_principales = ['Diésel', 'Bencina/Gasolina', 'Gas Licuado Petróleo (GLP)', 'R410A']
+    nombres_principales = ['Diésel', 'Gas Licuado Petróleo (GLP)']
     datos_agrupados = {'principales': {}, 'combustibles': {}, 'refrigerantes': {}, 'otros': {}}
 
     for f in factores_db:
@@ -1199,7 +1354,7 @@ def registro():
         grupo = 'otros'
         if cat in nombres_principales:
             grupo = 'principales'
-        elif 'gas' in cat_lower or 'diésel' in cat_lower or 'bencina' in cat_lower or 'aceite' in cat_lower or 'petróleo' in cat_lower:
+        elif 'glp' in cat_lower or 'gas' in cat_lower or 'diésel' in cat_lower or 'bencina' in cat_lower or 'aceite' in cat_lower or 'petróleo' in cat_lower:
             grupo = 'combustibles'
         elif 'r4' in cat_lower or 'hfc' in cat_lower or 'cfc' in cat_lower:
             grupo = 'refrigerantes'

@@ -25,8 +25,50 @@
     <div id="form_a1" style="background: white; padding: 2.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border-top: 5px solid #3B82F6;">
         <form action="/registro" method="POST">
             <input type="hidden" name="alcance_oculto" value="Alcance 1">
+            <input type="hidden" name="modo_registro" id="modo_registro_a1" value="individual">
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+            <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 1.5rem;">
+                <button type="button" id="modo_individual_a1" onclick="establecerModoA1('individual')" style="background: #3B82F6; color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                    Registro individual
+                </button>
+                <button type="button" id="modo_multiple_a1" onclick="establecerModoA1('multiple')" style="background: #F3F4F6; color: #4B5563; border: none; padding: 10px 16px; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                    Carga multiple
+                </button>
+            </div>
+
+            <div id="a1_batch_panel" style="display: none; background: #F9FAFB; padding: 1.25rem; border-radius: 10px; margin-bottom: 1.5rem; border: 1px solid #D1D5DB;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 1rem; align-items: end; margin-bottom: 1rem;">
+                    <div>
+                        <label style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">Mes de inicio</label>
+                        <input type="month" id="fecha_inicio_a1" name="fecha_inicio" style="width: 100%; padding: 10px; border: 1px solid #D1D5DB; border-radius: 6px; box-sizing: border-box;">
+                    </div>
+                    <div>
+                        <label style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">Mes de final</label>
+                        <input type="month" id="fecha_fin_a1" name="fecha_fin" style="width: 100%; padding: 10px; border: 1px solid #D1D5DB; border-radius: 6px; box-sizing: border-box;">
+                    </div>
+                    <button type="button" onclick="generarTablaA1()" style="background: #111827; color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; height: 42px;">
+                        Generar tabla
+                    </button>
+                </div>
+                <p id="batch_summary_a1" style="margin: 0 0 1rem 0; color: #6B7280; font-size: 0.95rem;">Selecciona un rango de meses y genera la tabla.</p>
+                <div style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden;">
+                        <thead>
+                            <tr style="background: #EEF2FF; color: #1F2937;">
+                                <th style="text-align: left; padding: 10px; border-bottom: 1px solid #E5E7EB;">Mes</th>
+                                <th style="text-align: left; padding: 10px; border-bottom: 1px solid #E5E7EB;">Cantidad</th>
+                            </tr>
+                        </thead>
+                        <tbody id="batch_body_a1">
+                            <tr>
+                                <td colspan="2" style="padding: 12px; color: #6B7280;">Aun no se ha generado una tabla.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="a1_individual_period" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
                 <div>
                     <label style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">Mes de la actividad</label>
                     <input type="month" name="fecha" required style="width: 100%; padding: 10px; border: 1px solid #D1D5DB; border-radius: 6px; box-sizing: border-box;">
@@ -84,7 +126,7 @@
 
             <input type="hidden" name="factor_oculto" id="fac_a1" value="0">
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
+            <div id="a1_individual_quantity" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
                 <div>
                     <label style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">Cantidad consumida</label>
                     <input type="number" step="0.01" name="cantidad" required style="width: 100%; padding: 10px; border: 1px solid #D1D5DB; border-radius: 6px; box-sizing: border-box;">
@@ -98,7 +140,7 @@
                 </div>
             </div>
 
-            <button type="submit" style="width: 100%; background: #3B82F6; color: white; padding: 12px; border: none; border-radius: 8px; font-weight: 600; font-size: 1.1rem; cursor: pointer; box-shadow: 0 4px 6px rgba(59, 130, 246, 0.2);">
+            <button id="btn_submit_a1" type="submit" style="width: 100%; background: #3B82F6; color: white; padding: 12px; border: none; border-radius: 8px; font-weight: 600; font-size: 1.1rem; cursor: pointer; box-shadow: 0 4px 6px rgba(59, 130, 246, 0.2);">
                 <i class="fas fa-save"></i> Guardar Registro Alcance 1
             </button>
         </form>
@@ -115,9 +157,49 @@
             <input type="hidden" name="fuente" value="Electricidad">
             <input type="hidden" name="actividad" value="Consumo de red eléctrica">
             <input type="hidden" name="unidad" value="kWh">
+            <input type="hidden" name="modo_registro" id="modo_registro_a2" value="individual">
+            <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 1.5rem;">
+                <button type="button" id="modo_individual_a2" onclick="establecerModoA2('individual')" style="background: #F59E0B; color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                    Registro individual
+                </button>
+                <button type="button" id="modo_multiple_a2" onclick="establecerModoA2('multiple')" style="background: #F3F4F6; color: #4B5563; border: none; padding: 10px 16px; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                    Carga multiple
+                </button>
+            </div>
+            <div id="a2_batch_panel" style="display: none; background: #FFF7ED; padding: 1.25rem; border-radius: 10px; margin-bottom: 1.5rem; border: 1px solid #FDBA74;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 1rem; align-items: end; margin-bottom: 1rem;">
+                    <div>
+                        <label style="display: block; font-weight: 600; color: #92400E; margin-bottom: 8px;">Mes de inicio</label>
+                        <input type="month" id="fecha_inicio_a2" name="fecha_inicio" style="width: 100%; padding: 10px; border: 1px solid #FDBA74; border-radius: 6px; box-sizing: border-box;">
+                    </div>
+                    <div>
+                        <label style="display: block; font-weight: 600; color: #92400E; margin-bottom: 8px;">Mes de final</label>
+                        <input type="month" id="fecha_fin_a2" name="fecha_fin" style="width: 100%; padding: 10px; border: 1px solid #FDBA74; border-radius: 6px; box-sizing: border-box;">
+                    </div>
+                    <button type="button" onclick="generarTablaA2()" style="background: #B45309; color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; height: 42px;">
+                        Generar tabla
+                    </button>
+                </div>
+                <p id="batch_summary_a2" style="margin: 0 0 1rem 0; color: #9A3412; font-size: 0.95rem;">Selecciona un rango de meses y genera la tabla.</p>
+                <div style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden;">
+                        <thead>
+                            <tr style="background: #FFEDD5; color: #7C2D12;">
+                                <th style="text-align: left; padding: 10px; border-bottom: 1px solid #FED7AA;">Mes</th>
+                                <th style="text-align: left; padding: 10px; border-bottom: 1px solid #FED7AA;">Cantidad</th>
+                            </tr>
+                        </thead>
+                        <tbody id="batch_body_a2">
+                            <tr>
+                                <td colspan="2" style="padding: 12px; color: #6B7280;">Aun no se ha generado una tabla.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
             
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
-                <div>
+                <div id="a2_fecha_wrap">
                     <label style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">Mes de Consumo</label>
                     <input type="month" name="fecha" required style="width: 100%; padding: 10px; border: 1px solid #D1D5DB; border-radius: 6px; box-sizing: border-box;">
                 </div>
@@ -157,7 +239,7 @@
                 </div>
             </div>
 
-            <div style="margin-bottom: 2.5rem;">
+            <div id="a2_individual_quantity" style="margin-bottom: 2.5rem;">
                 <label style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">Energía Consumida (kWh)</label>
                 <div style="position: relative;">
                     <i class="fas fa-bolt" style="position: absolute; left: 15px; top: 12px; color: #F59E0B;"></i>
@@ -165,7 +247,7 @@
                 </div>
             </div>
 
-            <button type="submit" style="width: 100%; background: #F59E0B; color: white; padding: 12px; border: none; border-radius: 8px; font-weight: 600; font-size: 1.1rem; cursor: pointer; box-shadow: 0 4px 6px rgba(245, 158, 11, 0.2);">
+            <button id="btn_submit_a2" type="submit" style="width: 100%; background: #F59E0B; color: white; padding: 12px; border: none; border-radius: 8px; font-weight: 600; font-size: 1.1rem; cursor: pointer; box-shadow: 0 4px 6px rgba(245, 158, 11, 0.2);">
                 <i class="fas fa-bolt"></i> Registrar Consumo Eléctrico
             </button>
         </form>
@@ -220,6 +302,374 @@
     }
 
     const baseFactores = {{ datos_factores | tojson }};
+    const modoRegistroA1 = document.getElementById('modo_registro_a1');
+    const btnModoIndividualA1 = document.getElementById('modo_individual_a1');
+    const btnModoMultipleA1 = document.getElementById('modo_multiple_a1');
+    const panelBatchA1 = document.getElementById('a1_batch_panel');
+    const bloqueIndividualPeriodoA1 = document.getElementById('a1_individual_period');
+    const bloqueIndividualCantidadA1 = document.getElementById('a1_individual_quantity');
+    const fechaIndividualA1 = document.querySelector('#form_a1 input[name="fecha"]');
+    const cantidadIndividualA1 = document.querySelector('#form_a1 input[name="cantidad"]');
+    const fechaWrapA1 = fechaIndividualA1 ? fechaIndividualA1.parentElement : null;
+    const cantidadWrapA1 = cantidadIndividualA1 ? cantidadIndividualA1.parentElement : null;
+    const unidadA1 = document.querySelector('#form_a1 select[name="unidad"]');
+    const unidadWrapA1 = unidadA1 ? unidadA1.parentElement : null;
+    const fechaInicioA1 = document.getElementById('fecha_inicio_a1');
+    const fechaFinA1 = document.getElementById('fecha_fin_a1');
+    const batchBodyA1 = document.getElementById('batch_body_a1');
+    const batchSummaryA1 = document.getElementById('batch_summary_a1');
+    const btnSubmitA1 = document.getElementById('btn_submit_a1');
+    const mesesNombresA1 = [
+        'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+        'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    ];
+
+    function formatearMesA1(valorMes) {
+        if (!valorMes || !valorMes.includes('-')) {
+            return valorMes || '';
+        }
+
+        const partes = valorMes.split('-');
+        const anio = partes[0];
+        const mesIndex = parseInt(partes[1], 10) - 1;
+        const nombreMes = mesesNombresA1[mesIndex] || valorMes;
+        return `${nombreMes} ${anio}`;
+    }
+
+    function limpiarTablaA1(mensaje) {
+        if (!batchBodyA1) {
+            return;
+        }
+
+        batchBodyA1.innerHTML = `
+            <tr>
+                <td colspan="2" style="padding: 12px; color: #6B7280;">${mensaje}</td>
+            </tr>
+        `;
+    }
+
+    function aplicarEstadoModoA1(modo) {
+        const esIndividual = modo !== 'multiple';
+
+        if (modoRegistroA1) {
+            modoRegistroA1.value = esIndividual ? 'individual' : 'multiple';
+        }
+
+        if (bloqueIndividualPeriodoA1) {
+            bloqueIndividualPeriodoA1.style.display = 'grid';
+        }
+
+        if (bloqueIndividualCantidadA1) {
+            bloqueIndividualCantidadA1.style.display = 'grid';
+        }
+
+        if (panelBatchA1) {
+            panelBatchA1.style.display = esIndividual ? 'none' : 'block';
+        }
+
+        if (fechaWrapA1) {
+            fechaWrapA1.style.display = esIndividual ? 'block' : 'none';
+        }
+
+        if (fechaIndividualA1) {
+            fechaIndividualA1.required = esIndividual;
+            fechaIndividualA1.disabled = !esIndividual;
+        }
+
+        if (cantidadWrapA1) {
+            cantidadWrapA1.style.display = esIndividual ? 'block' : 'none';
+        }
+
+        if (cantidadIndividualA1) {
+            cantidadIndividualA1.required = esIndividual;
+            cantidadIndividualA1.disabled = !esIndividual;
+        }
+
+        if (unidadWrapA1) {
+            unidadWrapA1.style.display = 'block';
+        }
+
+        if (unidadA1) {
+            unidadA1.required = true;
+            unidadA1.disabled = false;
+        }
+
+        if (fechaInicioA1) {
+            fechaInicioA1.required = !esIndividual;
+            fechaInicioA1.disabled = esIndividual;
+        }
+
+        if (fechaFinA1) {
+            fechaFinA1.required = !esIndividual;
+            fechaFinA1.disabled = esIndividual;
+        }
+
+        if (batchBodyA1) {
+            batchBodyA1.querySelectorAll('input[name="batch_cantidad[]"]').forEach(input => {
+                input.required = !esIndividual;
+                input.disabled = esIndividual;
+            });
+        }
+
+        if (btnModoIndividualA1) {
+            btnModoIndividualA1.style.background = esIndividual ? '#3B82F6' : '#F3F4F6';
+            btnModoIndividualA1.style.color = esIndividual ? 'white' : '#4B5563';
+        }
+
+        if (btnModoMultipleA1) {
+            btnModoMultipleA1.style.background = esIndividual ? '#F3F4F6' : '#111827';
+            btnModoMultipleA1.style.color = esIndividual ? '#4B5563' : 'white';
+        }
+
+        if (btnSubmitA1) {
+            btnSubmitA1.innerHTML = esIndividual
+                ? '<i class="fas fa-save"></i> Guardar Registro Alcance 1'
+                : '<i class="fas fa-layer-group"></i> Guardar Lote Alcance 1';
+        }
+    }
+
+    function establecerModoA1(modo) {
+        aplicarEstadoModoA1(modo);
+    }
+
+    function generarTablaA1() {
+        if (!fechaInicioA1 || !fechaFinA1 || !batchBodyA1 || !batchSummaryA1) {
+            return;
+        }
+
+        aplicarEstadoModoA1('multiple');
+
+        const inicio = fechaInicioA1.value;
+        const fin = fechaFinA1.value;
+
+        if (!inicio || !fin) {
+            limpiarTablaA1('Selecciona un rango de meses y genera la tabla.');
+            batchSummaryA1.style.color = '#B91C1C';
+            batchSummaryA1.textContent = 'Selecciona un rango de meses y genera la tabla.';
+            return;
+        }
+
+        const [anioInicio, mesInicio] = inicio.split('-').map(Number);
+        const [anioFin, mesFin] = fin.split('-').map(Number);
+        const cursorInicio = new Date(anioInicio, mesInicio - 1, 1);
+        const cursorFin = new Date(anioFin, mesFin - 1, 1);
+
+        if (cursorInicio > cursorFin) {
+            limpiarTablaA1('El mes de inicio no puede ser posterior al mes de final.');
+            batchSummaryA1.style.color = '#B91C1C';
+            batchSummaryA1.textContent = 'El mes de inicio no puede ser posterior al mes de final.';
+            return;
+        }
+
+        const meses = [];
+        const cursor = new Date(cursorInicio.getFullYear(), cursorInicio.getMonth(), 1);
+
+        while (cursor <= cursorFin) {
+            const anio = cursor.getFullYear();
+            const mes = String(cursor.getMonth() + 1).padStart(2, '0');
+            meses.push(`${anio}-${mes}`);
+            cursor.setMonth(cursor.getMonth() + 1);
+        }
+
+        batchBodyA1.innerHTML = '';
+
+        meses.forEach(mesValor => {
+            const fila = document.createElement('tr');
+            fila.setAttribute('data-mes', mesValor);
+            fila.innerHTML = `
+                <td style="padding: 10px; border-bottom: 1px solid #E5E7EB;">${formatearMesA1(mesValor)}</td>
+                <td style="padding: 10px; border-bottom: 1px solid #E5E7EB;">
+                    <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        name="batch_cantidad[]"
+                        required
+                        placeholder="Cantidad para ${formatearMesA1(mesValor)}"
+                        style="width: 100%; padding: 10px; border: 1px solid #D1D5DB; border-radius: 6px; box-sizing: border-box;"
+                    >
+                </td>
+            `;
+            batchBodyA1.appendChild(fila);
+        });
+
+        batchSummaryA1.style.color = '#4B5563';
+        batchSummaryA1.textContent = `Se generaron ${meses.length} filas entre ${formatearMesA1(meses[0])} y ${formatearMesA1(meses[meses.length - 1])}.`;
+
+        if (modoRegistroA1) {
+            modoRegistroA1.value = 'multiple';
+        }
+
+        aplicarEstadoModoA1('multiple');
+    }
+
+    establecerModoA1('individual');
+
+    const modoRegistroA2 = document.getElementById('modo_registro_a2');
+    const btnModoIndividualA2 = document.getElementById('modo_individual_a2');
+    const btnModoMultipleA2 = document.getElementById('modo_multiple_a2');
+    const panelBatchA2 = document.getElementById('a2_batch_panel');
+    const fechaWrapA2 = document.getElementById('a2_fecha_wrap');
+    const fechaIndividualA2 = document.querySelector('#form_a2 input[name="fecha"]');
+    const cantidadWrapA2 = document.getElementById('a2_individual_quantity');
+    const cantidadIndividualA2 = document.querySelector('#form_a2 input[name="cantidad"]');
+    const fechaInicioA2 = document.getElementById('fecha_inicio_a2');
+    const fechaFinA2 = document.getElementById('fecha_fin_a2');
+    const batchBodyA2 = document.getElementById('batch_body_a2');
+    const batchSummaryA2 = document.getElementById('batch_summary_a2');
+    const btnSubmitA2 = document.getElementById('btn_submit_a2');
+
+    function limpiarTablaA2(mensaje) {
+        if (!batchBodyA2) {
+            return;
+        }
+
+        batchBodyA2.innerHTML = `
+            <tr>
+                <td colspan="2" style="padding: 12px; color: #6B7280;">${mensaje}</td>
+            </tr>
+        `;
+    }
+
+    function aplicarEstadoModoA2(modo) {
+        const esIndividual = modo !== 'multiple';
+
+        if (modoRegistroA2) {
+            modoRegistroA2.value = esIndividual ? 'individual' : 'multiple';
+        }
+
+        if (panelBatchA2) {
+            panelBatchA2.style.display = esIndividual ? 'none' : 'block';
+        }
+
+        if (fechaWrapA2) {
+            fechaWrapA2.style.display = esIndividual ? 'block' : 'none';
+        }
+
+        if (fechaIndividualA2) {
+            fechaIndividualA2.required = esIndividual;
+            fechaIndividualA2.disabled = !esIndividual;
+        }
+
+        if (cantidadWrapA2) {
+            cantidadWrapA2.style.display = esIndividual ? 'block' : 'none';
+        }
+
+        if (cantidadIndividualA2) {
+            cantidadIndividualA2.required = esIndividual;
+            cantidadIndividualA2.disabled = !esIndividual;
+        }
+
+        if (fechaInicioA2) {
+            fechaInicioA2.required = !esIndividual;
+            fechaInicioA2.disabled = esIndividual;
+        }
+
+        if (fechaFinA2) {
+            fechaFinA2.required = !esIndividual;
+            fechaFinA2.disabled = esIndividual;
+        }
+
+        if (batchBodyA2) {
+            batchBodyA2.querySelectorAll('input[name="batch_cantidad[]"]').forEach(input => {
+                input.required = !esIndividual;
+                input.disabled = esIndividual;
+            });
+        }
+
+        if (btnModoIndividualA2) {
+            btnModoIndividualA2.style.background = esIndividual ? '#F59E0B' : '#F3F4F6';
+            btnModoIndividualA2.style.color = esIndividual ? 'white' : '#4B5563';
+        }
+
+        if (btnModoMultipleA2) {
+            btnModoMultipleA2.style.background = esIndividual ? '#F3F4F6' : '#111827';
+            btnModoMultipleA2.style.color = esIndividual ? '#4B5563' : 'white';
+        }
+
+        if (btnSubmitA2) {
+            btnSubmitA2.innerHTML = esIndividual
+                ? '<i class="fas fa-bolt"></i> Registrar Consumo Eléctrico'
+                : '<i class="fas fa-layer-group"></i> Guardar Lote Alcance 2';
+        }
+    }
+
+    function establecerModoA2(modo) {
+        aplicarEstadoModoA2(modo);
+    }
+
+    function generarTablaA2() {
+        if (!fechaInicioA2 || !fechaFinA2 || !batchBodyA2 || !batchSummaryA2) {
+            return;
+        }
+
+        aplicarEstadoModoA2('multiple');
+
+        const inicio = fechaInicioA2.value;
+        const fin = fechaFinA2.value;
+
+        if (!inicio || !fin) {
+            limpiarTablaA2('Selecciona un rango de meses y genera la tabla.');
+            batchSummaryA2.style.color = '#9A3412';
+            batchSummaryA2.textContent = 'Selecciona un rango de meses y genera la tabla.';
+            return;
+        }
+
+        const [anioInicio, mesInicio] = inicio.split('-').map(Number);
+        const [anioFin, mesFin] = fin.split('-').map(Number);
+        const cursorInicio = new Date(anioInicio, mesInicio - 1, 1);
+        const cursorFin = new Date(anioFin, mesFin - 1, 1);
+
+        if (cursorInicio > cursorFin) {
+            limpiarTablaA2('El mes de inicio no puede ser posterior al mes de final.');
+            batchSummaryA2.style.color = '#9A3412';
+            batchSummaryA2.textContent = 'El mes de inicio no puede ser posterior al mes de final.';
+            return;
+        }
+
+        const meses = [];
+        const cursor = new Date(cursorInicio.getFullYear(), cursorInicio.getMonth(), 1);
+
+        while (cursor <= cursorFin) {
+            const anio = cursor.getFullYear();
+            const mes = String(cursor.getMonth() + 1).padStart(2, '0');
+            meses.push(`${anio}-${mes}`);
+            cursor.setMonth(cursor.getMonth() + 1);
+        }
+
+        batchBodyA2.innerHTML = '';
+
+        meses.forEach(mesValor => {
+            const fila = document.createElement('tr');
+            fila.setAttribute('data-mes', mesValor);
+            fila.innerHTML = `
+                <td style="padding: 10px; border-bottom: 1px solid #FED7AA;">${formatearMesA1(mesValor)}</td>
+                <td style="padding: 10px; border-bottom: 1px solid #FED7AA;">
+                    <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        name="batch_cantidad[]"
+                        required
+                        placeholder="Cantidad para ${formatearMesA1(mesValor)}"
+                        style="width: 100%; padding: 10px; border: 1px solid #FDBA74; border-radius: 6px; box-sizing: border-box;"
+                    >
+                </td>
+            `;
+            batchBodyA2.appendChild(fila);
+        });
+
+        batchSummaryA2.style.color = '#9A3412';
+        batchSummaryA2.textContent = `Se generaron ${meses.length} filas entre ${formatearMesA1(meses[0])} y ${formatearMesA1(meses[meses.length - 1])}.`;
+
+        if (modoRegistroA2) {
+            modoRegistroA2.value = 'multiple';
+        }
+
+        aplicarEstadoModoA2('multiple');
+    }
+
+    establecerModoA2('individual');
 
     // 2. FILTRADO INTELIGENTE Y REDIRECCIÓN
     function configurarFiltros(idFuente, idCat, idUni, idFac, idMan) {

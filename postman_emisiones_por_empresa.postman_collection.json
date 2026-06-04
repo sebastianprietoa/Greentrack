@@ -1,0 +1,54 @@
+{
+  "info": {
+    "_postman_id": "5d0d6f1f-8e68-4e2a-9f4a-7a3a5d4f4c21",
+    "name": "GreenTrack - Emisiones por empresa",
+    "description": "Coleccion para consumir el endpoint GET /api/admin/emisiones-por-empresa. Requiere sesion de admin activa.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:5000"
+    },
+    {
+      "key": "anio",
+      "value": "2025"
+    }
+  ],
+  "item": [
+    {
+      "name": "Emisiones por empresa - todos los anios",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/admin/emisiones-por-empresa"
+        },
+        "description": "Devuelve emisiones GHG por empresa y anio. Requiere sesion de admin."
+      }
+    },
+    {
+      "name": "Emisiones por empresa - filtrar por anio",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/admin/emisiones-por-empresa?anio={{anio}}"
+        },
+        "description": "Devuelve emisiones GHG por empresa para el anio indicado."
+      }
+    }
+  ]
+}
