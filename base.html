@@ -12,8 +12,8 @@
         body {
             margin: 0;
             padding: 0;
-            background-color: #F3F4F6;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: transparent;
+            font-family: "Avenir Next LT Pro", "Segoe UI", system-ui, sans-serif;
         }
 
         .app-layout {
@@ -24,8 +24,8 @@
         /* ================= SIDEBAR (MENÚ LATERAL) ================= */
         .sidebar {
             width: 260px;
-            background-color: #ffffff;
-            border-right: 1px solid #E5E7EB;
+            background: linear-gradient(180deg, #12312B 0%, #173E36 100%);
+            border-right: 1px solid rgba(255, 255, 255, 0.08);
             display: flex;
             flex-direction: column;
             position: sticky;
@@ -41,13 +41,13 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            border-bottom: 1px solid #F3F4F6;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
         }
 
         .sidebar-brand {
             font-size: 1.5rem;
             font-weight: 800;
-            color: #10B981;
+            color: #EAF5F0;
             text-decoration: none;
             display: flex;
             align-items: center;
@@ -66,7 +66,7 @@
         .menu-category {
             font-size: 0.75rem;
             font-weight: 700;
-            color: #9CA3AF;
+            color: rgba(234, 245, 240, 0.55);
             text-transform: uppercase;
             letter-spacing: 0.05em;
             margin-top: 1.5rem;
@@ -83,16 +83,16 @@
             align-items: center;
             gap: 12px;
             padding: 0.75rem 1rem;
-            color: #4B5563;
+            color: rgba(234, 245, 240, 0.84);
             text-decoration: none;
-            border-radius: 8px;
+            border-radius: 12px;
             font-weight: 500;
-            transition: all 0.2s;
+            transition: all 0.2s ease;
         }
 
         .menu-link:hover {
-            background-color: #F9FAFB;
-            color: #10B981;
+            background-color: rgba(255, 255, 255, 0.08);
+            color: white;
         }
 
         .menu-link i {
@@ -103,14 +103,14 @@
 
         .sidebar-footer {
             padding: 1.5rem 1rem;
-            border-top: 1px solid #F3F4F6;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
         }
 
         .user-badge {
-            background-color: #ECFDF5;
-            color: #047857;
+            background-color: rgba(255, 255, 255, 0.08);
+            color: #ECFDF5;
             padding: 0.75rem;
-            border-radius: 8px;
+            border-radius: 12px;
             font-weight: 600;
             font-size: 0.9rem;
             text-align: center;
@@ -118,13 +118,13 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            border: 1px solid #A7F3D0;
+            border: 1px solid rgba(255, 255, 255, 0.12);
         }
 
         .admin-badge {
-            background-color: #F5F3FF;
-            color: #6D28D9;
-            border-color: #C4B5FD;
+            background-color: rgba(200, 169, 106, 0.12);
+            color: #F4D8A6;
+            border-color: rgba(200, 169, 106, 0.2);
         }
 
         .logout-btn {
@@ -134,17 +134,17 @@
             gap: 8px;
             width: 100%;
             padding: 0.75rem;
-            background-color: #FEE2E2;
-            color: #DC2626;
+            background-color: rgba(255, 255, 255, 0.08);
+            color: #F1F5F9;
             text-decoration: none;
-            border-radius: 8px;
+            border-radius: 12px;
             font-weight: 600;
             transition: background 0.2s;
         }
 
         .logout-btn:hover {
-            background-color: #FCA5A5;
-            color: #991B1B;
+            background-color: rgba(255, 255, 255, 0.14);
+            color: white;
         }
 
         /* ================= ÁREA PRINCIPAL ================= */
@@ -157,9 +157,10 @@
 
         .mobile-header {
             display: none;
-            background: white;
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(10px);
             padding: 1rem 1.5rem;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            box-shadow: 0 1px 20px rgba(18, 49, 43, 0.08);
             align-items: center;
             justify-content: space-between;
             position: sticky;
@@ -171,7 +172,7 @@
             background: none;
             border: none;
             font-size: 1.5rem;
-            color: #374151;
+            color: #12312B;
             cursor: pointer;
             padding: 0;
         }
@@ -181,7 +182,7 @@
             background: none;
             border: none;
             font-size: 1.5rem;
-            color: #9CA3AF;
+            color: rgba(255, 255, 255, 0.65);
             cursor: pointer;
         }
 
@@ -196,7 +197,7 @@
         /* Alertas / Flashes */
         .alert {
             padding: 1rem 1.5rem;
-            border-radius: 8px;
+            border-radius: 12px;
             margin-bottom: 1.5rem;
             display: flex;
             align-items: center;
@@ -213,7 +214,7 @@
             display: none;
             position: fixed;
             inset: 0;
-            background-color: rgba(0, 0, 0, 0.5);
+            background-color: rgba(8, 20, 17, 0.55);
             z-index: 995;
             backdrop-filter: blur(2px);
         }
@@ -229,7 +230,7 @@
                 position: fixed;
                 left: 0;
                 transform: translateX(-100%);
-                box-shadow: 4px 0 15px rgba(0,0,0,0.1);
+                box-shadow: 8px 0 30px rgba(0,0,0,0.18);
             }
             .sidebar.active {
                 transform: translateX(0);

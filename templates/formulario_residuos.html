@@ -15,7 +15,7 @@
     {% set sin_factor = preview_rows | length - con_factor %}
     <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 2rem;">
         <h2 style="color: #111827; margin: 0 0 0.5rem 0; display: flex; align-items: center; gap: 10px;">
-            <i class="fas fa-search" style="color: #3B82F6;"></i> Vista Previa — {{ tipo_ingreso_prev | upper }}
+            <i class="fas fa-search" style="color: #3B82F6;"></i> Vista Previa �?" {{ tipo_ingreso_prev | upper }}
         </h2>
         <p style="color: #6B7280; margin: 0 0 1.5rem 0; font-size: 0.9rem;">Revisa los datos antes de guardar. Nada se ha registrado aún.</p>
 
@@ -29,7 +29,7 @@
             </div>
             {% endif %}
             <div style="background: #EFF6FF; padding: 0.75rem 1.25rem; border-radius: 8px; font-weight: 700; color: #1E40AF;">
-                Total emisión: {{ "%.2f"|format(preview_rows | sum(attribute='emision')) }} kg CO₂e
+                Total emisión: {{ "%.2f"|format(preview_rows | sum(attribute='emision')) }} kg CO�,,e
             </div>
         </div>
 
@@ -41,8 +41,8 @@
                         <th style="padding: 10px 12px; text-align: left; border-bottom: 2px solid #E5E7EB;">Equivalente en Chile</th>
                         <th style="padding: 10px 12px; text-align: left; border-bottom: 2px solid #E5E7EB;">Tratamiento</th>
                         <th style="padding: 10px 12px; text-align: right; border-bottom: 2px solid #E5E7EB;">Cantidad (kg)</th>
-                        <th style="padding: 10px 12px; text-align: right; border-bottom: 2px solid #E5E7EB;">Factor (kg CO₂e/t)</th>
-                        <th style="padding: 10px 12px; text-align: right; border-bottom: 2px solid #E5E7EB;">Emisión (kg CO₂e)</th>
+                        <th style="padding: 10px 12px; text-align: right; border-bottom: 2px solid #E5E7EB;">Factor (kg CO�,,e/t)</th>
+                        <th style="padding: 10px 12px; text-align: right; border-bottom: 2px solid #E5E7EB;">Emisión (kg CO�,,e)</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -62,7 +62,7 @@
                             {% else %}
                                 <select class="sel-tratamiento" data-idx="{{ loop.index0 }}"
                                         style="padding: 5px 8px; border: 1px solid #D1D5DB; border-radius: 6px; font-size: 0.82rem; background: white; color: #374151; max-width: 180px;">
-                                    <option value="">— Sin especificar —</option>
+                                    <option value="">�?" Sin especificar �?"</option>
                                     {% for t in tratamientos_disponibles %}
                                     <option value="{{ t }}" {% if t == r.tratamiento %}selected{% endif %}>{{ t }}</option>
                                     {% endfor %}
@@ -77,7 +77,7 @@
                             {% if r.factor > 0 %}
                                 <span style="color: #059669; font-weight: 600;">{{ r.factor }}</span>
                             {% else %}
-                                <span style="color: #D97706;">—</span>
+                                <span style="color: #D97706;">�?"</span>
                             {% endif %}
                         </td>
                         <td style="padding: 9px 12px; text-align: right; font-weight: 700;">
@@ -106,7 +106,7 @@
                 <i class="fas fa-calendar-alt"></i> Periodo del reporte (mes y año de los residuos)
             </label>
             <p style="margin: 0 0 0.6rem 0; color: #78350F; font-size: 0.82rem;">
-                Detectado automáticamente desde el PDF. Corrígelo si no corresponde — todos los registros se guardarán con esta fecha.
+                Detectado automáticamente desde el PDF. Corrígelo si no corresponde �?" todos los registros se guardarán con esta fecha.
             </p>
             <input type="month" id="periodo_override_display"
                    value="{{ periodo_detectado | default('') }}"
@@ -157,15 +157,19 @@
     </div>
     {% endif %}
 
-    <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+    <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-top: 5px solid #10B981;">
         <h1 style="margin-bottom: 0.5rem; color: #111827; display: flex; align-items: center; gap: 10px;">
             <i class="fas fa-recycle" style="color: #10B981;"></i> Formulario de Gestión de Residuos
         </h1>
         <p style="color: #6B7280; margin-bottom: 2rem;">Complete según las instrucciones del formulario de residuos</p>
 
         <form method="POST" id="residuosForm" action="/formulario_residuos" enctype="multipart/form-data">
+            <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 1.5rem;">
+                <button type="button" id="modo_certificados" onclick="cambiarModoResiduos('certificados')" style="background: #10B981; color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: 600; cursor: pointer;">Certificados</button>
+                <button type="button" id="modo_manual" onclick="cambiarModoResiduos('manual')" style="background: #F3F4F6; color: #4B5563; border: none; padding: 10px 16px; border-radius: 8px; font-weight: 600; cursor: pointer;">Manual</button>
+            </div>
             
-            <div style="margin-bottom: 2.5rem; padding: 1.5rem; background: #F0F9FF; border-radius: 8px;">
+            <div id="cert_section" style="margin-bottom: 2.5rem; padding: 1.5rem; background: #F0F9FF; border-radius: 8px;">
                 <h2 style="margin-bottom: 1rem; color: #1E40AF; display: flex; align-items: center; gap: 10px;">
                     <i class="fas fa-magic"></i> 1. Método de Ingreso
                 </h2>
@@ -177,15 +181,15 @@
                     <div style="display: flex; gap: 2rem; flex-wrap: wrap;">
                         <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; background: white; padding: 10px 15px; border-radius: 6px; border: 1px solid #D1D5DB;">
                             <input type="radio" name="tipo_ingreso" value="manual" checked onchange="toggleReporte('manual')">
-                            <span>✍️ Ingreso Manual (Tabla)</span>
+                            <span>�o�️ Ingreso Manual (Tabla)</span>
                         </label>
                         <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; background: white; padding: 10px 15px; border-radius: 6px; border: 1px solid #D1D5DB;">
                             <input type="radio" name="tipo_ingreso" value="sinader" onchange="toggleReporte('auto')">
-                            <span>📄 Auto-SINADER (Residuos Generales)</span>
+                            <span>�Y"" Auto-SINADER (Residuos Generales)</span>
                         </label>
                         <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; background: white; padding: 10px 15px; border-radius: 6px; border: 1px solid #D1D5DB;">
                             <input type="radio" name="tipo_ingreso" value="sidrep" onchange="toggleReporte('auto')">
-                            <span>⚠️ Auto-SIDREP (Residuos Peligrosos)</span>
+                            <span>�s�️ Auto-SIDREP (Residuos Peligrosos)</span>
                         </label>
                     </div>
                 </div>
@@ -208,9 +212,83 @@
                 </div>
             </div>
             
-            <div id="tabla_section">
-                <div style="margin-bottom: 2rem; padding: 1.5rem; background: #FEF3C7; border-radius: 8px;">
-                    <h2 style="margin-bottom: 1rem; color: #92400E; display: flex; align-items: center; gap: 10px;">
+            
+                        <div style="background: #0F172A; border: 1px solid #334155; border-radius: 10px; padding: 1rem; margin-bottom: 1.5rem;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div>
+                        <label style="display: block; font-weight: 600; color: #E5E7EB; margin-bottom: 8px;">Tipo de residuo</label>
+                        <select id="tipo_general_res" onchange="aplicarConfiguracionGeneralResiduos()" style="width: 100%; padding: 10px; border: 1px solid #475569; border-radius: 6px; box-sizing: border-box; background: #111827; color: white;">
+                            <option value="">Seleccione desde BD...</option>
+                            {% for f in factores %}
+                                <option value="{{ f.categoria }}" data-factor="{{ f.factor }}" data-unidad="{{ f.unidad }}">
+                                    {%- if f.nombre_chile -%}{{ f.nombre_chile }}{%- else -%}{{ f.categoria }}{%- endif -%}
+                                </option>
+                            {% endfor %}
+                            <option value="Otro">Ingreso Manual (Otro)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display: block; font-weight: 600; color: #E5E7EB; margin-bottom: 8px;">Tratamiento</label>
+                        <select id="tratamiento_general_res" onchange="aplicarConfiguracionGeneralResiduos()" style="width: 100%; padding: 10px; border: 1px solid #475569; border-radius: 6px; box-sizing: border-box; background: #111827; color: white;">
+                            <option value="">Seleccionar</option>
+                            <option value="Reciclaje">Reciclaje</option>
+                            <option value="Vertedero">Vertedero</option>
+                            <option value="Incineraci�n">Incineraci�n</option>
+                            <option value="Compostaje">Compostaje</option>
+                            <option value="Tratamiento especial">Tratamiento especial</option>
+                            <option value="Reutilizaci�n">Reutilizaci�n</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+<div id="res_batch_panel" style="display: none; background: #1F2937; padding: 1.25rem; border-radius: 10px; margin-bottom: 1.5rem; border: 1px solid #374151; color: #E5E7EB;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 1rem; align-items: end; margin-bottom: 1rem;">
+                    <div>
+                        <label style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">Mes de inicio</label>
+                        <input type="month" id="fecha_inicio_res" style="width: 100%; padding: 10px; border: 1px solid #D1D5DB; border-radius: 6px; box-sizing: border-box;">
+                    </div>
+                    <div>
+                        <label style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">Mes de final</label>
+                        <input type="month" id="fecha_fin_res" style="width: 100%; padding: 10px; border: 1px solid #D1D5DB; border-radius: 6px; box-sizing: border-box;">
+                    </div>
+                    <button type="button" onclick="generarTablaResiduos()" style="background: #111827; color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; height: 42px;">
+                        Generar tabla
+                    </button>
+                </div>
+                <p id="batch_summary_res" style="margin: 0 0 1rem 0; color: #6B7280; font-size: 0.95rem;">Selecciona un rango de meses y genera la tabla.</p>
+                <div style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden;">
+                        <thead>
+                            <tr style="background: #D1FAE5; color: #065F46;">
+                                <th style="text-align: left; padding: 10px; border-bottom: 1px solid #A7F3D0;">Mes</th>
+                                <th style="text-align: left; padding: 10px; border-bottom: 1px solid #A7F3D0;">Cantidad</th>
+                                <th style="text-align: left; padding: 10px; border-bottom: 1px solid #A7F3D0;">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="batch_body_res">
+                            <tr>
+                                <td colspan="3" style="padding: 12px; color: #6B7280;">Aun no se ha generado una tabla.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div id="manual_section" style="display: none; background: #111111; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-top: 5px solid #3B82F6;">
+                <h2 style="margin-bottom: 0.5rem; color: #A5B4FC; display: flex; align-items: center; gap: 10px;">
+                    <i class="fas fa-recycle" style="color: #3B82F6;"></i> Registro Manual de Residuos
+                </h2>
+                <p style="color: #9CA3AF; margin-bottom: 2rem;">Ingrese los residuos de forma individual o por carga multiple.</p>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 1.5rem;">
+                    <button type="button" id="modo_individual_res" onclick="establecerModoResiduos('individual')" style="background: #10B981; color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                        Registro individual
+                    </button>
+                    <button type="button" id="modo_multiple_res" onclick="establecerModoResiduos('multiple')" style="background: #F3F4F6; color: #4B5563; border: none; padding: 10px 16px; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                        Carga multiple
+                    </button>
+                </div>
+                <div id="tabla_section">
+                <div style="margin-bottom: 2rem; padding: 1.5rem; background: #1F2937; border-radius: 8px;">
+                    <h2 style="margin-bottom: 1rem; color: #FB923C; display: flex; align-items: center; gap: 10px;">
                         <i class="fas fa-table"></i> 2. Registro Manual de Residuos
                     </h2>
                     <p style="color: #6B7280; margin-bottom: 1.5rem;">
@@ -223,11 +301,7 @@
                         <thead>
                             <tr style="background: #10B981; color: white;">
                                 <th style="padding: 1rem; text-align: left; font-weight: 600;">Mes de Registro *</th>
-                                <th style="padding: 1rem; text-align: left; font-weight: 600;">TIPO de residuo *</th>
                                 <th style="padding: 1rem; text-align: left; font-weight: 600;">CANTIDAD *</th>
-                                <th style="padding: 1rem; text-align: left; font-weight: 600;">Tratamiento</th>
-                                <th style="padding: 1rem; text-align: left; font-weight: 600;">Costo</th>
-                                <th style="padding: 1rem; text-align: left; font-weight: 600;">Destino</th>
                                 <th style="padding: 1rem; text-align: left; font-weight: 600;">Acciones</th>
                             </tr>
                         </thead>
@@ -236,42 +310,12 @@
                                 <td style="padding: 0.5rem; border: 1px solid #E5E7EB;">
                                     <input type="month" name="periodo[]" required
                                            style="width: 100%; padding: 8px; border: 1px solid #D1D5DB; border-radius: 4px;">
-                                </td>
-                                <td style="padding: 0.5rem; border: 1px solid #E5E7EB;">
-                                    <select name="tipo_residuo[]" required onchange="actualizarFactor(this)"
-                                            style="width: 100%; padding: 8px; border: 1px solid #D1D5DB; border-radius: 4px;">
-                                        <option value="">Seleccione desde BD...</option>
-                                        {% for f in factores %}
-                                            <option value="{{ f.categoria }}" data-factor="{{ f.factor }}" data-unidad="{{ f.unidad }}" data-tratamiento="{{ f.tratamiento or '' }}">
-                                                {%- if f.nombre_chile -%}{{ f.nombre_chile }}{%- else -%}{{ f.categoria }}{%- endif -%}
-                                                {%- if f.tratamiento %} — {{ f.tratamiento }}{%- endif -%}
-                                            </option>
-                                        {% endfor %}
-                                        <option value="Otro" style="color: red; font-weight: bold;">Ingreso Manual (Otro)</option>
-                                    </select>
+                                    <input type="hidden" name="tipo_residuo[]" class="tipo-residuo-hidden" value="">
+                                    <input type="hidden" name="tratamiento[]" class="tratamiento-hidden" value="">
                                     <input type="hidden" name="factor[]" class="factor-oculto" value="0">
                                 </td>
                                 <td style="padding: 0.5rem; border: 1px solid #E5E7EB;">
                                     <input type="number" name="cantidad[]" step="0.01" min="0" placeholder="0.00" required
-                                           style="width: 100%; padding: 8px; border: 1px solid #D1D5DB; border-radius: 4px;">
-                                </td>
-                                <td style="padding: 0.5rem; border: 1px solid #E5E7EB;">
-                                    <select name="tratamiento[]" style="width: 100%; padding: 8px; border: 1px solid #D1D5DB; border-radius: 4px;">
-                                        <option value="">Seleccionar</option>
-                                        <option value="Reciclaje">Reciclaje</option>
-                                        <option value="Vertedero">Vertedero</option>
-                                        <option value="Incineración">Incineración</option>
-                                        <option value="Compostaje">Compostaje</option>
-                                        <option value="Tratamiento especial">Tratamiento especial</option>
-                                        <option value="Reutilización">Reutilización</option>
-                                    </select>
-                                </td>
-                                <td style="padding: 0.5rem; border: 1px solid #E5E7EB;">
-                                    <input type="number" name="costo[]" step="0.01" min="0" placeholder="0.00"
-                                           style="width: 100%; padding: 8px; border: 1px solid #D1D5DB; border-radius: 4px;">
-                                </td>
-                                <td style="padding: 0.5rem; border: 1px solid #E5E7EB;">
-                                    <input type="text" name="destino[]" placeholder="Ej: Empresa"
                                            style="width: 100%; padding: 8px; border: 1px solid #D1D5DB; border-radius: 4px;">
                                 </td>
                                 <td style="padding: 0.5rem; border: 1px solid #E5E7EB; text-align: center;">
@@ -288,8 +332,8 @@
                     <button type="button" onclick="agregarFila()" style="background: #10B981; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px;">
                         <i class="fas fa-plus"></i> Agregar Fila
                     </button>
-                    <button type="button" onclick="calcularTotal()" style="background: #3B82F6; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px;">
-                        <i class="fas fa-calculator"></i> Calcular Total
+                    <button type="button" onclick="previsualizarEmisionesResiduos()" style="background: #3B82F6; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-eye"></i> Previsualizar emisiones
                     </button>
                 </div>
                 
@@ -300,61 +344,272 @@
                     </div>
                 </div>
                 
-                <div style="text-align: center;">
-                    <button type="submit" style="background: #10B981; color: white; border: none; padding: 14px 40px; border-radius: 8px; font-size: 1.1rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 10px;">
-                        <i class="fas fa-save"></i> Guardar Filas Manuales
-                    </button>
-                </div>
+            </div>
+            <div style="text-align: center; margin-top: 1.25rem; margin-bottom: 0.5rem;">
+                <button type="submit" style="background: #10B981; color: white; border: none; padding: 14px 40px; border-radius: 8px; font-size: 1.1rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 10px;">
+                    <i class="fas fa-save"></i> Cargar información a la base
+                </button>
             </div>
         </form>
     </div>
 </div>
 
 <script>
+    function cambiarModoResiduos(modo) {
+        const cert = document.getElementById('cert_section');
+        const manual = document.getElementById('manual_section');
+        const btnCert = document.getElementById('modo_certificados');
+        const btnMan = document.getElementById('modo_manual');
+
+        if (cert) cert.style.display = modo === 'certificados' ? 'block' : 'none';
+        if (manual) manual.style.display = modo === 'manual' ? 'block' : 'none';
+        if (btnCert) {
+            btnCert.style.background = modo === 'certificados' ? '#10B981' : '#F3F4F6';
+            btnCert.style.color = modo === 'certificados' ? 'white' : '#4B5563';
+        }
+        if (btnMan) {
+            btnMan.style.background = modo === 'manual' ? '#111827' : '#F3F4F6';
+            btnMan.style.color = modo === 'manual' ? 'white' : '#4B5563';
+        }
+        document.querySelectorAll('#manual_section input, #manual_section select').forEach(el => {
+            el.disabled = modo !== 'manual';
+        });
+    }
+
+    function reordenarPanelesResiduos() {
+        const manualSection = document.getElementById('manual_section');
+        const tablaSection = document.getElementById('tabla_section');
+        const toggleRow = document.getElementById('modo_individual_res')?.closest('div');
+        const configPanel = document.getElementById('tipo_general_res')?.closest('div[style*="background: #0F172A"]');
+        const batchPanel = document.getElementById('res_batch_panel');
+        const saveButton = document.querySelector('#manual_section button[type="submit"]');
+
+        if (manualSection && configPanel && toggleRow && !manualSection.contains(configPanel)) {
+            manualSection.insertBefore(configPanel, toggleRow);
+        }
+
+        if (manualSection && batchPanel && tablaSection && !manualSection.contains(batchPanel)) {
+            manualSection.insertBefore(batchPanel, tablaSection);
+        }
+
+        if (saveButton && !saveButton.dataset.labelFixed) {
+            saveButton.dataset.labelFixed = '1';
+            saveButton.innerHTML = '<i class="fas fa-save"></i> Cargar información a la base';
+        }
+    }
+
+    function asegurarPreviewResiduos() {
+        if (document.getElementById('preview_residuos')) return;
+        const tablaSection = document.getElementById('tabla_section');
+        if (!tablaSection) return;
+
+        const panel = document.createElement('div');
+        panel.id = 'preview_residuos';
+        panel.style.display = 'none';
+        panel.style.margin = '1rem 0 1.5rem 0';
+        panel.style.background = '#0F172A';
+        panel.style.border = '1px solid #1E293B';
+        panel.style.borderRadius = '10px';
+        panel.style.padding = '1rem 1.25rem';
+        panel.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem;">
+                <div>
+                    <h3 style="margin: 0; color: #E2E8F0;">Vista previa de emisiones</h3>
+                    <p style="margin: 0.35rem 0 0 0; color: #94A3B8; font-size: 0.9rem;">Revisa cantidades, factores y emisiones antes de guardar.</p>
+                </div>
+                <div style="background: #111827; border: 1px solid #334155; color: #E5E7EB; border-radius: 999px; padding: 0.5rem 0.9rem; font-weight: 700;">
+                    Total: <span id="preview_total_residuos">0.00</span> kg CO2e
+                </div>
+            </div>
+            <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse; color: #E5E7EB;">
+                    <thead>
+                        <tr style="background: #111827; color: #CBD5E1;">
+                            <th style="padding: 10px; text-align: left; border-bottom: 1px solid #334155;">Mes</th>
+                            <th style="padding: 10px; text-align: left; border-bottom: 1px solid #334155;">Tipo de residuo</th>
+                            <th style="padding: 10px; text-align: left; border-bottom: 1px solid #334155;">Tratamiento</th>
+                            <th style="padding: 10px; text-align: right; border-bottom: 1px solid #334155;">Cantidad</th>
+                            <th style="padding: 10px; text-align: right; border-bottom: 1px solid #334155;">Factor</th>
+                            <th style="padding: 10px; text-align: right; border-bottom: 1px solid #334155;">Emision</th>
+                        </tr>
+                    </thead>
+                    <tbody id="preview_residuos_body">
+                        <tr>
+                            <td colspan="6" style="padding: 12px; color: #94A3B8;">Aun no se ha generado una previsualizacion.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        `;
+
+        tablaSection.insertAdjacentElement('afterend', panel);
+    }
+
+    let modoResiduosActual = 'individual';
+
+    function establecerModoResiduos(modo) {
+        modoResiduosActual = modo;
+        const panelBatch = document.getElementById('res_batch_panel');
+        const tablaSection = document.getElementById('tabla_section');
+        const btnIndividual = document.getElementById('modo_individual_res');
+        const btnMultiple = document.getElementById('modo_multiple_res');
+        if (panelBatch) panelBatch.style.display = modo === 'multiple' ? 'block' : 'none';
+        if (tablaSection) tablaSection.style.display = modo === 'multiple' ? 'none' : 'block';
+        if (tablaSection) {
+            tablaSection.querySelectorAll('input, select, textarea, button').forEach(el => {
+                el.disabled = modo === 'multiple';
+            });
+        }
+        if (btnIndividual) {
+            btnIndividual.style.background = modo === 'individual' ? '#10B981' : '#F3F4F6';
+            btnIndividual.style.color = modo === 'individual' ? 'white' : '#4B5563';
+        }
+        if (btnMultiple) {
+            btnMultiple.style.background = modo === 'multiple' ? '#111827' : '#F3F4F6';
+            btnMultiple.style.color = modo === 'multiple' ? 'white' : '#4B5563';
+        }
+    }
+
+    function sumarMeses(ym, cantidad) {
+        const [anio, mes] = ym.split('-').map(Number);
+        const d = new Date(anio, mes - 1, 1);
+        d.setMonth(d.getMonth() + cantidad);
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    }
+
+    function generarTablaResiduos() {
+        const inicio = document.getElementById('fecha_inicio_res').value;
+        const fin = document.getElementById('fecha_fin_res').value;
+        const body = document.getElementById('batch_body_res');
+        const summary = document.getElementById('batch_summary_res');
+        if (!inicio || !fin) { alert('Selecciona mes de inicio y final.'); return; }
+        if (inicio > fin) { alert('El mes de inicio no puede ser mayor que el mes final.'); return; }
+        const meses = [];
+        let actual = inicio;
+        while (actual <= fin) { meses.push(actual); actual = sumarMeses(actual, 1); }
+        const template = document.querySelector('#tabla_residuos tr');
+        body.innerHTML = '';
+        meses.forEach(mes => {
+            const fila = template.cloneNode(true);
+            fila.querySelectorAll('input, select, button').forEach(el => { el.disabled = false; });
+            const periodo = fila.querySelector('input[name="periodo[]"]');
+            const cantidad = fila.querySelector('input[name="cantidad[]"]');
+            const tipo = fila.querySelector('.tipo-residuo-hidden');
+            const tratamiento = fila.querySelector('.tratamiento-hidden');
+            const hidden = fila.querySelector('.factor-oculto');
+            if (periodo) periodo.value = mes;
+            if (tipo) tipo.value = document.getElementById('tipo_general_res')?.value || '';
+            if (cantidad) cantidad.value = '';
+            if (tratamiento) tratamiento.value = document.getElementById('tratamiento_general_res')?.value || '';
+            if (hidden) hidden.value = '0';
+            body.appendChild(fila);
+        });
+        aplicarConfiguracionGeneralResiduos();
+        if (summary) summary.textContent = `Se generaron ${meses.length} fila(s) para el rango seleccionado.`;
+    }
+    establecerModoResiduos('individual');
+    cambiarModoResiduos('certificados');
+
+    function aplicarConfiguracionGeneralResiduos() {
+        const tipoSelect = document.getElementById('tipo_general_res');
+        const tratSelect = document.getElementById('tratamiento_general_res');
+        const tipoValor = tipoSelect ? tipoSelect.value : '';
+        const tratValor = tratSelect ? tratSelect.value : '';
+        const tipoOpt = tipoSelect ? tipoSelect.options[tipoSelect.selectedIndex] : null;
+        const factorValor = tipoOpt && tipoOpt.dataset && tipoOpt.dataset.factor ? tipoOpt.dataset.factor : '0';
+
+        document.querySelectorAll('#tabla_residuos tr, #batch_body_res tr').forEach(row => {
+            const tipoHidden = row.querySelector('.tipo-residuo-hidden');
+            const tratHidden = row.querySelector('.tratamiento-hidden');
+            const factorHidden = row.querySelector('.factor-oculto');
+            if (tipoHidden) tipoHidden.value = tipoValor;
+            if (tratHidden) tratHidden.value = tratValor;
+            if (factorHidden) factorHidden.value = factorValor;
+        });
+    }
+
+    function previsualizarEmisionesResiduos() {
+        reordenarPanelesResiduos();
+        asegurarPreviewResiduos();
+        aplicarConfiguracionGeneralResiduos();
+
+        const panel = document.getElementById('preview_residuos');
+        const tbody = document.getElementById('preview_residuos_body');
+        const totalBadge = document.getElementById('preview_total_residuos');
+        const tipoSelect = document.getElementById('tipo_general_res');
+        const tipoTexto = tipoSelect && tipoSelect.selectedIndex >= 0
+            ? (tipoSelect.options[tipoSelect.selectedIndex].textContent || '').trim()
+            : '';
+        const tratamientoTexto = document.getElementById('tratamiento_general_res')?.value || '';
+        const filas = modoResiduosActual === 'multiple'
+            ? Array.from(document.querySelectorAll('#batch_body_res tr'))
+            : Array.from(document.querySelectorAll('#tabla_residuos tr'));
+
+        const datos = [];
+        let total = 0;
+
+        filas.forEach(row => {
+            const periodo = row.querySelector('input[name="periodo[]"]')?.value || '';
+            const cantidadInput = row.querySelector('input[name="cantidad[]"]');
+            if (!cantidadInput) return;
+
+            const cantidad = parseFloat(String(cantidadInput.value || '').replace(',', '.')) || 0;
+            const factor = parseFloat(row.querySelector('.factor-oculto')?.value || '0') || 0;
+            const tipo = row.querySelector('.tipo-residuo-hidden')?.value || tipoTexto || '-';
+            const tratamiento = row.querySelector('.tratamiento-hidden')?.value || tratamientoTexto || '-';
+            const emision = (cantidad / 1000) * factor;
+
+            if (!periodo && !cantidad) return;
+
+            total += emision;
+            datos.push({ periodo, tipo, tratamiento, cantidad, factor, emision });
+        });
+
+        if (tbody) {
+            tbody.innerHTML = datos.length
+                ? datos.map(item => `
+                    <tr style="border-bottom: 1px solid #1E293B;">
+                        <td style="padding: 10px; color: #E2E8F0;">${item.periodo || '-'}</td>
+                        <td style="padding: 10px; color: #E2E8F0;">${item.tipo || '-'}</td>
+                        <td style="padding: 10px; color: #E2E8F0;">${item.tratamiento || '-'}</td>
+                        <td style="padding: 10px; text-align: right; color: #E2E8F0;">${item.cantidad.toFixed(2)}</td>
+                        <td style="padding: 10px; text-align: right; color: #E2E8F0;">${item.factor.toFixed(4)}</td>
+                        <td style="padding: 10px; text-align: right; color: #E2E8F0; font-weight: 700;">${item.emision.toFixed(4)}</td>
+                    </tr>
+                `).join('')
+                : '<tr><td colspan="6" style="padding: 12px; color: #94A3B8;">Aun no se ha generado una previsualizacion.</td></tr>';
+        }
+
+        if (totalBadge) totalBadge.textContent = total.toFixed(2);
+        if (panel) panel.style.display = 'block';
+        calcularTotal();
+    }
+
     function toggleReporte(modo) {
         const reporteSection = document.getElementById('reporte_section');
         const tablaSection = document.getElementById('tabla_section');
         
         if (modo === 'auto') {
+            cambiarModoResiduos('certificados');
             reporteSection.style.display = 'block';
             tablaSection.style.display = 'none';
             document.getElementById('archivo_pdf').required = true;
-            // Quitamos required a la tabla manual para que deje enviar el PDF
-            document.querySelector('input[name="periodo[]"]').required = false;
-            document.querySelector('select[name="tipo_residuo[]"]').required = false;
-            document.querySelector('input[name="cantidad[]"]').required = false;
+            document.querySelectorAll('#manual_section input, #manual_section select').forEach(el => { el.disabled = true; });
         } else {
+            cambiarModoResiduos('manual');
+            establecerModoResiduos('individual');
             reporteSection.style.display = 'none';
             tablaSection.style.display = 'block';
             document.getElementById('archivo_pdf').required = false;
-            // Volvemos a pedir los manuales
-            document.querySelector('input[name="periodo[]"]').required = true;
-            document.querySelector('select[name="tipo_residuo[]"]').required = true;
-            document.querySelector('input[name="cantidad[]"]').required = true;
+            document.querySelectorAll('#manual_section input, #manual_section select').forEach(el => { el.disabled = false; });
+            aplicarConfiguracionGeneralResiduos();
         }
     }
     
-    function actualizarFactor(selectElement) {
-        const fila = selectElement.closest('tr');
-        const factorInput = fila.querySelector('.factor-oculto');
-        const tratSelect = fila.querySelector('select[name="tratamiento[]"]');
-        const selectedOption = selectElement.options[selectElement.selectedIndex];
-        if (selectedOption && selectedOption.dataset.factor) {
-            factorInput.value = selectedOption.dataset.factor;
-        } else {
-            factorInput.value = '0';
-        }
-        // Autocompletar tratamiento desde la opción seleccionada
-        if (tratSelect && selectedOption && selectedOption.dataset.tratamiento) {
-            const trat = selectedOption.dataset.tratamiento;
-            for (let opt of tratSelect.options) {
-                if (opt.value.toLowerCase() === trat.toLowerCase() || trat.toLowerCase().includes(opt.value.toLowerCase())) {
-                    tratSelect.value = opt.value;
-                    break;
-                }
-            }
-        }
-    }
+    establecerModoResiduos('individual');
+    cambiarModoResiduos('certificados');
+    reordenarPanelesResiduos();
+    asegurarPreviewResiduos();
 
     function agregarFila() {
         const tbody = document.getElementById('tabla_residuos');
@@ -364,14 +619,14 @@
             if(input.type !== 'hidden') input.value = '';
             if(input.type === 'hidden') input.value = '0'; 
         });
-        const selects = filaNueva.querySelectorAll('select');
-        selects.forEach(select => select.selectedIndex = 0);
         tbody.appendChild(filaNueva);
+        aplicarConfiguracionGeneralResiduos();
     }
     
     function eliminarFila(boton) {
         const fila = boton.closest('tr');
-        if (document.getElementById('tabla_residuos').rows.length > 1) {
+        const tbody = boton.closest('tbody');
+        if (tbody && tbody.rows.length > 1) {
             fila.remove();
         } else {
             alert('Debe haber al menos una fila en la tabla');
@@ -380,7 +635,9 @@
     
     function calcularTotal() {
         let total = 0;
-        const cantidadInputs = document.querySelectorAll('input[name="cantidad[]"]');
+        const cantidadInputs = modoResiduosActual === 'multiple'
+            ? document.querySelectorAll('#batch_body_res input[name="cantidad[]"]')
+            : document.querySelectorAll('#tabla_residuos input[name="cantidad[]"]');
         cantidadInputs.forEach(input => {
             const valor = parseFloat(input.value) || 0;
             total += valor;
@@ -390,3 +647,8 @@
     }
 </script>
 {% endblock %}
+
+
+
+
+

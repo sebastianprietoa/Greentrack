@@ -6,33 +6,36 @@
     <title>GreenTrack - {% block title %}{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
     <style>
-        /* ================= RESET + TIPOGRAFÍA ================= */
         *, *::before, *::after { box-sizing: border-box; }
 
         body {
             margin: 0;
             padding: 0;
-            background-color: #F0F2F5;
-            font-family: 'Inter', 'Segoe UI', sans-serif;
-            color: #111827;
+            background:
+                radial-gradient(circle at 12% 18%, rgba(32, 133, 152, 0.08) 0, rgba(32, 133, 152, 0.08) 1px, transparent 1px),
+                radial-gradient(circle at 78% 62%, rgba(32, 133, 152, 0.06) 0, rgba(32, 133, 152, 0.06) 1px, transparent 1px),
+                linear-gradient(180deg, #F7FAF9 0%, #F1F6F4 100%);
+            background-size: 28px 28px, 34px 34px, auto;
+            font-family: "Avenir Next LT Pro", "Segoe UI", system-ui, sans-serif;
+            color: var(--dark);
             -webkit-font-smoothing: antialiased;
         }
 
-        h1, h2, h3, h4 { font-family: 'Inter', sans-serif; }
+        h1, h2, h3, h4 {
+            font-family: "Avenir Next LT Pro", "Segoe UI", sans-serif;
+        }
 
         .app-layout {
             display: flex;
             min-height: 100vh;
         }
 
-        /* ================= SIDEBAR OSCURO ================= */
         .sidebar {
             width: 260px;
-            background: linear-gradient(180deg, #0D1F19 0%, #0A1A14 100%);
-            border-right: 1px solid rgba(255,255,255,0.05);
+            background: linear-gradient(180deg, #0D4F66 0%, #0B3F52 100%);
+            border-right: 1px solid rgba(255,255,255,0.08);
             display: flex;
             flex-direction: column;
             position: sticky;
@@ -41,39 +44,31 @@
             flex-shrink: 0;
             z-index: 1000;
             transition: transform 0.3s ease;
-            box-shadow: 4px 0 24px rgba(0,0,0,0.18);
+            box-shadow: 4px 0 24px rgba(11,63,82,0.16);
         }
 
         .sidebar-header {
-            padding: 1.5rem 1.25rem;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            border-bottom: 1px solid rgba(255,255,255,0.07);
-        }
-
-        .sidebar-brand {
-            font-size: 1.35rem;
-            font-weight: 800;
-            color: #34D399;
-            text-decoration: none;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            letter-spacing: -0.02em;
-        }
-
-        .sidebar-brand .brand-icon {
-            background: rgba(52,211,153,0.15);
-            border-radius: 10px;
-            width: 36px;
-            height: 36px;
+            padding: 1rem 1rem 0.85rem;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1rem;
-            color: #34D399;
-            border: 1px solid rgba(52,211,153,0.25);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+
+        .sidebar-brand {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            color: #fff;
+            text-decoration: none;
+            transform: translateX(-10px);
+        }
+
+        .sidebar-brand img {
+            display: block;
+            width: auto;
+            height: 184px;
+            max-width: 360px;
         }
 
         .sidebar-menu {
@@ -83,21 +78,16 @@
             display: flex;
             flex-direction: column;
             gap: 2px;
-            scrollbar-width: thin;
-            scrollbar-color: rgba(255,255,255,0.1) transparent;
         }
 
-        .sidebar-menu::-webkit-scrollbar { width: 4px; }
-        .sidebar-menu::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
-
         .menu-category {
-            font-size: 0.68rem;
+            font-size: 0.75rem;
             font-weight: 700;
-            color: rgba(255,255,255,0.3);
+            color: rgba(244, 251, 250, 0.72);
             text-transform: uppercase;
-            letter-spacing: 0.1em;
+            letter-spacing: 0.05em;
             margin-top: 1.5rem;
-            margin-bottom: 0.4rem;
+            margin-bottom: 0.5rem;
             padding-left: 0.75rem;
         }
 
@@ -107,51 +97,37 @@
             display: flex;
             align-items: center;
             gap: 11px;
-            padding: 0.65rem 0.875rem;
-            color: rgba(255,255,255,0.6);
+            padding: 0.75rem 0.875rem;
+            color: rgba(244, 251, 250, 0.88);
             text-decoration: none;
-            border-radius: 8px;
+            border-radius: 12px;
             font-weight: 500;
             font-size: 0.9rem;
             transition: all 0.15s ease;
-            border-left: 3px solid transparent;
-            position: relative;
         }
 
         .menu-link:hover {
-            background: rgba(52,211,153,0.1);
+            background: rgba(255,255,255,0.14);
             color: #fff;
-            border-left-color: rgba(52,211,153,0.4);
         }
-
-        .menu-link.active {
-            background: rgba(52,211,153,0.15);
-            color: #34D399;
-            border-left-color: #34D399;
-            font-weight: 600;
-        }
-
-        .menu-link.active i { color: #34D399 !important; }
 
         .menu-link i {
             width: 18px;
             text-align: center;
             font-size: 1rem;
             flex-shrink: 0;
-            transition: color 0.15s;
         }
 
         .sidebar-footer {
             padding: 1.25rem 0.875rem;
-            border-top: 1px solid rgba(255,255,255,0.07);
-            background: rgba(0,0,0,0.15);
+            border-top: 1px solid rgba(255,255,255,0.08);
         }
 
         .user-badge {
-            background: rgba(52,211,153,0.1);
-            color: #6EE7B7;
-            padding: 0.65rem 0.875rem;
-            border-radius: 8px;
+            background: rgba(255,255,255,0.16);
+            color: #F4FBFA;
+            padding: 0.75rem 0.875rem;
+            border-radius: 12px;
             font-weight: 600;
             font-size: 0.85rem;
             text-align: center;
@@ -159,13 +135,13 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            border: 1px solid rgba(52,211,153,0.2);
+            border: 1px solid rgba(255,255,255,0.12);
         }
 
         .admin-badge {
-            background: rgba(167,139,250,0.12);
-            color: #C4B5FD;
-            border-color: rgba(167,139,250,0.25);
+            background: rgba(200, 169, 106, 0.12);
+            color: #F4D8A6;
+            border-color: rgba(200, 169, 106, 0.2);
         }
 
         .logout-btn {
@@ -174,35 +150,35 @@
             justify-content: center;
             gap: 8px;
             width: 100%;
-            padding: 0.65rem;
-            background: rgba(239,68,68,0.12);
-            color: #FCA5A5;
+            padding: 0.75rem;
+            background: rgba(255,255,255,0.12);
+            color: #F1F5F9;
             text-decoration: none;
-            border-radius: 8px;
+            border-radius: 12px;
             font-weight: 600;
             font-size: 0.88rem;
             transition: all 0.15s;
-            border: 1px solid rgba(239,68,68,0.18);
         }
 
         .logout-btn:hover {
-            background: rgba(239,68,68,0.22);
-            color: #FEE2E2;
+            background: rgba(255,255,255,0.2);
+            color: #fff;
         }
 
-        /* ================= ÁREA PRINCIPAL ================= */
         .main-wrapper {
             flex: 1;
             display: flex;
             flex-direction: column;
             min-width: 0;
+            min-height: 100vh;
         }
 
         .mobile-header {
             display: none;
-            background: #0D1F19;
+            background: rgba(255,255,255,0.94);
+            backdrop-filter: blur(10px);
             padding: 1rem 1.5rem;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            box-shadow: 0 2px 20px rgba(18,49,43,0.08);
             align-items: center;
             justify-content: space-between;
             position: sticky;
@@ -214,7 +190,7 @@
             background: none;
             border: none;
             font-size: 1.4rem;
-            color: rgba(255,255,255,0.7);
+            color: #12312B;
             cursor: pointer;
             padding: 0;
         }
@@ -224,65 +200,96 @@
             background: none;
             border: none;
             font-size: 1.4rem;
-            color: rgba(255,255,255,0.5);
+            color: rgba(255,255,255,0.65);
             cursor: pointer;
         }
 
         .content-area {
-            padding: 2rem;
-            max-width: 1280px;
+            flex: 1;
+            padding: 2rem 2rem 1rem;
+            max-width: 1240px;
             margin: 0 auto;
             width: 100%;
             box-sizing: border-box;
         }
 
-        /* ================= CARDS CON HOVER ================= */
-        .eco-card {
-            transition: transform 0.18s ease, box-shadow 0.18s ease;
-        }
-        .eco-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 28px rgba(0,0,0,0.10) !important;
+        .brand-footer {
+            margin-top: auto;
+            padding: 1rem 1.25rem 1.25rem;
         }
 
-        /* ================= ALERTAS / FLASHES ================= */
+        .brand-footer-inner {
+            max-width: 1240px;
+            margin: 0 auto;
+            width: 100%;
+            display: grid;
+            grid-template-columns: minmax(190px, 1.8fr) minmax(150px, 1.3fr) minmax(160px, 1.4fr) minmax(150px, 1.3fr) minmax(130px, 1.1fr);
+            gap: 0.9rem;
+            align-items: center;
+            background: rgba(255,255,255,0.7);
+            border: 1px solid rgba(213,227,227,0.9);
+            border-radius: 18px;
+            padding: 0.95rem 1rem;
+            box-shadow: 0 2px 0 rgba(34, 115, 138, 0.12);
+        }
+
+        .brand-footer-logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 72px;
+            padding: 0.15rem 0.35rem;
+        }
+
+        .brand-footer-logo img {
+            max-width: 100%;
+            max-height: 74px;
+            object-fit: contain;
+            display: block;
+        }
+
+        .brand-footer-placeholder {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            min-height: 54px;
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #0D4F66;
+            border: 1px dashed rgba(13,79,102,0.2);
+            border-radius: 14px;
+            background: rgba(13,79,102,0.04);
+        }
+
         .alert {
-            padding: 0.875rem 1.25rem;
-            border-radius: 10px;
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
             margin-bottom: 1.5rem;
             display: flex;
             align-items: center;
             gap: 12px;
             font-weight: 500;
-            font-size: 0.92rem;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
         }
-        .alert-success { background: #D1FAE5; color: #065F46; border-left: 4px solid #10B981; }
-        .alert-error   { background: #FEE2E2; color: #991B1B; border-left: 4px solid #EF4444; }
-        .alert-danger  { background: #FEE2E2; color: #991B1B; border-left: 4px solid #EF4444; }
-        .alert-info    { background: #DBEAFE; color: #1E40AF; border-left: 4px solid #3B82F6; }
-        .alert-warning { background: #FEF3C7; color: #92400E; border-left: 4px solid #F59E0B; }
 
-        /* ================= TABLAS BASE ================= */
-        .eco-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
-        .eco-table thead tr { background: #F9FAFB; }
-        .eco-table th { padding: 10px 14px; text-align: left; color: #4B5563; font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 2px solid #E5E7EB; }
-        .eco-table td { padding: 10px 14px; border-bottom: 1px solid #F3F4F6; color: #374151; }
-        .eco-table tbody tr:hover { background: #F9FAFB; }
-        .eco-table tbody tr:last-child td { border-bottom: none; }
+        .alert-success { background: #E8F7EF; color: #116149; border-left: 4px solid #2C90A2; }
+        .alert-error { background: #FCE8E7; color: #8D2F2B; border-left: 4px solid #D96A63; }
+        .alert-info { background: #E8F1FB; color: #274B7A; border-left: 4px solid #1D6F8A; }
 
-        /* ================= RESPONSIVO ================= */
         .sidebar-overlay {
             display: none;
             position: fixed;
             inset: 0;
-            background: rgba(0,0,0,0.55);
+            background-color: rgba(8, 20, 17, 0.55);
             z-index: 995;
-            backdrop-filter: blur(3px);
+            backdrop-filter: blur(2px);
         }
 
         @media (max-width: 1024px) {
-            .content-area { padding: 1.5rem; }
+            .content-area { padding: 1.5rem 1.25rem 1rem; }
+            .brand-footer-inner { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         }
 
         @media (max-width: 768px) {
@@ -290,118 +297,68 @@
                 position: fixed;
                 left: 0;
                 transform: translateX(-100%);
-                box-shadow: 6px 0 24px rgba(0,0,0,0.3);
+                box-shadow: 8px 0 30px rgba(0,0,0,0.18);
             }
-            .sidebar.active { transform: translateX(0); }
+
+            .sidebar.active {
+                transform: translateX(0);
+            }
+
             .mobile-header { display: flex; }
             .close-sidebar { display: block; }
             .sidebar-overlay.active { display: block; }
-            .content-area { padding: 1rem; }
+            .content-area { padding: 1rem 1rem 0.75rem; }
+            .brand-footer { padding: 0.75rem 1rem 1rem; }
+            .brand-footer-inner { grid-template-columns: 1fr 1fr; }
+            .sidebar-brand img { height: 62px; max-width: 150px; }
+        }
+
+        @media (max-width: 500px) {
+            .brand-footer-inner { grid-template-columns: 1fr; }
+            .sidebar-brand img { height: 56px; max-width: 136px; }
         }
     </style>
 </head>
 <body>
-
     <div class="app-layout">
-        
         {% if session.user_id %}
-        
         <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
-                <a href="{{ url_for('dashboard') if session.es_admin == 0 else url_for('admin_dashboard') }}" class="sidebar-brand">
-                    <img src="{{ url_for('static', filename='logo_left.png') }}" alt="GreenTrack" style="height: 40px; width: 40px; object-fit: contain; filter: drop-shadow(0 2px 6px rgba(0,234,120,0.25));"> GreenTrack
+                <a href="{{ url_for('dashboard') if session.es_admin == 0 else url_for('admin_dashboard') }}" class="sidebar-brand" aria-label="GreenTrack">
+                    <img src="{{ url_for('static', filename='brand/logo_principal.png') }}" alt="GreenTrack">
                 </a>
-                <button class="close-sidebar" id="closeSidebar">
+                <button class="close-sidebar" id="closeSidebar" aria-label="Cerrar menú">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
 
             <div class="sidebar-menu">
                 {% if session.es_admin == 1 %}
-                    <div class="menu-category">⚙️ Administración</div>
-                    <a href="{{ url_for('admin_dashboard') }}" class="menu-link">
-                        <i class="fas fa-tachometer-alt" style="color: #6366f1;"></i> Dashboard
-                    </a>
-                    <a href="{{ url_for('admin_empresas') }}" class="menu-link">
-                        <i class="fas fa-building" style="color: #8b5cf6;"></i> Empresas
-                    </a>
-                    <a href="{{ url_for('admin_factores') }}" class="menu-link">
-                        <i class="fas fa-sliders-h" style="color: #f59e0b;"></i> Factores
-                    </a>
-                    <a href="{{ url_for('admin_exportar_todo') }}" class="menu-link">
-                        <i class="fas fa-file-export" style="color: #10b981;"></i> Exportar Data
-                    </a>
-                    <a href="{{ url_for('admin_pendientes') }}" class="menu-link" style="position: relative;">
-                        <i class="fas fa-clock" style="color: #f59e0b;"></i> Validar PDFs
-                        {% if total_pendientes is defined and total_pendientes > 0 %}
-                        <span style="background: #EF4444; color: white; font-size: 0.7rem; font-weight: 700; padding: 1px 6px; border-radius: 10px; margin-left: 6px;">{{ total_pendientes }}</span>
-                        {% endif %}
-                    </a>
-                    <a href="{{ url_for('admin_pdf_historial') }}" class="menu-link">
-                        <i class="fas fa-history" style="color: #6b7280;"></i> Historial PDFs
-                    </a>
-                    <a href="{{ url_for('admin_exportar_ghg_global') }}" class="menu-link">
-                        <i class="fas fa-globe" style="color: #064E3B;"></i> GHG Global
-                    </a>
-                    <a href="{{ url_for('admin_tickets') }}" class="menu-link" style="position: relative;">
-                        <i class="fas fa-headset" style="color: #ec4899;"></i> Tickets Soporte
-                        {% if tickets_abiertos is defined and tickets_abiertos > 0 %}
-                        <span style="background: #EC4899; color: white; font-size: 0.7rem; font-weight: 700; padding: 1px 6px; border-radius: 10px; margin-left: 6px;">{{ tickets_abiertos }}</span>
-                        {% endif %}
-                    </a>
+                    <div class="menu-category">Administración</div>
+                    <a href="{{ url_for('admin_dashboard') }}" class="menu-link"><i class="fas fa-tachometer-alt" style="color: #6E84C8;"></i> Dashboard</a>
+                    <a href="{{ url_for('admin_empresas') }}" class="menu-link"><i class="fas fa-building" style="color: #4AA383;"></i> Empresas</a>
+                    <a href="{{ url_for('admin_factores') }}" class="menu-link"><i class="fas fa-sliders-h" style="color: #D9AA2D;"></i> Factores</a>
+                    <a href="{{ url_for('admin_exportar_todo') }}" class="menu-link"><i class="fas fa-file-export" style="color: #2C90A2;"></i> Exportar Data</a>
                 {% else %}
-                    <div class="menu-category">📊 Visualización</div>
-                    <a href="{{ url_for('dashboard') }}" class="menu-link">
-                        <i class="fas fa-chart-pie" style="color: #6366f1;"></i> Resumen General
-                    </a>
-                    <a href="{{ url_for('combustion_dashboard') }}" class="menu-link">
-                        <i class="fas fa-fire" style="color: #ef4444;"></i> Combustión
-                    </a>
-                    <a href="{{ url_for('electricidad_dashboard') }}" class="menu-link">
-                        <i class="fas fa-bolt" style="color: #f59e0b;"></i> Electricidad
-                    </a>
-                    <a href="{{ url_for('refrigerantes_dashboard') }}" class="menu-link">
-                         <i class="fas fa-snowflake" style="color: #06B6D4;"></i> Refrigerantes
-                    </a>
-                    <a href="{{ url_for('agua_dashboard') }}" class="menu-link">
-                        <i class="fas fa-tint" style="color: #3b82f6;"></i>Agua
-                    </a>
-                    <a href="{{ url_for('residuos_dashboard') }}" class="menu-link">
-                        <i class="fas fa-recycle" style="color: #10b981;"></i>  Residuos
-                    </a>
+                    <div class="menu-category">Visualización</div>
+                    <a href="{{ url_for('dashboard') }}" class="menu-link"><i class="fas fa-chart-pie" style="color: #6E84C8;"></i> Resumen General</a>
+                    <a href="{{ url_for('combustion_dashboard') }}" class="menu-link"><i class="fas fa-fire" style="color: #D96A63;"></i> Combustión</a>
+                    <a href="{{ url_for('electricidad_dashboard') }}" class="menu-link"><i class="fas fa-bolt" style="color: #D9AA2D;"></i> Electricidad</a>
+                    <a href="{{ url_for('refrigerantes_dashboard') }}" class="menu-link"><i class="fas fa-snowflake" style="color: #5FBCD3;"></i> Refrigerantes</a>
+                    <a href="{{ url_for('agua_dashboard') }}" class="menu-link"><i class="fas fa-tint" style="color: #4AA0E6;"></i> Agua</a>
+                    <a href="{{ url_for('residuos_dashboard') }}" class="menu-link"><i class="fas fa-recycle" style="color: #4AA383;"></i> Residuos</a>
 
-                    <div class="menu-category">📝 Registro de Datos</div>
-                    <a href="{{ url_for('registro') }}" class="menu-link">
-                        <i class="fas fa-plus-circle" style="color: #f59e0b;"></i> Nuevo Registro
-                    </a>
-                    <a href="{{ url_for('importar_registros') }}" class="menu-link">
-                        <i class="fas fa-file-upload" style="color: #3b82f6;"></i> Carga Masiva (Excel)
-                    </a>
-                    <a href="{{ url_for('vehiculos') }}" class="menu-link">
-                        <i class="fas fa-car" style="color: #8b5cf6;"></i> Vehículos / Patentes
-                    </a>
-                    <a href="{{ url_for('combustible_movil') }}" class="menu-link">
-                        <i class="fas fa-gas-pump" style="color: #ef4444;"></i> Combustible Móvil
-                    </a>
+                    <div class="menu-category">Registro de Datos</div>
+                    <a href="{{ url_for('registro') }}" class="menu-link"><i class="fas fa-plus-circle" style="color: #2C90A2;"></i> Nuevo Registro</a>
+                    <a href="{{ url_for('importar_registros') }}" class="menu-link"><i class="fas fa-file-upload" style="color: #6E84C8;"></i> Carga Masiva (Excel)</a>
+                    <a href="{{ url_for('vehiculos') }}" class="menu-link"><i class="fas fa-car" style="color: #D9AA2D;"></i> Vehículos / Patentes</a>
+                    <a href="{{ url_for('combustible_movil') }}" class="menu-link"><i class="fas fa-gas-pump" style="color: #D96A63;"></i> Combustible Móvil</a>
 
-                    <div class="menu-category">⚙️ Herramientas</div>
-                    <a href="{{ url_for('mis_envios') }}" class="menu-link">
-                        <i class="fas fa-paper-plane" style="color: #3b82f6;"></i> Mis Envíos PDF
-                    </a>
-                    <a href="{{ url_for('mis_datos') }}" class="menu-link">
-                        <i class="fas fa-user-circle" style="color: #6b7280;"></i> Mi Cuenta
-                    </a>
-                    <a href="{{ url_for('exportar') }}" class="menu-link">
-                        <i class="fas fa-file-excel" style="color: #10b981;"></i> Exportar Excel
-                    </a>
-                    <a href="{{ url_for('tickets') }}" class="menu-link" style="position: relative;">
-                        <i class="fas fa-headset" style="color: #ec4899;"></i> Soporte / Tickets
-                        {% if mis_tickets_abiertos is defined and mis_tickets_abiertos > 0 %}
-                        <span style="background: #EC4899; color: white; font-size: 0.7rem; font-weight: 700; padding: 1px 6px; border-radius: 10px; margin-left: 6px;">{{ mis_tickets_abiertos }}</span>
-                        {% endif %}
-                    </a>
+                    <div class="menu-category">Herramientas</div>
+                    <a href="{{ url_for('mis_datos') }}" class="menu-link"><i class="fas fa-user-circle" style="color: #B9D0D8;"></i> Mis Datos</a>
+                    <a href="{{ url_for('exportar') }}" class="menu-link"><i class="fas fa-file-excel" style="color: #4AA383;"></i> Exportar Excel</a>
                 {% endif %}
             </div>
 
@@ -411,24 +368,18 @@
                 {% else %}
                     <div class="user-badge" title="{{ session.empresa }}">{{ session.empresa }}</div>
                 {% endif %}
-                
-                <a href="{{ url_for('logout') }}" class="logout-btn">
-                    <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
-                </a>
+                <a href="{{ url_for('logout') }}" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Cerrar Sesión</a>
             </div>
         </aside>
         {% endif %}
 
         <div class="main-wrapper">
-            
             {% if session.user_id %}
             <header class="mobile-header">
-                <button class="mobile-toggle" id="openSidebar">
-                    <i class="fas fa-bars"></i>
-                </button>
-                <div class="sidebar-brand" style="font-size: 1.1rem; margin: 0;">
-                    <img src="{{ url_for('static', filename='logo_left.png') }}" alt="GreenTrack" style="height: 32px; width: 32px; object-fit: contain; filter: drop-shadow(0 2px 6px rgba(0,234,120,0.25));"> GreenTrack
-                </div>
+                <button class="mobile-toggle" id="openSidebar"><i class="fas fa-bars"></i></button>
+                <a href="{{ url_for('dashboard') if session.es_admin == 0 else url_for('admin_dashboard') }}" class="sidebar-brand" style="margin: 0;">
+                    <img src="{{ url_for('static', filename='brand/logo_principal.png') }}" alt="GreenTrack" style="height: 40px;">
+                </a>
                 <div style="width: 24px;"></div>
             </header>
             {% endif %}
@@ -449,42 +400,46 @@
 
                 {% block content %}{% endblock %}
             </main>
+
+            <footer class="brand-footer">
+                <div class="brand-footer-inner">
+                    <div class="brand-footer-logo">
+                        <img src="{{ url_for('static', filename='brand/logo_principal.png') }}" alt="GreenTrack" style="max-height: 176px;">
+                    </div>
+                    <div class="brand-footer-logo">
+                        <img src="{{ url_for('static', filename='brand/logo_greenticket_blanco.png') }}" alt="PuertoVaras.org" style="max-height: 72px;">
+                    </div>
+                    <div class="brand-footer-logo">
+                        <img src="{{ url_for('static', filename='brand/logo_greenticket_marca.png') }}" alt="GreenTicket marca" style="max-height: 72px;">
+                    </div>
+                    <div class="brand-footer-logo">
+                        <img src="{{ url_for('static', filename='brand/logo_corfo_color.png') }}" alt="CORFO" style="max-height: 72px;">
+                    </div>
+                    <div class="brand-footer-logo">
+                        <img src="{{ url_for('static', filename='brand/logo_puerto_varas_negro.png') }}" alt="Desarrollo Productivo Sostenible" style="max-height: 72px;">
+                    </div>
+                </div>
+            </footer>
         </div>
-        
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
     <script>
-        // Menú móvil
         const sidebar = document.getElementById('sidebar');
         const overlay = document.getElementById('sidebarOverlay');
         const openBtn = document.getElementById('openSidebar');
         const closeBtn = document.getElementById('closeSidebar');
 
-        if (sidebar && openBtn && closeBtn) {
+        if (sidebar && openBtn && closeBtn && overlay) {
             function toggleMenu() {
                 sidebar.classList.toggle('active');
                 overlay.classList.toggle('active');
             }
+
             openBtn.addEventListener('click', toggleMenu);
             closeBtn.addEventListener('click', toggleMenu);
             overlay.addEventListener('click', toggleMenu);
         }
-
-        // Active state en sidebar
-        const currentPath = window.location.pathname;
-        document.querySelectorAll('.menu-link').forEach(link => {
-            const href = link.getAttribute('href');
-            if (href && (currentPath === href || (href !== '/' && currentPath.startsWith(href)))) {
-                link.classList.add('active');
-            }
-        });
-
-        // Card hover — agrega clase eco-card a todos los divs con box-shadow inline
-        document.querySelectorAll('.content-area div[style]').forEach(el => {
-            if (el.style.boxShadow && el.style.borderRadius) {
-                el.classList.add('eco-card');
-            }
-        });
     </script>
 </body>
 </html>

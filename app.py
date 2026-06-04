@@ -780,17 +780,31 @@ def formulario_residuos():
         """)
         todos = [dict(r) for r in cur2.fetchall()]
         conn2.close()
-        palabras_clave = ['residuo', 'papel', 'carton', 'plastico', 'vidrio', 'metal', 'organico',
-                          'wood', 'glass', 'batteries', 'weee', 'clothing', 'tyres', 'mineral', 'organic']
-        filtrados = [f for f in todos if any(p in sin_tildes(f['categoria']) for p in palabras_clave)]
-        # Deduplicate by (categoria, tratamiento): keep the latest año per combination
+        palabras_clave = {
+            'residuo', 'residuos', 'waste', 'papel', 'carton', 'cartón', 'plastico', 'plástico',
+            'vidrio', 'metal', 'organico', 'orgánico', 'wood', 'glass', 'batteries', 'bateria',
+            'baterias', 'weee', 'clothing', 'tyres', 'neumaticos', 'neumáticos', 'mineral',
+            'organic'
+        }
+        # Solo categorias asociadas a residuos; excluye combustibles, refrigerantes y otros grupos.
+        filtrados = []
+        for f in todos:
+            categoria = (f.get('categoria') or '').strip()
+            nombre_chile = (f.get('nombre_chile') or '').strip()
+            tratamiento = (f.get('tratamiento') or '').strip()
+            texto = sin_tildes(" ".join([categoria, nombre_chile, tratamiento]))
+            if tratamiento or nombre_chile or any(p in texto for p in palabras_clave):
+                filtrados.append(f)
+
+        # Un solo registro por categoria: se conserva el primero por el orden DESC por anio.
         seen = set()
         unique = []
         for f in filtrados:
-            key = (f['categoria'], f.get('tratamiento') or '')
-            if key not in seen:
-                seen.add(key)
-                unique.append(f)
+            categoria = (f.get('categoria') or '').strip()
+            if not categoria or categoria in seen:
+                continue
+            seen.add(categoria)
+            unique.append(f)
         return unique
 
     def buscar_factor(residuo_limpio, factores_db, año=0, tratamiento=None):
@@ -3159,3 +3173,5 @@ init_db()
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
+
+
