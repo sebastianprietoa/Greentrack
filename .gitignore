@@ -26,6 +26,7 @@ greentrack_backup*.dump
 greenetrack_backup*.dump
 
 # Logs
+logs/
 *.log
 
 # OS / editor

@@ -13,14 +13,14 @@
     {% if preview_rows is defined and preview_rows %}
     {% set con_factor = preview_rows | selectattr('factor', '>', 0) | list | length %}
     {% set sin_factor = preview_rows | length - con_factor %}
-    <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 2rem;">
-        <h2 style="color: #111827; margin: 0 0 0.5rem 0; display: flex; align-items: center; gap: 10px;">
-            <i class="fas fa-search" style="color: #3B82F6;"></i> Vista Previa �?" {{ tipo_ingreso_prev | upper }}
+    <div style="background: rgba(255,255,255,0.9); padding: 2rem; border-radius: 12px; border: 1px solid rgba(216,225,220,0.9); box-shadow: 0 10px 30px rgba(18,49,43,0.08); margin-bottom: 2rem;">
+        <h2 style="color: #12312B; margin: 0 0 0.5rem 0; display: flex; align-items: center; gap: 10px;">
+            <i class="fas fa-search" style="color: #3B82F6;"></i> Vista Previa - {{ tipo_ingreso_prev | upper }}
         </h2>
-        <p style="color: #6B7280; margin: 0 0 1.5rem 0; font-size: 0.9rem;">Revisa los datos antes de guardar. Nada se ha registrado aún.</p>
+        <p style="color: #5E6B73; margin: 0 0 1.5rem 0; font-size: 0.9rem;">Revisa los datos antes de guardar. Nada se ha registrado a?n.</p>
 
         <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
-            <div style="background: #D1FAE5; padding: 0.75rem 1.25rem; border-radius: 8px; font-weight: 700; color: #065F46;">
+            <div style="background: #E8F7EF; padding: 0.75rem 1.25rem; border-radius: 8px; font-weight: 700; color: #116149;">
                 <i class="fas fa-check-circle"></i> {{ con_factor }} con factor asignado
             </div>
             {% if sin_factor > 0 %}
@@ -28,28 +28,28 @@
                 <i class="fas fa-exclamation-triangle"></i> {{ sin_factor }} sin factor (emisión = 0)
             </div>
             {% endif %}
-            <div style="background: #EFF6FF; padding: 0.75rem 1.25rem; border-radius: 8px; font-weight: 700; color: #1E40AF;">
-                Total emisión: {{ "%.2f"|format(preview_rows | sum(attribute='emision')) }} kg CO�,,e
+            <div style="background: #E8F1FB; padding: 0.75rem 1.25rem; border-radius: 8px; font-weight: 700; color: #274B7A;">
+                Total emisión: {{ "%.2f"|format(preview_rows | sum(attribute='emision')) }} kg CO2e
             </div>
         </div>
 
         <div style="overflow-x: auto; margin-bottom: 1.5rem;">
-            <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem; background: white; border: 1px solid #D8E1DC; border-radius: 12px; overflow: hidden;">
                 <thead>
-                    <tr style="background: #F3F4F6; color: #374151;">
-                        <th style="padding: 10px 12px; text-align: left; border-bottom: 2px solid #E5E7EB;">Residuo (PDF)</th>
-                        <th style="padding: 10px 12px; text-align: left; border-bottom: 2px solid #E5E7EB;">Equivalente en Chile</th>
-                        <th style="padding: 10px 12px; text-align: left; border-bottom: 2px solid #E5E7EB;">Tratamiento</th>
-                        <th style="padding: 10px 12px; text-align: right; border-bottom: 2px solid #E5E7EB;">Cantidad (kg)</th>
-                        <th style="padding: 10px 12px; text-align: right; border-bottom: 2px solid #E5E7EB;">Factor (kg CO�,,e/t)</th>
-                        <th style="padding: 10px 12px; text-align: right; border-bottom: 2px solid #E5E7EB;">Emisión (kg CO�,,e)</th>
+                    <tr style="background: #EEF4F0; color: #12312B;">
+                        <th style="padding: 10px 12px; text-align: left; border-bottom: 1px solid #D8E1DC;">Residuo (PDF)</th>
+                        <th style="padding: 10px 12px; text-align: left; border-bottom: 1px solid #D8E1DC;">Equivalente en Chile</th>
+                        <th style="padding: 10px 12px; text-align: left; border-bottom: 1px solid #D8E1DC;">Tratamiento</th>
+                        <th style="padding: 10px 12px; text-align: right; border-bottom: 1px solid #D8E1DC;">Cantidad (kg)</th>
+                        <th style="padding: 10px 12px; text-align: right; border-bottom: 1px solid #D8E1DC;">Factor (kg CO2e/t)</th>
+                        <th style="padding: 10px 12px; text-align: right; border-bottom: 1px solid #D8E1DC;">Emisión (kg CO2e)</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for r in preview_rows %}
-                    <tr style="border-bottom: 1px solid #F3F4F6; {% if r.factor == 0 %}background: #FFFBEB;{% endif %}">
-                        <td style="padding: 9px 12px; max-width: 200px; word-break: break-word; color: #6B7280; font-size: 0.8rem;">{{ r.categoria }}</td>
-                        <td style="padding: 9px 12px; max-width: 220px; word-break: break-word; font-weight: 600; color: #111827;">
+                    <tr style="border-bottom: 1px solid #E5E7EB; {% if r.factor == 0 %}background: #FFF7ED;{% endif %}">
+                        <td style="padding: 9px 12px; max-width: 200px; word-break: break-word; color: #5E6B73; font-size: 0.8rem;">{{ r.categoria }}</td>
+                        <td style="padding: 9px 12px; max-width: 220px; word-break: break-word; font-weight: 600; color: #12312B;">
                             {% if r.nombre_chile %}
                                 {{ r.nombre_chile }}
                             {% else %}
@@ -61,8 +61,8 @@
                                 <span style="background: #FEF2F2; color: #991B1B; padding: 2px 9px; border-radius: 6px; font-size: 0.78rem; font-weight: 700;">Vertedero</span>
                             {% else %}
                                 <select class="sel-tratamiento" data-idx="{{ loop.index0 }}"
-                                        style="padding: 5px 8px; border: 1px solid #D1D5DB; border-radius: 6px; font-size: 0.82rem; background: white; color: #374151; max-width: 180px;">
-                                    <option value="">�?" Sin especificar �?"</option>
+                                        style="padding: 5px 8px; border: 1px solid #D8E1DC; border-radius: 6px; font-size: 0.82rem; background: white; color: #12312B; max-width: 180px;">
+                                    <option value="">- Sin especificar -</option>
                                     {% for t in tratamientos_disponibles %}
                                     <option value="{{ t }}" {% if t == r.tratamiento %}selected{% endif %}>{{ t }}</option>
                                     {% endfor %}
@@ -75,9 +75,9 @@
                         <td style="padding: 9px 12px; text-align: right;">{{ "%.2f"|format(r.cantidad) }}</td>
                         <td style="padding: 9px 12px; text-align: right;">
                             {% if r.factor > 0 %}
-                                <span style="color: #059669; font-weight: 600;">{{ r.factor }}</span>
+                                <span style="color: #0E7C66; font-weight: 600;">{{ r.factor }}</span>
                             {% else %}
-                                <span style="color: #D97706;">�?"</span>
+                                <span style="color: #D97706;">-</span>
                             {% endif %}
                         </td>
                         <td style="padding: 9px 12px; text-align: right; font-weight: 700;">
@@ -93,20 +93,20 @@
             </table>
         </div>
 
-        <div style="background: #EFF6FF; border: 1px solid #BFDBFE; border-radius: 8px; padding: 1rem 1.25rem; margin-bottom: 1.25rem; display: flex; align-items: flex-start; gap: 10px;">
+        <div style="background: #E8F1FB; border: 1px solid #C8DBF3; border-radius: 8px; padding: 1rem 1.25rem; margin-bottom: 1.25rem; display: flex; align-items: flex-start; gap: 10px;">
             <i class="fas fa-info-circle" style="color: #3B82F6; margin-top: 2px; flex-shrink: 0;"></i>
-            <p style="margin: 0; color: #1E40AF; font-size: 0.9rem;">
-                Al enviar, el administrador revisará los datos antes de registrarlos. Podrás ver el estado en <a href="/mis_envios" style="color: #1E40AF; font-weight: 600;">Mis Envíos</a>.
+            <p style="margin: 0; color: #274B7A; font-size: 0.9rem;">
+                Al enviar, el administrador revisará los datos antes de registrarlos. Podrás ver el estado en <a href="/mis_envios" style="color: #274B7A; font-weight: 600;">Mis Envíos</a>.
             </p>
         </div>
 
         <!-- Periodo del reporte -->
-        <div style="background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 8px; padding: 1rem 1.25rem; margin-bottom: 1.25rem;">
+        <div style="background: #FFF7ED; border: 1px solid #FCD34D; border-radius: 8px; padding: 1rem 1.25rem; margin-bottom: 1.25rem;">
             <label style="display: block; font-weight: 700; color: #92400E; margin-bottom: 0.4rem; font-size: 0.9rem;">
                 <i class="fas fa-calendar-alt"></i> Periodo del reporte (mes y año de los residuos)
             </label>
             <p style="margin: 0 0 0.6rem 0; color: #78350F; font-size: 0.82rem;">
-                Detectado automáticamente desde el PDF. Corrígelo si no corresponde �?" todos los registros se guardarán con esta fecha.
+                Detectado automáticamente desde el PDF. Corrígelo si no corresponde - todos los registros se guardarán con esta fecha.
             </p>
             <input type="month" id="periodo_override_display"
                    value="{{ periodo_detectado | default('') }}"
@@ -121,11 +121,11 @@
                 <input type="hidden" name="nombre_pdf" value="{{ nombre_pdf | default('') }}">
                 <input type="hidden" name="tipo_pdf" value="{{ tipo_ingreso_prev | default('') }}">
                 <input type="hidden" name="periodo_override" id="periodo_override_hidden" value="{{ periodo_detectado | default('') }}">
-                <button type="submit" style="background: #3B82F6; color: white; border: none; padding: 12px 28px; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 1rem; display: flex; align-items: center; gap: 8px;">
+                <button type="submit" style="background: #2C90A2; color: white; border: none; padding: 12px 28px; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 1rem; display: flex; align-items: center; gap: 8px;">
                     <i class="fas fa-paper-plane"></i> Enviar para Revisión ({{ preview_rows | length }} registros)
                 </button>
             </form>
-            <a href="/formulario_residuos" style="background: #F3F4F6; color: #374151; padding: 12px 28px; border-radius: 8px; font-weight: 600; text-decoration: none; display: flex; align-items: center; gap: 8px;">
+            <a href="/formulario_residuos" style="background: #EEF4F0; color: #12312B; padding: 12px 28px; border-radius: 8px; font-weight: 600; text-decoration: none; display: flex; align-items: center; gap: 8px;">
                 <i class="fas fa-times"></i> Cancelar
             </a>
         </div>
@@ -157,20 +157,20 @@
     </div>
     {% endif %}
 
-    <div style="background: #0B0F14; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border: 1px solid #1F2937; border-top: 5px solid #10B981;">
-        <h1 style="margin-bottom: 0.5rem; color: #E5E7EB; display: flex; align-items: center; gap: 10px;">
+    <div style="background: rgba(255,255,255,0.9); padding: 2rem; border-radius: 12px; border: 1px solid rgba(216,225,220,0.9); box-shadow: 0 10px 30px rgba(18,49,43,0.08); border-top: 5px solid #0E7C66;">
+        <h1 style="margin-bottom: 0.5rem; color: #12312B; display: flex; align-items: center; gap: 10px;">
             <i class="fas fa-recycle" style="color: #10B981;"></i> Formulario de Gestión de Residuos
         </h1>
-        <p style="color: #94A3B8; margin-bottom: 2rem;">Complete según las instrucciones del formulario de residuos</p>
+        <p style="color: #5E6B73; margin-bottom: 2rem;">Complete según las instrucciones del formulario de residuos</p>
 
         <form method="POST" id="residuosForm" action="/formulario_residuos" enctype="multipart/form-data">
             <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 1.5rem;">
-                <button type="button" id="modo_certificados" onclick="cambiarModoResiduos('certificados')" style="background: #10B981; color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: 600; cursor: pointer;">Certificados</button>
+                <button type="button" id="modo_certificados" onclick="cambiarModoResiduos('certificados')" style="background: #0E7C66; color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: 600; cursor: pointer;">Certificados</button>
                 <button type="button" id="modo_manual" onclick="cambiarModoResiduos('manual')" style="background: #F3F4F6; color: #4B5563; border: none; padding: 10px 16px; border-radius: 8px; font-weight: 600; cursor: pointer;">Manual</button>
             </div>
             
-            <div id="cert_section" style="margin-bottom: 2.5rem; padding: 1.5rem; background: #F0F9FF; border-radius: 8px;">
-                <h2 style="margin-bottom: 1rem; color: #1E40AF; display: flex; align-items: center; gap: 10px;">
+            <div id="cert_section" style="margin-bottom: 2.5rem; padding: 1.5rem; background: rgba(255,255,255,0.78); border: 1px solid rgba(216,225,220,0.9); border-radius: 8px;">
+                <h2 style="margin-bottom: 1rem; color: #1D6F8A; display: flex; align-items: center; gap: 10px;">
                     <i class="fas fa-pen-to-square"></i> 1. Método de Ingreso
                 </h2>
                 
@@ -179,45 +179,45 @@
                         ¿Cómo deseas registrar los residuos?
                     </label>
                     <div style="display: flex; gap: 2rem; flex-wrap: wrap;">
-                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; background: white; padding: 10px 15px; border-radius: 6px; border: 1px solid #D1D5DB;">
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; background: rgba(255,255,255,0.9); padding: 10px 15px; border-radius: 6px; border: 1px solid #D8E1DC;">
                             <input type="radio" name="tipo_ingreso" value="manual" checked onchange="toggleReporte('manual')">
-                            <span><i class="fas fa-pen" style="color: #2563EB;"></i> Ingreso Manual (Tabla)</span>
+                            <span><i class="fas fa-pen" style="color: #2C90A2;"></i> Ingreso Manual (Tabla)</span>
                         </label>
-                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; background: white; padding: 10px 15px; border-radius: 6px; border: 1px solid #D1D5DB;">
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; background: rgba(255,255,255,0.9); padding: 10px 15px; border-radius: 6px; border: 1px solid #D8E1DC;">
                             <input type="radio" name="tipo_ingreso" value="sinader" onchange="toggleReporte('auto')">
-                            <span><i class="fas fa-file-alt" style="color: #0EA5E9;"></i> Auto-SINADER (Residuos Generales)</span>
+                            <span><i class="fas fa-file-alt" style="color: #2C90A2;"></i> Auto-SINADER (Residuos Generales)</span>
                         </label>
-                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; background: white; padding: 10px 15px; border-radius: 6px; border: 1px solid #D1D5DB;">
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; background: rgba(255,255,255,0.9); padding: 10px 15px; border-radius: 6px; border: 1px solid #D8E1DC;">
                             <input type="radio" name="tipo_ingreso" value="sidrep" onchange="toggleReporte('auto')">
-                            <span><i class="fas fa-triangle-exclamation" style="color: #F59E0B;"></i> Auto-SIDREP (Residuos Peligrosos)</span>
+                            <span><i class="fas fa-triangle-exclamation" style="color: #D97706;"></i> Auto-SIDREP (Residuos Peligrosos)</span>
                         </label>
                     </div>
                 </div>
                 
-                <div id="reporte_section" style="display: none; border-top: 1px solid #BFDBFE; padding-top: 1.5rem;">
+                <div id="reporte_section" style="display: none; border-top: 1px solid #D8E1DC; padding-top: 1.5rem;">
                     <div style="margin-bottom: 1rem;">
                         <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #374151;">
                             Subir Certificado Oficial (PDF) *
                         </label>
                         <input type="file" id="archivo_pdf" name="archivo_pdf" accept=".pdf" 
-                               style="width: 100%; padding: 12px 16px; border: 2px dashed #3B82F6; border-radius: 8px; font-size: 1rem; background: #EFF6FF;">
+                               style="width: 100%; padding: 12px 16px; border: 2px dashed #2C90A2; border-radius: 8px; font-size: 1rem; background: rgba(255,255,255,0.95);">
                         <p style="font-size: 0.9rem; color: #6B7280; margin-top: 0.5rem;">
                             El sistema leerá el PDF y extraerá automáticamente todas las filas con sus cantidades.
                         </p>
                     </div>
                     
-                    <button type="submit" style="background: #3B82F6; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 1.1rem; box-shadow: 0 4px 6px rgba(59, 130, 246, 0.2);">
+                    <button type="submit" style="background: #0E7C66; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 1.1rem; box-shadow: 0 4px 6px rgba(14, 124, 102, 0.2);">
                         <i class="fas fa-cogs"></i> Procesar Documento
                     </button>
                 </div>
             </div>
             
             
-                        <div style="background: #0F172A; border: 1px solid #334155; border-radius: 10px; padding: 1rem; margin-bottom: 1.5rem;">
+                        <div style="background: rgba(255,255,255,0.9); border: 1px solid rgba(216,225,220,0.9); border-radius: 10px; padding: 1rem; margin-bottom: 1.5rem;">
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                     <div>
-                        <label style="display: block; font-weight: 600; color: #E5E7EB; margin-bottom: 8px;">Tipo de residuo</label>
-                        <select id="tipo_general_res" onchange="aplicarConfiguracionGeneralResiduos()" style="width: 100%; padding: 10px; border: 1px solid #475569; border-radius: 6px; box-sizing: border-box; background: #111827; color: white;">
+                        <label style="display: block; font-weight: 600; color: #12312B; margin-bottom: 8px;">Tipo de residuo</label>
+                        <select id="tipo_general_res" onchange="aplicarConfiguracionGeneralResiduos()" style="width: 100%; padding: 10px; border: 1px solid #D8E1DC; border-radius: 6px; box-sizing: border-box; background: white; color: #12312B;">
                             <option value="">Seleccione desde BD...</option>
                             {% for f in factores %}
                                 <option value="{{ f.categoria }}" data-factor="{{ f.factor }}" data-unidad="{{ f.unidad }}">
@@ -228,38 +228,38 @@
                         </select>
                     </div>
                     <div>
-                        <label style="display: block; font-weight: 600; color: #E5E7EB; margin-bottom: 8px;">Tratamiento</label>
-                        <select id="tratamiento_general_res" onchange="aplicarConfiguracionGeneralResiduos()" style="width: 100%; padding: 10px; border: 1px solid #475569; border-radius: 6px; box-sizing: border-box; background: #111827; color: white;">
+                        <label style="display: block; font-weight: 600; color: #12312B; margin-bottom: 8px;">Tratamiento</label>
+                        <select id="tratamiento_general_res" onchange="aplicarConfiguracionGeneralResiduos()" style="width: 100%; padding: 10px; border: 1px solid #D8E1DC; border-radius: 6px; box-sizing: border-box; background: white; color: #12312B;">
                             <option value="">Seleccionar</option>
                             <option value="Reciclaje">Reciclaje</option>
                             <option value="Vertedero">Vertedero</option>
-                            <option value="Incineraci�n">Incineraci�n</option>
+                            <option value="Incineración">Incineración</option>
                             <option value="Compostaje">Compostaje</option>
                             <option value="Tratamiento especial">Tratamiento especial</option>
-                            <option value="Reutilizaci�n">Reutilizaci�n</option>
+                            <option value="Reutilización">Reutilización</option>
                         </select>
                     </div>
                 </div>
             </div>
-<div id="res_batch_panel" style="display: none; background: #1F2937; padding: 1.25rem; border-radius: 10px; margin-bottom: 1.5rem; border: 1px solid #374151; color: #E5E7EB;">
+<div id="res_batch_panel" style="display: none; background: rgba(255,255,255,0.9); padding: 1.25rem; border-radius: 10px; margin-bottom: 1.5rem; border: 1px solid rgba(216,225,220,0.9); color: #12312B;">
                 <div style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 1rem; align-items: end; margin-bottom: 1rem;">
                     <div>
-                        <label style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">Mes de inicio</label>
-                        <input type="month" id="fecha_inicio_res" style="width: 100%; padding: 10px; border: 1px solid #D1D5DB; border-radius: 6px; box-sizing: border-box;">
+                        <label style="display: block; font-weight: 600; color: #12312B; margin-bottom: 8px;">Mes de inicio</label>
+                        <input type="month" id="fecha_inicio_res" style="width: 100%; padding: 10px; border: 1px solid #D8E1DC; border-radius: 6px; box-sizing: border-box;">
                     </div>
                     <div>
-                        <label style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">Mes de final</label>
-                        <input type="month" id="fecha_fin_res" style="width: 100%; padding: 10px; border: 1px solid #D1D5DB; border-radius: 6px; box-sizing: border-box;">
+                        <label style="display: block; font-weight: 600; color: #12312B; margin-bottom: 8px;">Mes de final</label>
+                        <input type="month" id="fecha_fin_res" style="width: 100%; padding: 10px; border: 1px solid #D8E1DC; border-radius: 6px; box-sizing: border-box;">
                     </div>
-                    <button type="button" onclick="generarTablaResiduos()" style="background: #111827; color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; height: 42px;">
+                    <button type="button" onclick="generarTablaResiduos()" style="background: #0D4F66; color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; height: 42px;">
                         Generar tabla
                     </button>
                 </div>
-                <p id="batch_summary_res" style="margin: 0 0 1rem 0; color: #6B7280; font-size: 0.95rem;">Selecciona un rango de meses y genera la tabla.</p>
+                <p id="batch_summary_res" style="margin: 0 0 1rem 0; color: #5E6B73; font-size: 0.95rem;">Selecciona un rango de meses y genera la tabla.</p>
                 <div style="overflow-x: auto;">
                     <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden;">
                         <thead>
-                            <tr style="background: #D1FAE5; color: #065F46;">
+                            <tr style="background: #E8F7EF; color: #12312B;">
                                 <th style="text-align: left; padding: 10px; border-bottom: 1px solid #A7F3D0;">Mes</th>
                                 <th style="text-align: left; padding: 10px; border-bottom: 1px solid #A7F3D0;">Cantidad</th>
                                 <th style="text-align: left; padding: 10px; border-bottom: 1px solid #A7F3D0;">Acciones</th>
@@ -267,28 +267,28 @@
                         </thead>
                         <tbody id="batch_body_res">
                             <tr>
-                                <td colspan="3" style="padding: 12px; color: #6B7280;">Aun no se ha generado una tabla.</td>
+                                <td colspan="3" style="padding: 12px; color: #6B7280;">Aún no se ha generado una tabla.</td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
             </div>
-            <div id="manual_section" style="display: none; background: #111111; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-top: 5px solid #3B82F6;">
-                <h2 style="margin-bottom: 0.5rem; color: #A5B4FC; display: flex; align-items: center; gap: 10px;">
+            <div id="manual_section" style="display: none; background: rgba(255,255,255,0.9); padding: 2rem; border-radius: 12px; box-shadow: 0 10px 30px rgba(18,49,43,0.08); border: 1px solid rgba(216,225,220,0.9); border-top: 5px solid #2C90A2;">
+                <h2 style="margin-bottom: 0.5rem; color: #1D6F8A; display: flex; align-items: center; gap: 10px;">
                     <i class="fas fa-recycle" style="color: #3B82F6;"></i> Registro Manual de Residuos
                 </h2>
-                <p style="color: #9CA3AF; margin-bottom: 2rem;">Ingrese los residuos de forma individual o por carga multiple.</p>
+                <p style="color: #5E6B73; margin-bottom: 2rem;">Ingrese los residuos de forma individual o por carga múltiple.</p>
                 <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 1.5rem;">
-                    <button type="button" id="modo_individual_res" onclick="establecerModoResiduos('individual')" style="background: #10B981; color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                    <button type="button" id="modo_individual_res" onclick="establecerModoResiduos('individual')" style="background: #0E7C66; color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: 600; cursor: pointer;">
                         Registro individual
                     </button>
                     <button type="button" id="modo_multiple_res" onclick="establecerModoResiduos('multiple')" style="background: #F3F4F6; color: #4B5563; border: none; padding: 10px 16px; border-radius: 8px; font-weight: 600; cursor: pointer;">
-                        Carga multiple
+                        Carga múltiple
                     </button>
                 </div>
                 <div id="tabla_section">
-                <div style="margin-bottom: 2rem; padding: 1.5rem; background: #1F2937; border-radius: 8px;">
-                    <h2 style="margin-bottom: 1rem; color: #FB923C; display: flex; align-items: center; gap: 10px;">
+                <div style="margin-bottom: 2rem; padding: 1.5rem; background: rgba(255,255,255,0.82); border: 1px solid rgba(216,225,220,0.9); border-radius: 8px;">
+                    <h2 style="margin-bottom: 1rem; color: #D97706; display: flex; align-items: center; gap: 10px;">
                         <i class="fas fa-table"></i> 2. Registro Manual de Residuos
                     </h2>
                     <p style="color: #6B7280; margin-bottom: 1.5rem;">
@@ -329,25 +329,25 @@
                 </div>
                 
                 <div style="display: flex; gap: 1rem; margin-bottom: 2rem;">
-                    <button type="button" onclick="agregarFila()" style="background: #10B981; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                    <button type="button" onclick="agregarFila()" style="background: #0E7C66; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px;">
                         <i class="fas fa-plus"></i> Agregar Fila
                     </button>
                 </div>
                 
-                <div id="total_container" style="display: none; margin-bottom: 2rem; padding: 1rem; background: #D1FAE5; border-radius: 8px;">
-                    <h3 style="margin-bottom: 0.5rem; color: #065F46;">Suma Total (Referencial):</h3>
+                <div id="total_container" style="display: none; margin-bottom: 2rem; padding: 1rem; background: #E8F7EF; border-radius: 8px;">
+                    <h3 style="margin-bottom: 0.5rem; color: #12312B;">Suma Total (Referencial):</h3>
                     <div style="display: flex; align-items: baseline; gap: 10px;">
-                        <span id="total_residuos" style="font-size: 1.5rem; font-weight: 700; color: #111827;">0.00</span>
+                        <span id="total_residuos" style="font-size: 1.5rem; font-weight: 700; color: #12312B;">0.00</span>
                     </div>
                 </div>
             </div>
             <div style="display: flex; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap;">
-                <button type="button" onclick="previsualizarEmisionesResiduos()" style="background: #3B82F6; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                <button type="button" onclick="previsualizarEmisionesResiduos()" style="background: #2C90A2; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px;">
                     <i class="fas fa-eye"></i> Previsualizar emisiones
                 </button>
             </div>
             <div style="text-align: center; margin-top: 1.25rem; margin-bottom: 0.5rem;">
-                <button type="submit" style="background: #10B981; color: white; border: none; padding: 14px 40px; border-radius: 8px; font-size: 1.1rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 10px;">
+                <button type="submit" style="background: #0E7C66; color: white; border: none; padding: 14px 40px; border-radius: 8px; font-size: 1.1rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 10px;">
                     <i class="fas fa-save"></i> Cargar información a la base
                 </button>
             </div>
@@ -369,7 +369,7 @@
             btnCert.style.color = modo === 'certificados' ? 'white' : '#4B5563';
         }
         if (btnMan) {
-            btnMan.style.background = modo === 'manual' ? '#111827' : '#F3F4F6';
+            btnMan.style.background = modo === 'manual' ? '#0E7C66' : '#F3F4F6';
             btnMan.style.color = modo === 'manual' ? 'white' : '#4B5563';
         }
         document.querySelectorAll('#manual_section input, #manual_section select').forEach(el => {
@@ -381,7 +381,7 @@
         const manualSection = document.getElementById('manual_section');
         const tablaSection = document.getElementById('tabla_section');
         const toggleRow = document.getElementById('modo_individual_res')?.closest('div');
-        const configPanel = document.getElementById('tipo_general_res')?.closest('div[style*="background: #0F172A"]');
+        const configPanel = document.getElementById('tipo_general_res')?.closest('div[style*="background: rgba(255,255,255,0.9)"]');
         const batchPanel = document.getElementById('res_batch_panel');
         const saveButton = document.querySelector('#manual_section button[type="submit"]');
 
@@ -408,35 +408,35 @@
         panel.id = 'preview_residuos';
         panel.style.display = 'none';
         panel.style.margin = '1rem 0 1.5rem 0';
-        panel.style.background = '#0F172A';
-        panel.style.border = '1px solid #1E293B';
+        panel.style.background = 'rgba(255,255,255,0.92)';
+        panel.style.border = '1px solid #D8E1DC';
         panel.style.borderRadius = '10px';
         panel.style.padding = '1rem 1.25rem';
         panel.innerHTML = `
             <div style="display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem;">
                 <div>
-                    <h3 style="margin: 0; color: #E2E8F0;">Vista previa de emisiones</h3>
-                    <p style="margin: 0.35rem 0 0 0; color: #94A3B8; font-size: 0.9rem;">Revisa cantidades, factores y emisiones antes de guardar.</p>
+                    <h3 style="margin: 0; color: #12312B;">Vista previa de emisiones</h3>
+                    <p style="margin: 0.35rem 0 0 0; color: #5E6B73; font-size: 0.9rem;">Revisa cantidades, factores y emisiones antes de guardar.</p>
                 </div>
-                <div style="background: #111827; border: 1px solid #334155; color: #E5E7EB; border-radius: 999px; padding: 0.5rem 0.9rem; font-weight: 700;">
+                <div style="background: #EEF4F0; border: 1px solid #D8E1DC; color: #12312B; border-radius: 999px; padding: 0.5rem 0.9rem; font-weight: 700;">
                     Total: <span id="preview_total_residuos">0.00</span> kg CO2e
                 </div>
             </div>
             <div style="overflow-x: auto;">
-                <table style="width: 100%; border-collapse: collapse; color: #E5E7EB;">
+                <table style="width: 100%; border-collapse: collapse; color: #12312B; background: white; border: 1px solid #D8E1DC; border-radius: 8px; overflow: hidden;">
                     <thead>
-                        <tr style="background: #111827; color: #CBD5E1;">
-                            <th style="padding: 10px; text-align: left; border-bottom: 1px solid #334155;">Mes</th>
-                            <th style="padding: 10px; text-align: left; border-bottom: 1px solid #334155;">Tipo de residuo</th>
-                            <th style="padding: 10px; text-align: left; border-bottom: 1px solid #334155;">Tratamiento</th>
-                            <th style="padding: 10px; text-align: right; border-bottom: 1px solid #334155;">Cantidad</th>
-                            <th style="padding: 10px; text-align: right; border-bottom: 1px solid #334155;">Factor</th>
-                            <th style="padding: 10px; text-align: right; border-bottom: 1px solid #334155;">Emision</th>
+                        <tr style="background: #F8FAFC; color: #12312B;">
+                            <th style="padding: 10px; text-align: left; border-bottom: 1px solid #D8E1DC;">Mes</th>
+                            <th style="padding: 10px; text-align: left; border-bottom: 1px solid #D8E1DC;">Tipo de residuo</th>
+                            <th style="padding: 10px; text-align: left; border-bottom: 1px solid #D8E1DC;">Tratamiento</th>
+                            <th style="padding: 10px; text-align: right; border-bottom: 1px solid #D8E1DC;">Cantidad</th>
+                            <th style="padding: 10px; text-align: right; border-bottom: 1px solid #D8E1DC;">Factor</th>
+                            <th style="padding: 10px; text-align: right; border-bottom: 1px solid #D8E1DC;">Emisión</th>
                         </tr>
                     </thead>
                     <tbody id="preview_residuos_body">
                         <tr>
-                            <td colspan="6" style="padding: 12px; color: #94A3B8;">Aun no se ha generado una previsualizacion.</td>
+                            <td colspan="6" style="padding: 12px; color: #5E6B73;">Aún no se ha generado una previsualización.</td>
                         </tr>
                     </tbody>
                 </table>
@@ -466,7 +466,7 @@
             btnIndividual.style.color = modo === 'individual' ? 'white' : '#4B5563';
         }
         if (btnMultiple) {
-            btnMultiple.style.background = modo === 'multiple' ? '#111827' : '#F3F4F6';
+            btnMultiple.style.background = modo === 'multiple' ? '#0E7C66' : '#F3F4F6';
             btnMultiple.style.color = modo === 'multiple' ? 'white' : '#4B5563';
         }
     }
@@ -569,16 +569,16 @@
         if (tbody) {
             tbody.innerHTML = datos.length
                 ? datos.map(item => `
-                    <tr style="border-bottom: 1px solid #1E293B;">
-                        <td style="padding: 10px; color: #E2E8F0;">${item.periodo || '-'}</td>
-                        <td style="padding: 10px; color: #E2E8F0;">${item.tipo || '-'}</td>
-                        <td style="padding: 10px; color: #E2E8F0;">${item.tratamiento || '-'}</td>
-                        <td style="padding: 10px; text-align: right; color: #E2E8F0;">${item.cantidad.toFixed(2)}</td>
-                        <td style="padding: 10px; text-align: right; color: #E2E8F0;">${item.factor.toFixed(4)}</td>
-                        <td style="padding: 10px; text-align: right; color: #E2E8F0; font-weight: 700;">${item.emision.toFixed(4)}</td>
+                        <tr style="border-bottom: 1px solid #E5E7EB;">
+                        <td style="padding: 10px; color: #12312B;">${item.periodo || '-'}</td>
+                        <td style="padding: 10px; color: #12312B;">${item.tipo || '-'}</td>
+                        <td style="padding: 10px; color: #12312B;">${item.tratamiento || '-'}</td>
+                        <td style="padding: 10px; text-align: right; color: #12312B;">${item.cantidad.toFixed(2)}</td>
+                        <td style="padding: 10px; text-align: right; color: #12312B;">${item.factor.toFixed(4)}</td>
+                        <td style="padding: 10px; text-align: right; color: #12312B; font-weight: 700;">${item.emision.toFixed(4)}</td>
                     </tr>
                 `).join('')
-                : '<tr><td colspan="6" style="padding: 12px; color: #94A3B8;">Aun no se ha generado una previsualizacion.</td></tr>';
+                : '<tr><td colspan="6" style="padding: 12px; color: #5E6B73;">Aún no se ha generado una previsualización.</td></tr>';
         }
 
         if (totalBadge) totalBadge.textContent = total.toFixed(2);
