@@ -509,6 +509,196 @@ document.querySelectorAll('.stat-card').forEach(card => {
 </script>
 
 <style>
+    .dashboard-header,
+    .stats-grid,
+    .quick-actions,
+    .panel-shell,
+    .panel-shell-wide {
+        margin-bottom: 2rem !important;
+    }
+
+    .dashboard-header {
+        background: linear-gradient(135deg, #2C90A2, #1D6F8A) !important;
+        color: #fff !important;
+        padding: 1.75rem !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+        font-family: Arial, sans-serif !important;
+        margin-top: 0 !important;
+    }
+
+    .dashboard-header h1,
+    .dashboard-header p,
+    .dashboard-header label {
+        color: #fff !important;
+        font-family: Arial, sans-serif !important;
+    }
+
+    .dashboard-header select {
+        background: #fff !important;
+        color: #111827 !important;
+        border-radius: 10px !important;
+        border: 1px solid rgba(255,255,255,0.15) !important;
+        box-shadow: none !important;
+        font-family: Arial, sans-serif !important;
+    }
+
+    .stats-grid {
+        display: grid !important;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)) !important;
+        gap: 1rem !important;
+    }
+
+    .stat-card {
+        background: #fff !important;
+        border: 1px solid #D5E3E3 !important;
+        border-radius: 16px !important;
+        box-shadow: 0 2px 0 rgba(34, 115, 138, 0.22) !important;
+        padding: 1.25rem 1.35rem !important;
+        font-family: Arial, sans-serif !important;
+        border-top: 6px solid transparent !important;
+    }
+
+    .stat-card > div:first-child p {
+        color: #6B7280 !important;
+        font-weight: 800 !important;
+        letter-spacing: 0.05em !important;
+        font-family: Arial, sans-serif !important;
+    }
+
+    .stat-card .fa-leaf { color: #2C90A2 !important; }
+    .stat-card .fa-fire { color: #D96A63 !important; }
+    .stat-card .fa-bolt { color: #D9AA2D !important; }
+    .stat-card .fa-recycle { color: #4AA383 !important; }
+    .stat-card .fa-layer-group { color: #6E84C8 !important; }
+
+    .stat-card:nth-child(1) { border-top-color: #2C90A2 !important; }
+    .stat-card:nth-child(2) { border-top-color: #D96A63 !important; }
+    .stat-card:nth-child(3) { border-top-color: #D9AA2D !important; }
+    .stat-card:nth-child(4) { border-top-color: #4AA383 !important; }
+    .stat-card:nth-child(5) { border-top-color: #6E84C8 !important; }
+
+    .stat-card > div:nth-child(2) {
+        color: #12312B !important;
+        font-weight: 800 !important;
+    }
+
+    .stat-card p[style*="font-size: 0.78rem"] {
+        color: #6B7280 !important;
+    }
+
+    .quick-actions {
+        display: grid !important;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) !important;
+        gap: 1rem !important;
+    }
+
+    .action-card {
+        background: #fff !important;
+        border: 1px solid #D5E3E3 !important;
+        border-radius: 16px !important;
+        padding: 1.25rem !important;
+        text-decoration: none !important;
+        color: #374151 !important;
+        box-shadow: 0 2px 0 rgba(34, 115, 138, 0.18) !important;
+        transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease !important;
+        font-family: Arial, sans-serif !important;
+    }
+
+    .action-card:hover {
+        transform: translateY(-3px) !important;
+        box-shadow: 0 14px 34px rgba(18,49,43,0.12) !important;
+        border-color: rgba(14,124,102,0.3) !important;
+    }
+
+    .action-card h3 {
+        color: #12312B !important;
+        font-weight: 700 !important;
+    }
+
+    .action-card p {
+        color: #6B7280 !important;
+    }
+
+    .action-card:last-child {
+        background: #156C89 !important;
+        color: #fff !important;
+        border-color: transparent !important;
+    }
+
+    .action-card:last-child h3,
+    .action-card:last-child p {
+        color: #fff !important;
+    }
+
+    .action-card i {
+        margin-bottom: 0.75rem !important;
+    }
+
+    .action-card[href="{{ url_for('registro') }}"] i { color: #2C90A2 !important; }
+    .action-card[href="{{ url_for('mis_datos') }}"] i { color: #4AA383 !important; }
+    .action-card[href="{{ url_for('exportar') }}"] i { color: #D9AA2D !important; }
+    .action-card[href="{{ url_for('configuracion') }}"] i { color: #6E84C8 !important; }
+    .action-card:last-child i { color: #fff !important; }
+
+    .action-card:hover i {
+        transform: translateY(-1px);
+    }
+
+    .panel-shell,
+    .panel-shell-wide,
+    div[style*="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.07);"] {
+        background: #fff !important;
+        border: 1px solid #D5E3E3 !important;
+        border-radius: 16px !important;
+        box-shadow: 0 2px 0 rgba(34, 115, 138, 0.18) !important;
+        font-family: Arial, sans-serif !important;
+    }
+
+    h3[style*="display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #F3F4F6;"] {
+        border-bottom-color: #E6ECE8 !important;
+        color: #12312B !important;
+    }
+
+    h3[style*="display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #F3F4F6;"] i {
+        color: #2C90A2 !important;
+    }
+
+    table[style*="border-collapse: collapse"] thead tr,
+    thead tr[style*="background: #F9FAFB;"] {
+        background: #F8FAF9 !important;
+    }
+
+    table[style*="border-collapse: collapse"] th,
+    table[style*="border-collapse: collapse"] td {
+        border-bottom-color: #EEF2F0 !important;
+    }
+
+    a[style*="background: #10B981; color: white;"] {
+        background: #156C89 !important;
+        border-radius: 999px !important;
+    }
+
+    a[style*="color: #3B82F6; text-decoration: none; font-weight: 500; font-size: 0.88rem;"] {
+        color: #156C89 !important;
+        font-weight: 700 !important;
+    }
+
+    .dashboard-table th,
+    .dashboard-table td,
+    .panel-link,
+    .chip,
+    .vehicle-card,
+    .progress-head,
+    .progress-meta {
+        font-family: Arial, sans-serif !important;
+    }
+
+    .quick-actions + div,
+    .quick-actions + div + div {
+        margin-bottom: 2rem !important;
+    }
+
     @media (max-width: 768px) {
         .stats-grid { grid-template-columns: 1fr 1fr !important; }
         .quick-actions { grid-template-columns: 1fr 1fr !important; }

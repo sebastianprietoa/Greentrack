@@ -36,3 +36,6 @@ greenetrack_backup*.dump
 # Temporary files
 tmp/
 temp/
+
+# Brand/source assets
+assets/
