@@ -157,11 +157,11 @@
     </div>
     {% endif %}
 
-    <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-top: 5px solid #10B981;">
-        <h1 style="margin-bottom: 0.5rem; color: #111827; display: flex; align-items: center; gap: 10px;">
+    <div style="background: #0B0F14; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border: 1px solid #1F2937; border-top: 5px solid #10B981;">
+        <h1 style="margin-bottom: 0.5rem; color: #E5E7EB; display: flex; align-items: center; gap: 10px;">
             <i class="fas fa-recycle" style="color: #10B981;"></i> Formulario de Gestión de Residuos
         </h1>
-        <p style="color: #6B7280; margin-bottom: 2rem;">Complete según las instrucciones del formulario de residuos</p>
+        <p style="color: #94A3B8; margin-bottom: 2rem;">Complete según las instrucciones del formulario de residuos</p>
 
         <form method="POST" id="residuosForm" action="/formulario_residuos" enctype="multipart/form-data">
             <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 1.5rem;">
@@ -171,7 +171,7 @@
             
             <div id="cert_section" style="margin-bottom: 2.5rem; padding: 1.5rem; background: #F0F9FF; border-radius: 8px;">
                 <h2 style="margin-bottom: 1rem; color: #1E40AF; display: flex; align-items: center; gap: 10px;">
-                    <i class="fas fa-magic"></i> 1. Método de Ingreso
+                    <i class="fas fa-pen-to-square"></i> 1. Método de Ingreso
                 </h2>
                 
                 <div style="margin-bottom: 1.5rem;">
@@ -181,15 +181,15 @@
                     <div style="display: flex; gap: 2rem; flex-wrap: wrap;">
                         <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; background: white; padding: 10px 15px; border-radius: 6px; border: 1px solid #D1D5DB;">
                             <input type="radio" name="tipo_ingreso" value="manual" checked onchange="toggleReporte('manual')">
-                            <span>�o�️ Ingreso Manual (Tabla)</span>
+                            <span><i class="fas fa-pen" style="color: #2563EB;"></i> Ingreso Manual (Tabla)</span>
                         </label>
                         <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; background: white; padding: 10px 15px; border-radius: 6px; border: 1px solid #D1D5DB;">
                             <input type="radio" name="tipo_ingreso" value="sinader" onchange="toggleReporte('auto')">
-                            <span>�Y"" Auto-SINADER (Residuos Generales)</span>
+                            <span><i class="fas fa-file-alt" style="color: #0EA5E9;"></i> Auto-SINADER (Residuos Generales)</span>
                         </label>
                         <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; background: white; padding: 10px 15px; border-radius: 6px; border: 1px solid #D1D5DB;">
                             <input type="radio" name="tipo_ingreso" value="sidrep" onchange="toggleReporte('auto')">
-                            <span>�s�️ Auto-SIDREP (Residuos Peligrosos)</span>
+                            <span><i class="fas fa-triangle-exclamation" style="color: #F59E0B;"></i> Auto-SIDREP (Residuos Peligrosos)</span>
                         </label>
                     </div>
                 </div>
@@ -332,9 +332,6 @@
                     <button type="button" onclick="agregarFila()" style="background: #10B981; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px;">
                         <i class="fas fa-plus"></i> Agregar Fila
                     </button>
-                    <button type="button" onclick="previsualizarEmisionesResiduos()" style="background: #3B82F6; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px;">
-                        <i class="fas fa-eye"></i> Previsualizar emisiones
-                    </button>
                 </div>
                 
                 <div id="total_container" style="display: none; margin-bottom: 2rem; padding: 1rem; background: #D1FAE5; border-radius: 8px;">
@@ -343,7 +340,11 @@
                         <span id="total_residuos" style="font-size: 1.5rem; font-weight: 700; color: #111827;">0.00</span>
                     </div>
                 </div>
-                
+            </div>
+            <div style="display: flex; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap;">
+                <button type="button" onclick="previsualizarEmisionesResiduos()" style="background: #3B82F6; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                    <i class="fas fa-eye"></i> Previsualizar emisiones
+                </button>
             </div>
             <div style="text-align: center; margin-top: 1.25rem; margin-bottom: 0.5rem;">
                 <button type="submit" style="background: #10B981; color: white; border: none; padding: 14px 40px; border-radius: 8px; font-size: 1.1rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 10px;">

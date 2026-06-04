@@ -3,141 +3,187 @@
 
 {% block content %}
 <style>
-    .login-wrap {
-        min-height: calc(100vh - 4rem);
+    .login-page {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+        position: relative;
+        background-image: url("{{ url_for('static', filename='brand/login_bg.jpg') }}");
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+    }
+
+    .login-page::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.4);
+    }
+
+    .login-shell {
+        position: relative;
+        z-index: 1;
+        width: 100%;
+        max-width: 24rem;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(4px);
+        border-radius: 1rem;
+        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.18);
+        overflow: hidden;
+    }
+
+    .login-hero {
+        padding: 1.5rem 2rem;
+        min-height: 14rem;
+        background: linear-gradient(135deg, #1a4a6b 0%, #2b6c8e 100%);
         display: flex;
         align-items: center;
         justify-content: center;
     }
-    .login-card {
-        width: 100%;
-        max-width: 440px;
-        background: white;
-        border-radius: 20px;
-        overflow: hidden;
-        box-shadow: 0 24px 64px rgba(0,0,0,0.13);
+
+    .login-hero img {
+        height: 168px;
+        width: auto;
+        object-fit: contain;
+        display: block;
+        filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.18));
     }
-    .login-top {
-        background: linear-gradient(135deg, #0D1F19 0%, #134E35 100%);
-        padding: 2.5rem 2rem;
-        text-align: center;
-        position: relative;
-        overflow: hidden;
+
+    .login-form-panel {
+        padding: 2rem;
     }
-    .login-top::before {
-        content: '';
-        position: absolute;
-        top: -60px; right: -60px;
-        width: 200px; height: 200px;
-        background: rgba(52,211,153,0.07);
-        border-radius: 50%;
-    }
-    .login-top::after {
-        content: '';
-        position: absolute;
-        bottom: -40px; left: -40px;
-        width: 160px; height: 160px;
-        background: rgba(52,211,153,0.05);
-        border-radius: 50%;
-    }
-    .login-top h1 {
-        color: #34D399;
-        font-size: 1.8rem;
-        font-weight: 800;
-        margin: 0 0 4px 0;
-        letter-spacing: -0.03em;
-        position: relative; z-index: 1;
-    }
-    .login-top p {
-        color: rgba(255,255,255,0.55);
-        font-size: 0.85rem;
-        margin: 0;
-        position: relative; z-index: 1;
-    }
-    .login-body { padding: 2rem; }
-    .login-body h2 {
+
+    .login-form-panel h2 {
+        margin: 0 0 0.25rem;
         color: #111827;
-        font-size: 1.15rem;
+        font-size: 1.5rem;
         font-weight: 700;
-        margin: 0 0 0.25rem 0;
+        line-height: 1.2;
     }
-    .login-body .subtitle {
-        color: #9CA3AF;
-        font-size: 0.85rem;
-        margin: 0 0 1.75rem 0;
+
+    .subtitle {
+        margin: 0 0 1.75rem;
+        color: #64748b;
+        font-size: 0.95rem;
+        line-height: 1.45;
     }
+
+    .field-group {
+        margin-bottom: 1rem;
+    }
+
     .field-label {
         display: block;
-        font-size: 0.8rem;
-        font-weight: 600;
+        margin-bottom: 0.35rem;
         color: #374151;
-        margin-bottom: 6px;
+        font-size: 0.875rem;
+        font-weight: 700;
     }
+
+    .input-shell {
+        position: relative;
+    }
+
+    .input-icon {
+        position: absolute;
+        left: 0.75rem;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 1rem;
+        height: 1rem;
+        color: #94a3b8;
+        pointer-events: none;
+    }
+
     .field-input {
         width: 100%;
-        padding: 11px 14px;
-        border: 1.5px solid #E5E7EB;
-        border-radius: 10px;
-        font-size: 0.95rem;
-        font-family: 'Inter', sans-serif;
+        padding: 0.7rem 0.75rem 0.7rem 2.5rem;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.75rem;
+        background: #fff;
         color: #111827;
+        font-family: "Avenir Next LT Pro", "Segoe UI", sans-serif;
+        font-size: 0.95rem;
         outline: none;
-        transition: border-color 0.15s, box-shadow 0.15s;
-        box-sizing: border-box;
-        background: #FAFAFA;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease;
     }
+
     .field-input:focus {
-        border-color: #34D399;
-        box-shadow: 0 0 0 3px rgba(52,211,153,0.12);
-        background: white;
+        border-color: #2b6c8e;
+        box-shadow: 0 0 0 3px rgba(43, 108, 142, 0.16);
     }
+
     .login-btn {
         width: 100%;
-        padding: 13px;
-        background: linear-gradient(135deg, #10B981, #059669);
-        color: white;
+        margin-top: 0.5rem;
+        padding: 0.7rem 1rem;
         border: none;
-        border-radius: 10px;
+        border-radius: 0.75rem;
+        background: #2b6c8e;
+        color: #fff;
+        font-family: "Avenir Next LT Pro", "Segoe UI", sans-serif;
+        font-size: 0.95rem;
         font-weight: 700;
-        font-size: 0.98rem;
-        font-family: 'Inter', sans-serif;
-        cursor: pointer;
-        transition: all 0.2s;
-        box-shadow: 0 4px 14px rgba(16,185,129,0.35);
-        letter-spacing: 0.01em;
-    }
-    .login-btn:hover {
-        background: linear-gradient(135deg, #059669, #047857);
-        box-shadow: 0 6px 20px rgba(16,185,129,0.45);
-        transform: translateY(-1px);
-    }
-    .login-footer {
-        margin-top: 1.5rem;
-        padding-top: 1.25rem;
-        border-top: 1px solid #F3F4F6;
-        text-align: center;
-        color: #9CA3AF;
-        font-size: 0.8rem;
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 6px;
+        gap: 0.5rem;
+        cursor: pointer;
+        box-shadow: 0 10px 18px rgba(43, 108, 142, 0.28);
+        transition: background 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .login-btn:hover {
+        background: #1a4a6b;
+        transform: translateY(-1px);
+        box-shadow: 0 12px 22px rgba(43, 108, 142, 0.34);
+    }
+
+    .login-footer {
+        margin-top: 1.25rem;
+        padding: 0.75rem;
+        background: #f8fafc;
+        border-radius: 0.75rem;
+        color: #64748b;
+        font-size: 0.72rem;
+        line-height: 1.35;
+        text-align: center;
+    }
+
+    @media (max-width: 520px) {
+        .login-page {
+            padding: 0.75rem;
+        }
+
+        .login-hero {
+            min-height: 12rem;
+            padding: 1.25rem 1.5rem;
+        }
+
+        .login-hero img {
+            height: 140px;
+        }
+
+        .login-form-panel {
+            padding: 1.5rem;
+        }
     }
 </style>
 
-<div class="login-wrap">
-    <div class="login-card">
-        <div class="login-top">
-            <img src="{{ url_for('static', filename='GT_Blanco.png') }}" alt="GreenTrack" style="height: 80px; object-fit: contain; margin: 0 auto 1rem auto; display: block; position: relative; z-index: 1;">
-            <h1>GreenTrack</h1>
-            <p>Sistema de Gestión de Huella de Carbono</p>
+<div class="login-page">
+    <div class="login-shell">
+        <div class="login-hero">
+            <img src="{{ url_for('static', filename='brand/logo_principal.png') }}" alt="GreenTrack Logo">
         </div>
 
-        <div class="login-body">
+        <div class="login-form-panel">
             {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
                     {% for category, message in messages %}
-                        <div class="alert alert-{{ category }}" style="margin-bottom: 1.25rem; font-size: 0.88rem;">
+                        <div class="alert alert-{{ category }}" style="margin-bottom: 1rem; font-size: 0.875rem;">
                             <i class="fas fa-exclamation-circle"></i> {{ message }}
                         </div>
                     {% endfor %}
@@ -148,22 +194,45 @@
             <p class="subtitle">Ingresa tus credenciales para continuar</p>
 
             <form method="POST" action="/">
-                <div style="margin-bottom: 1.1rem;">
-                    <label class="field-label">Correo electrónico</label>
-                    <input type="email" name="email" class="field-input" placeholder="correo@empresa.cl" required autofocus>
+                <div class="field-group">
+                    <label class="field-label" for="email">Correo electrónico</label>
+                    <div class="input-shell">
+                        <i class="fas fa-envelope input-icon"></i>
+                        <input
+                            id="email"
+                            type="email"
+                            name="email"
+                            class="field-input"
+                            placeholder="usuario@ejemplo.cl"
+                            required
+                            autofocus
+                        >
+                    </div>
                 </div>
-                <div style="margin-bottom: 1.5rem;">
-                    <label class="field-label">Contraseña</label>
-                    <input type="password" name="password" class="field-input" placeholder="••••••••" required>
+
+                <div class="field-group">
+                    <label class="field-label" for="password">Contraseña</label>
+                    <div class="input-shell">
+                        <i class="fas fa-lock input-icon"></i>
+                        <input
+                            id="password"
+                            type="password"
+                            name="password"
+                            class="field-input"
+                            placeholder="••••••"
+                            required
+                        >
+                    </div>
                 </div>
+
                 <button type="submit" class="login-btn">
-                    <i class="fas fa-sign-in-alt" style="margin-right: 8px;"></i> Ingresar
+                    <i class="fas fa-sign-in-alt"></i>
+                    <span>Ingresar</span>
                 </button>
             </form>
 
             <div class="login-footer">
-                <i class="fas fa-lock"></i>
-                Plataforma de acceso exclusivo. Contacta al Administrador para solicitar acceso.
+                Plataforma de acceso exclusivo. Contacta al Administrador para obtener acceso.
             </div>
         </div>
     </div>
