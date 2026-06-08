@@ -11,7 +11,7 @@ import re
 import tempfile
 from extractor_sinader import extract_sinader_data
 from extractor_sidrep import extract_sidrep_data, clasificar_defra
-from auth_utils import hash_password, verify_password
+from auth_utils import hash_password, verify_password, verify_api_token
 from routes import register_blueprints
 
 app = Flask(__name__)
@@ -3108,8 +3108,13 @@ def mis_envios():
 # ================= API GHG GLOBAL (ADMIN) =================
 @app.route("/api/admin/emisiones-por-empresa")
 def api_admin_emisiones_por_empresa():
-    if session.get('es_admin') != 1:
-        return jsonify({"error": "No autorizado"}), 401
+    auth_header = request.headers.get("Authorization", "")
+    token = auth_header[7:].strip() if auth_header.startswith("Bearer ") else ""
+    claims = verify_api_token(token)
+    if not claims:
+        return jsonify({"error": "Token inválido o expirado"}), 401
+    if int(claims.get("es_admin") or 0) != 1:
+        return jsonify({"error": "No autorizado"}), 403
 
     conn = None
     try:
