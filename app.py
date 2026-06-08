@@ -3163,16 +3163,67 @@ def api_admin_emisiones_por_empresa():
             cursor.execute(query)
 
         filas = cursor.fetchall()
+        empresas_respuesta = [fila["empresa"] for fila in filas if fila["empresa"]]
+        perfil_empresa_map = {}
+        medidas_empresa_map = {}
+
+        if empresas_respuesta:
+            cursor.execute(
+                """
+                    SELECT empresa, sector_empresa, tipo_empresa
+                    FROM usuarios
+                    WHERE empresa = ANY(%s)
+                """,
+                (empresas_respuesta,)
+            )
+            for row in cursor.fetchall():
+                perfil_empresa_map[row["empresa"]] = {
+                    "sector_empresa": row["sector_empresa"],
+                    "tipo_empresa": row["tipo_empresa"],
+                }
+
+            cursor.execute(
+                """
+                    SELECT empresa, anio, unidad, valor, fecha_actualizacion
+                    FROM medidas_productivas
+                    WHERE empresa = ANY(%s)
+                    ORDER BY empresa, anio DESC, id DESC
+                """,
+                (empresas_respuesta,)
+            )
+            for row in cursor.fetchall():
+                empresa_row = row["empresa"]
+                total_t, intensidad = calcular_intensidad_emisiones(conn, empresa_row, row["anio"], row.get("valor") or 0)
+                medidas_empresa_map.setdefault(empresa_row, []).append({
+                    "anio": int(row["anio"] or 0),
+                    "unidad": row["unidad"],
+                    "valor": round(float(row["valor"] or 0), 6),
+                    "fecha_actualizacion": row["fecha_actualizacion"],
+                    "emisiones_anio_kgco2e": round(float(total_t or 0), 2),
+                    "intensidad_emisiones_kgco2e_unidad": round(float(intensidad or 0), 6),
+                })
+
         respuesta = []
         for fila in filas:
+            empresa = fila["empresa"]
+            medidas_empresa = medidas_empresa_map.get(empresa, [])
+            medida_productiva_anio = next(
+                (m for m in medidas_empresa if str(m.get("anio") or "") == str(fila["anio"] or "")),
+                None
+            )
+            perfil_empresa = perfil_empresa_map.get(empresa, {})
             respuesta.append({
-                "empresa": fila["empresa"],
+                "empresa": empresa,
                 "anio": str(fila["anio"] or ""),
+                "sector_empresa": perfil_empresa.get("sector_empresa"),
+                "tipo_empresa": perfil_empresa.get("tipo_empresa"),
                 "alcance_1_kgco2e": round(float(fila["alcance_1_kgco2e"] or 0), 2),
                 "alcance_2_mercado_kgco2e": round(float(fila["alcance_2_mercado_kgco2e"] or 0), 2),
                 "alcance_2_ubicacion_kgco2e": round(float(fila["alcance_2_ubicacion_kgco2e"] or 0), 2),
                 "alcance_3_kgco2e": round(float(fila["alcance_3_kgco2e"] or 0), 2),
                 "total_ghg_kgco2e": round(float(fila["total_ghg_kgco2e"] or 0), 2),
+                "medida_productiva_anio": medida_productiva_anio,
+                "medidas_productivas": medidas_empresa,
             })
 
         return jsonify(respuesta)
