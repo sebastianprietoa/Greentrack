@@ -98,6 +98,26 @@
         <div style="font-size: 1.5rem; font-weight: 700; color: #111827; line-height: 1.2;">{{ total_registros }}</div>
         <p style="color: #6B7280; margin: 4px 0 0 0; font-size: 0.78rem;">Actividades registradas</p>
     </div>
+
+    <div class="stat-card" style="background: white; padding: 1.25rem 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); border-left: 5px solid #8B5CF6;">
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+            <i class="fas fa-chart-line" style="color: #8B5CF6; font-size: 1rem;"></i>
+            <p style="margin: 0; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; color: #9CA3AF; letter-spacing: 0.05em;">Intensidad de Emisiones</p>
+        </div>
+        <div style="font-size: 1.45rem; font-weight: 700; color: #111827; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+            {{ '%.6f'|format(intensidad_emisiones or 0) }}
+        </div>
+        <p style="color: #6B7280; margin: 4px 0 0 0; font-size: 0.78rem;">
+            kgCO2e / {{ intensidad_unidad or 'unidad' }}
+        </p>
+        <p style="color: #9CA3AF; margin: 2px 0 0 0; font-size: 0.72rem;">
+            {% if intensidad_anio %}
+                {% if anio_seleccionado == 'Todos' %}Última medida: año {{ intensidad_anio }}{% else %}Año {{ intensidad_anio }}{% endif %}
+            {% else %}
+                Sin medida productiva
+            {% endif %}
+        </p>
+    </div>
 </div>
 
 <!-- Acciones rápidas -->

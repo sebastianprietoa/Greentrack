@@ -135,6 +135,26 @@
                            style="width: 100%; padding: 10px 12px; border: 1px solid #D1D5DB; border-radius: 8px; font-size: 0.95rem; box-sizing: border-box;">
                 </div>
             </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                <div>
+                    <label style="display: block; font-size: 0.8rem; font-weight: 600; color: #374151; margin-bottom: 5px;">Sector de la Empresa *</label>
+                    <select name="sector_empresa" id="crear_sector_empresa" required
+                            onchange="actualizarTiposEmpresa('crear_sector_empresa', 'crear_tipo_empresa')"
+                            style="width: 100%; padding: 10px 12px; border: 1px solid #D1D5DB; border-radius: 8px; font-size: 0.95rem; box-sizing: border-box; background: white;">
+                        <option value="">Selecciona un sector</option>
+                        {% for sector in sectores_empresa.keys() %}
+                        <option value="{{ sector }}">{{ sector }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label style="display: block; font-size: 0.8rem; font-weight: 600; color: #374151; margin-bottom: 5px;">Tipo de Empresa *</label>
+                    <select name="tipo_empresa" id="crear_tipo_empresa" required disabled
+                            style="width: 100%; padding: 10px 12px; border: 1px solid #D1D5DB; border-radius: 8px; font-size: 0.95rem; box-sizing: border-box; background: white;">
+                        <option value="">Primero selecciona un sector</option>
+                    </select>
+                </div>
+            </div>
             <div style="margin-bottom: 1.5rem;">
                 <label style="display: block; font-size: 0.8rem; font-weight: 600; color: #374151; margin-bottom: 5px;">Contraseña Temporal *</label>
                 <input type="password" name="password" placeholder="Mínimo 6 caracteres" required
@@ -172,7 +192,7 @@
                 <input id="edit_email" type="email" name="email" required
                        style="width: 100%; padding: 10px 12px; border: 1px solid #D1D5DB; border-radius: 8px; font-size: 0.95rem; box-sizing: border-box;">
             </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
                 <div>
                     <label style="display: block; font-size: 0.8rem; font-weight: 600; color: #374151; margin-bottom: 5px;">RUT</label>
                     <input id="edit_rut" type="text" name="rut"
@@ -183,6 +203,62 @@
                     <input id="edit_contacto" type="text" name="contacto"
                            style="width: 100%; padding: 10px 12px; border: 1px solid #D1D5DB; border-radius: 8px; font-size: 0.95rem; box-sizing: border-box;">
                 </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                <div>
+                    <label style="display: block; font-size: 0.8rem; font-weight: 600; color: #374151; margin-bottom: 5px;">Sector de la Empresa</label>
+                    <select id="edit_sector_empresa" name="sector_empresa"
+                            onchange="actualizarTiposEmpresa('edit_sector_empresa', 'edit_tipo_empresa')"
+                            style="width: 100%; padding: 10px 12px; border: 1px solid #D1D5DB; border-radius: 8px; font-size: 0.95rem; box-sizing: border-box; background: white;">
+                        <option value="">Selecciona un sector</option>
+                        {% for sector in sectores_empresa.keys() %}
+                        <option value="{{ sector }}">{{ sector }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label style="display: block; font-size: 0.8rem; font-weight: 600; color: #374151; margin-bottom: 5px;">Tipo de Empresa</label>
+                    <select id="edit_tipo_empresa" name="tipo_empresa"
+                            style="width: 100%; padding: 10px 12px; border: 1px solid #D1D5DB; border-radius: 8px; font-size: 0.95rem; box-sizing: border-box; background: white;">
+                        <option value="">Selecciona un tipo</option>
+                    </select>
+                </div>
+            </div>
+            <div style="border: 1px solid #E5E7EB; border-radius: 10px; padding: 1rem; margin-bottom: 1rem; background: #FAFAFA;">
+                <div style="font-size: 0.82rem; font-weight: 700; color: #374151; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 8px;">
+                    <i class="fas fa-chart-line" style="color: #10B981;"></i> Medida productiva
+                </div>
+                <div style="display: grid; grid-template-columns: 120px 1fr 1fr; gap: 0.75rem;">
+                    <div>
+                        <label style="display: block; font-size: 0.72rem; font-weight: 700; color: #6B7280; margin-bottom: 4px;">Año</label>
+                        <select id="edit_medida_anio" name="medida_anio"
+                                style="width: 100%; padding: 9px 10px; border: 1px solid #D1D5DB; border-radius: 7px; font-size: 0.9rem; background: white;">
+                            <option value="">Año</option>
+                            {% for y in range(current_year if current_year is defined else 2026, 2017, -1) %}
+                            <option value="{{ y }}">{{ y }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.72rem; font-weight: 700; color: #6B7280; margin-bottom: 4px;">Unidad</label>
+                        <select id="edit_medida_unidad" name="medida_unidad"
+                                style="width: 100%; padding: 9px 10px; border: 1px solid #D1D5DB; border-radius: 7px; font-size: 0.9rem; background: white;">
+                            <option value="">Selecciona unidad</option>
+                            {% for unidad in unidades_productivas %}
+                            <option value="{{ unidad }}">{{ unidad }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.72rem; font-weight: 700; color: #6B7280; margin-bottom: 4px;">Valor</label>
+                        <input id="edit_medida_valor" type="number" name="medida_valor" step="0.01" min="0"
+                               placeholder="0.00"
+                               style="width: 100%; padding: 9px 10px; border: 1px solid #D1D5DB; border-radius: 7px; font-size: 0.9rem; box-sizing: border-box;">
+                    </div>
+                </div>
+                <p style="margin: 0.65rem 0 0 0; font-size: 0.75rem; color: #6B7280;">
+                    Si completas estos campos, el sistema recalculará la intensidad de emisiones de ese año.
+                </p>
             </div>
             <button type="submit" style="width: 100%; background: #6366F1; color: white; padding: 12px; border: none; border-radius: 8px; font-weight: 600; font-size: 1rem; cursor: pointer;">
                 <i class="fas fa-save"></i> Guardar Cambios
@@ -246,7 +322,7 @@
             </div>
         </div>
         <div style="position: relative; height: 280px;">
-            <canvas id="chartEmpresas"></canvas>
+            <canvas id="chartEmpresas" style="width: 100%; height: 100%; display: block;"></canvas>
         </div>
         <p id="chart_no_data" style="display: none; text-align: center; color: #9CA3AF; padding: 2rem; margin: 0; font-size: 0.9rem;">
             Sin datos para el año seleccionado.
@@ -260,7 +336,7 @@
             <i class="fas fa-trophy" style="color: #F59E0B;"></i> Top Emisores
         </h3>
         <div style="position: relative; height: 170px; margin-bottom: 1rem;">
-            <canvas id="donutTop"></canvas>
+            <canvas id="donutTop" style="width: 100%; height: 100%; display: block;"></canvas>
         </div>
         {% set total_top = top_emisores | sum(attribute='total') %}
         {% set colores_top = ['#6366F1','#10B981','#F59E0B','#EF4444','#3B82F6','#8B5CF6'] %}
@@ -277,7 +353,35 @@
     </div>
     {% endif %}
 
+    {% if chart_intensidad_empresas %}
+    <div style="background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); padding: 1.5rem; margin-top: 1.5rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.2rem; flex-wrap: wrap; gap: 1rem;">
+            <h3 style="margin: 0; color: #374151; font-size: 1rem;">
+                <i class="fas fa-balance-scale" style="color: #8B5CF6;"></i> Intensidad de Emisiones
+            </h3>
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <label style="font-size: 0.82rem; color: #6B7280; font-weight: 600;">Año:</label>
+                <select id="anio_intensidad_chart" onchange="updateIntensidadChart(this.value)"
+                        style="padding: 5px 10px; border: 1px solid #D1D5DB; border-radius: 6px; font-size: 0.85rem; color: #374151;">
+                    <option value="Todos">Última medida</option>
+                    {% for a in chart_intensidad_years %}
+                    <option value="{{ a }}">{{ a }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        <div style="position: relative; height: 280px;">
+            <canvas id="chartIntensidad" style="width: 100%; height: 100%; display: block;"></canvas>
+        </div>
+        <p style="margin: 0.75rem 0 0 0; text-align: center; color: #6B7280; font-size: 0.85rem;">
+            Unidad: kgCO2e/unidad. Si falta la medida productiva, la intensidad se muestra en 0.
+        </p>
+    </div>
+    {% endif %}
+
 </div>
+{% endif %}
+
 {% endif %}
 
 <!-- Últimas empresas -->
@@ -304,6 +408,7 @@
             </thead>
             <tbody>
                 {% for emp in ultimas_empresas %}
+                {% set medida = medidas_empresas.get(emp.empresa) if medidas_empresas else none %}
                 <tr style="border-bottom: 1px solid #F3F4F6;" onmouseover="this.style.background='#FAFAFA'" onmouseout="this.style.background=''">
                     <td style="padding: 10px 14px; font-weight: 600; color: #111827;">
                         <div style="display: flex; align-items: center; gap: 10px;">
@@ -321,7 +426,9 @@
                             <a href="/admin/empresa/{{ emp.empresa }}" style="background: #EEF2FF; color: #6366F1; padding: 5px 9px; border-radius: 6px; text-decoration: none; font-size: 0.78rem; font-weight: 600;" title="Ver detalle">
                                 <i class="fas fa-chart-pie"></i> Ver
                             </a>
-                            <button data-id="{{ emp.id }}" data-empresa="{{ emp.empresa }}" data-email="{{ emp.email }}" data-contacto="{{ emp.contacto or '' }}" data-rut=""
+                            <button data-id="{{ emp.id }}" data-empresa="{{ emp.empresa }}" data-email="{{ emp.email }}" data-contacto="{{ emp.contacto or '' }}" data-rut="{{ emp.rut or '' }}"
+                                    data-sector="{{ emp.sector_empresa or '' }}" data-tipo="{{ emp.tipo_empresa or '' }}"
+                                    data-medida-anio="{{ medida.anio if medida else '' }}" data-medida-unidad="{{ medida.unidad if medida else '' }}" data-medida-valor="{{ medida.valor if medida else '' }}"
                                     onclick="openEditModal(this)"
                                     style="background: #F5F3FF; color: #7C3AED; border: none; padding: 5px 9px; border-radius: 6px; font-size: 0.78rem; font-weight: 600; cursor: pointer;">
                                 <i class="fas fa-edit"></i>
@@ -351,7 +458,7 @@
 </div>
 
 <!-- ===== SECCIÓN: EMPRESAS ===== -->
-{% elif admin_section == "empresas" %}
+{% if admin_section == "empresas" %}
 
 <div style="background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); overflow: hidden;">
     <div style="padding: 1rem 1.5rem; border-bottom: 1px solid #F3F4F6; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
@@ -389,6 +496,7 @@
             <tbody>
                 {% for emp in empresas %}
                 {% set stats = em_stats[emp.empresa] if emp.empresa in em_stats else none %}
+                {% set medida = medidas_empresas.get(emp.empresa) if medidas_empresas else none %}
                 <tr class="fila-empresa" style="border-bottom: 1px solid #F3F4F6;" onmouseover="this.style.background='#FAFAFA'" onmouseout="this.style.background=''">
                     <td style="padding: 10px 14px; font-weight: 600; color: #111827;">
                         <div style="display: flex; align-items: center; gap: 10px;">
@@ -421,6 +529,8 @@
                                 <i class="fas fa-file-excel"></i>
                             </a>
                             <button data-id="{{ emp.id }}" data-empresa="{{ emp.empresa }}" data-email="{{ emp.email }}" data-contacto="{{ emp.contacto or '' }}" data-rut="{{ emp.rut or '' }}"
+                                    data-sector="{{ emp.sector_empresa or '' }}" data-tipo="{{ emp.tipo_empresa or '' }}"
+                                    data-medida-anio="{{ medida.anio if medida else '' }}" data-medida-unidad="{{ medida.unidad if medida else '' }}" data-medida-valor="{{ medida.valor if medida else '' }}"
                                     onclick="openEditModal(this)"
                                     style="background: #F5F3FF; color: #7C3AED; border: none; padding: 5px 9px; border-radius: 6px; font-size: 0.78rem; font-weight: 600; cursor: pointer;" title="Editar">
                                 <i class="fas fa-edit"></i>
@@ -665,6 +775,32 @@ function filtrarTablaElec() {
     });
 }
 
+const SECTORES_EMPRESA = {{ sectores_empresa | tojson }};
+const UNIDADES_PRODUCTIVAS = {{ unidades_productivas | tojson }};
+
+function actualizarTiposEmpresa(selectSectorId, selectTipoId, sectorSeleccionado = null, tipoSeleccionado = null) {
+    const selectSector = document.getElementById(selectSectorId);
+    const selectTipo = document.getElementById(selectTipoId);
+    if (!selectSector || !selectTipo) return;
+    const sector = sectorSeleccionado ?? selectSector.value;
+    const tipos = SECTORES_EMPRESA[sector] || [];
+    selectTipo.innerHTML = '';
+    if (!sector || !tipos.length) {
+        selectTipo.disabled = true;
+        selectTipo.innerHTML = '<option value="">Primero selecciona un sector</option>';
+        return;
+    }
+    selectTipo.disabled = false;
+    selectTipo.innerHTML = '<option value="">Selecciona un tipo</option>';
+    tipos.forEach(tipo => {
+        const opt = document.createElement('option');
+        opt.value = tipo;
+        opt.textContent = tipo;
+        if (tipoSeleccionado && tipoSeleccionado === tipo) opt.selected = true;
+        selectTipo.appendChild(opt);
+    });
+}
+
 function filtrarEmpresas() {
     const q = document.getElementById('buscadorEmpresas')?.value.toLowerCase() || '';
     let visibles = 0;
@@ -687,6 +823,11 @@ function openEditModal(btn) {
     document.getElementById('edit_email').value    = d.email;
     document.getElementById('edit_contacto').value = d.contacto;
     document.getElementById('edit_rut').value      = d.rut;
+    document.getElementById('edit_sector_empresa').value = d.sector || '';
+    actualizarTiposEmpresa('edit_sector_empresa', 'edit_tipo_empresa', d.sector || '', d.tipo || '');
+    document.getElementById('edit_medida_anio').value = d.medidaAnio || '';
+    document.getElementById('edit_medida_unidad').value = d.medidaUnidad || '';
+    document.getElementById('edit_medida_valor').value = d.medidaValor || '';
     document.getElementById('modal_editar').style.display = 'flex';
 }
 
@@ -711,10 +852,14 @@ function diagnosticarExcel() {
         .catch(e => { document.getElementById('diagContenido').innerHTML = '<p style="color:red">Error: ' + e + '</p>'; });
 }
 
-{% if admin_section == "dashboard" and chart_empresas %}
+{% if admin_section == "dashboard" %}
+{% if chart_empresas %}
 const _chartData     = {{ chart_data | tojson }};
 const _chartEmpresas = {{ chart_empresas | tojson }};
 const _chartAnios    = {{ chart_anios | tojson }};
+const _chartIntEmp   = {{ chart_intensidad_empresas | default([]) | tojson }};
+const _chartIntVals  = {{ chart_intensidad_values | default([]) | tojson }};
+const _chartIntData  = {{ chart_intensidad_series | default({}) | tojson }};
 const COLORS = ['#6366F1','#10B981','#F59E0B','#EF4444','#3B82F6','#8B5CF6','#14B8A6','#F97316','#EC4899','#84CC16'];
 let _myChart = null;
 
@@ -762,8 +907,11 @@ function updateChart(anio) {
 }
 
 const _initAnio = _chartAnios.length > 0 ? _chartAnios[0] : 'Todos';
-document.getElementById('anio_chart').value = _initAnio;
-updateChart(_initAnio);
+if (document.getElementById('anio_chart')) {
+    document.getElementById('anio_chart').value = _initAnio;
+    updateChart(_initAnio);
+}
+{% endif %}
 
 {% if top_emisores %}
 const topData = {{ top_emisores | tojson }};
@@ -793,9 +941,68 @@ new Chart(document.getElementById('donutTop'), {
     }
 });
 {% endif %}
+
+{% if chart_intensidad_empresas %}
+const _intensityValues = _chartIntVals || [];
+const _intensitySeries = _chartIntData || {};
+const _intensityLabels = _chartIntEmp || [];
+const INT_COLORS = ['#8B5CF6','#6366F1','#10B981','#F59E0B','#EF4444','#3B82F6','#14B8A6','#F97316','#EC4899','#84CC16'];
+let chartIntensidad = null;
+const _intensityCanvas = document.getElementById('chartIntensidad');
+
+if (_intensityCanvas) {
+    chartIntensidad = new Chart(_intensityCanvas, {
+        type: 'bar',
+        data: {
+            labels: _intensityLabels,
+            datasets: [{
+                label: 'kgCO2e/unidad',
+                data: _intensityValues,
+                backgroundColor: _intensityLabels.map((_, i) => INT_COLORS[i % INT_COLORS.length] + 'BB'),
+                borderColor: _intensityLabels.map((_, i) => INT_COLORS[i % INT_COLORS.length]),
+                borderWidth: 1.5,
+                borderRadius: 5
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: c => ' ' + new Intl.NumberFormat('es-CL', {minimumFractionDigits: 6, maximumFractionDigits: 6}).format(c.parsed.y) + ' kgCO2e/unidad'
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: { color: '#E5E7EB' },
+                    ticks: { callback: v => new Intl.NumberFormat('es-CL', {minimumFractionDigits: 3, maximumFractionDigits: 3}).format(v) }
+                },
+                x: { grid: { display: false }, ticks: { maxRotation: 35, font: { size: 11 } } }
+            }
+        }
+    });
+}
+
+window.updateIntensidadChart = function(anio) {
+    if (!chartIntensidad) return;
+    const series = _intensitySeries[anio] || _intensitySeries['Todos'] || _intensityValues;
+    chartIntensidad.data.datasets[0].data = series;
+    chartIntensidad.update();
+};
+
+const selector = document.getElementById('anio_intensidad_chart');
+if (selector) {
+    selector.value = 'Todos';
+    window.updateIntensidadChart(selector.value);
+}
+{% endif %}
+
 {% endif %}
 </script>
-
 {% if admin_section == "empresas" %}
 <!-- Modal Exportar Todo -->
 <div id="modalExportarTodo" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1100; align-items:center; justify-content:center; padding:1rem;">

@@ -7,6 +7,7 @@ import hashlib
 import os
 import io
 import json
+import re
 import tempfile
 from extractor_sinader import extract_sinader_data
 from extractor_sidrep import extract_sidrep_data, clasificar_defra
@@ -103,6 +104,104 @@ FACTORES = {
     "Agua": {"m3": 0.34}
 }
 
+UNIDADES_PRODUCTIVAS = [
+    "Toneladas producto",
+    "Toneladas producidas",
+    "Kilogramos producidos",
+    "Personas",
+    "Horas de trabajo",
+    "% de ocupación",
+    "Noches ocupadas",
+    "Habitaciones vendidas",
+    "Pasajeros transportados",
+    "Kilómetros recorridos",
+    "Servicios prestados",
+    "Órdenes procesadas",
+    "Visitas",
+    "Atenciones",
+    "M2 construidos",
+    "M2 operados",
+    "Litros embotellados",
+    "Toneladas transportadas",
+    "Tickets vendidos",
+]
+
+SECTORES_EMPRESA = {
+    "Turismo": ["Transporte", "Alojamiento", "Alimentación", "Agencias de viaje", "Eventos", "Empresas de transporte"],
+    "Servicios": ["Consultoría", "Tecnología", "Outsourcing", "Backoffice", "Call center", "Gestión administrativa"],
+    "Salud": ["Clínicas", "Hospitales", "Centros médicos", "Laboratorios", "Odontología", "Telemedicina"],
+    "Comercio": ["Retail", "Mayoristas", "E-commerce", "Distribución", "Importadora", "Exportadora"],
+    "Construcción": ["Constructoras", "Inmobiliarias", "Obras civiles", "Servicios de mantenimiento", "Contratistas"],
+    "Industria y manufactura": ["Alimentos y bebidas", "Metalmecánica", "Textil", "Plásticos", "Química", "Celulosa y papel"],
+    "Agroindustria": ["Fruticultura", "Lechería", "Ganadería", "Vitivinícola", "Forestal", "Procesamiento agrícola"],
+    "Transporte y logística": ["Carga terrestre", "Logística", "Courier", "Transporte marítimo", "Transporte aéreo", "Última milla"],
+    "Energía y utilities": ["Generación eléctrica", "Distribución eléctrica", "Gas", "Agua y saneamiento", "Energías renovables"],
+    "Educación": ["Colegios", "Universidades", "Institutos", "Capacitación", "Educación técnica"],
+    "Sector público": ["Municipalidades", "Servicios públicos", "Hospitales públicos", "Universidades estatales", "Gobierno regional"],
+    "Minería": ["Extracción", "Servicios mineros", "Proveedores mineros", "Exploración", "Procesamiento"],
+    "Finanzas": ["Bancos", "Aseguradoras", "Fintech", "Corredoras", "Servicios financieros"],
+}
+
+def calcular_intensidad_emisiones(conn, empresa, anio, valor_medida):
+    try:
+        valor = float(valor_medida)
+    except Exception:
+        valor = 0.0
+    if valor <= 0:
+        return 0.0, None
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT COALESCE(SUM(emision), 0) FROM registros WHERE empresa = %s AND SUBSTRING(fecha::text, 1, 4) = %s",
+        (empresa, str(anio))
+    )
+    total_kg = float(cur.fetchone()[0] or 0)
+    total_t = round(total_kg / 1000.0, 4)
+    intensidad = round(total_kg / valor, 6)
+    return total_t, intensidad
+
+def obtener_medidas_productivas(conn, empresa):
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    cursor.execute("""
+        SELECT anio, unidad, valor, fecha_actualizacion
+        FROM medidas_productivas
+        WHERE empresa = %s
+        ORDER BY anio DESC, id DESC
+    """, (empresa,))
+    medidas = [dict(row) for row in cursor.fetchall()]
+    for medida in medidas:
+        total_t, intensidad = calcular_intensidad_emisiones(conn, empresa, medida['anio'], medida['valor'])
+        medida['emisiones_anio_tco2e'] = total_t
+        medida['intensidad_emisiones'] = intensidad
+    return medidas
+
+def obtener_medidas_empresas(conn):
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    cursor.execute("""
+        SELECT empresa, anio, unidad, valor, fecha_actualizacion
+        FROM medidas_productivas
+        ORDER BY empresa, anio DESC, id DESC
+    """)
+    medidas = {}
+    for row in cursor.fetchall():
+        emp = row['empresa']
+        if emp and emp not in medidas:
+            medidas[emp] = dict(row)
+    for emp, medida in medidas.items():
+        total_t, intensidad = calcular_intensidad_emisiones(conn, emp, medida['anio'], medida['valor'])
+        medida['emisiones_anio_tco2e'] = total_t
+        medida['intensidad_emisiones'] = intensidad
+    return medidas
+
+def guardar_medida_productiva(cursor, empresa, anio, unidad, valor):
+    cursor.execute("""
+        INSERT INTO medidas_productivas (empresa, anio, unidad, valor, fecha_actualizacion)
+        VALUES (%s, %s, %s, %s, %s)
+        ON CONFLICT (empresa, anio) DO UPDATE SET
+            unidad = EXCLUDED.unidad,
+            valor = EXCLUDED.valor,
+            fecha_actualizacion = EXCLUDED.fecha_actualizacion
+    """, (empresa, int(anio), unidad, float(valor), datetime.now().strftime("%Y-%m-%d %H:%M")))
+
 def init_db():
     conn = get_db()
     cursor = conn.cursor()
@@ -123,6 +222,8 @@ def init_db():
     )
     """)
     cursor.execute("ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS anio_default TEXT")
+    cursor.execute("ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS sector_empresa TEXT")
+    cursor.execute("ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS tipo_empresa TEXT")
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS registros (
         id SERIAL PRIMARY KEY,
@@ -152,6 +253,18 @@ def init_db():
         vehiculos INTEGER DEFAULT 0,
         combustible_colaboradores INTEGER,
         tarjeta_combustible INTEGER,
+        FOREIGN KEY (empresa) REFERENCES usuarios(empresa)
+    )
+    """)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS medidas_productivas (
+        id SERIAL PRIMARY KEY,
+        empresa TEXT NOT NULL,
+        anio INTEGER NOT NULL,
+        unidad TEXT NOT NULL,
+        valor REAL NOT NULL DEFAULT 0,
+        fecha_actualizacion TEXT,
+        UNIQUE (empresa, anio),
         FOREIGN KEY (empresa) REFERENCES usuarios(empresa)
     )
     """)
@@ -409,6 +522,41 @@ def dashboard():
         {'nombre': 'Alcance 3 – Residuos', 'total': alcance_a3, 'color': '#10B981'},
     ]
 
+    cursor.execute("""
+        SELECT anio, unidad, valor, fecha_actualizacion
+        FROM medidas_productivas
+        WHERE empresa = %s
+        ORDER BY anio DESC, id DESC
+    """, (empresa,))
+    medidas_productivas = [dict(row) for row in cursor.fetchall()]
+    intensidad_anio = None
+    intensidad_unidad = None
+    intensidad_emisiones = 0.0
+    intensidad_medida = 0.0
+
+    medida_intensidad = None
+    if anio_seleccionado != 'Todos':
+        try:
+            anio_int = int(anio_seleccionado)
+        except Exception:
+            anio_int = None
+        intensidad_anio = anio_int
+        if anio_int is not None:
+            medida_intensidad = next((m for m in medidas_productivas if int(m.get('anio') or 0) == anio_int), None)
+    else:
+        medida_intensidad = medidas_productivas[0] if medidas_productivas else None
+        if medida_intensidad:
+            intensidad_anio = int(medida_intensidad.get('anio') or 0) or None
+
+    if medida_intensidad:
+        intensidad_unidad = medida_intensidad.get('unidad')
+        try:
+            intensidad_medida = float(medida_intensidad.get('valor') or 0)
+        except Exception:
+            intensidad_medida = 0.0
+        if intensidad_anio and intensidad_medida > 0:
+            _, intensidad_emisiones = calcular_intensidad_emisiones(conn, empresa, intensidad_anio, intensidad_medida)
+
     # 6. VARIACIÓN INTERANUAL
     variacion_pct = None
     anio_prev = None
@@ -430,7 +578,9 @@ def dashboard():
                            vehiculos_emisiones=list(vehiculos_dict.values()), tiene_vehiculos=len(vehiculos)>0, vehiculos=vehiculos,
                            tendencia_labels=tendencia_labels, tendencia_a1=tendencia_a1,
                            tendencia_a2=tendencia_a2, tendencia_a3=tendencia_a3,
-                           alcances_data=alcances_data, variacion_pct=variacion_pct, anio_prev=anio_prev)
+                           alcances_data=alcances_data, variacion_pct=variacion_pct, anio_prev=anio_prev,
+                           intensidad_emisiones=intensidad_emisiones, intensidad_unidad=intensidad_unidad,
+                           intensidad_anio=intensidad_anio)
 
 # ================= HISTORIAL COMPLETO =================
 @app.route("/historial")
@@ -1846,9 +1996,9 @@ def admin_dashboard():
 
     conn = get_db()
     cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-    cursor.execute("SELECT id, empresa, email, contacto, fecha_registro FROM usuarios WHERE es_admin = 0 ORDER BY fecha_registro DESC LIMIT 5")
+    cursor.execute("SELECT id, empresa, email, contacto, rut, fecha_registro, sector_empresa, tipo_empresa FROM usuarios WHERE es_admin = 0 ORDER BY fecha_registro DESC LIMIT 5")
     ultimas = [dict(row) for row in cursor.fetchall()]
-    cursor.execute("SELECT id, empresa FROM usuarios WHERE es_admin = 0 ORDER BY empresa")
+    cursor.execute("SELECT id, empresa, sector_empresa, tipo_empresa FROM usuarios WHERE es_admin = 0 ORDER BY empresa")
     empresas_filtro = [dict(row) for row in cursor.fetchall()]
 
     cursor.execute("""
@@ -1863,8 +2013,6 @@ def admin_dashboard():
             if emp not in em_map: em_map[emp] = {}
             em_map[emp][anio_val] = em_map[emp].get(anio_val, 0) + total
 
-    conn.close()
-
     all_empresas = sorted(em_map.keys())
     all_anios = sorted({a for d in em_map.values() for a in d.keys()}, reverse=True)
     chart_data = {"Todos": [round(sum(em_map.get(e, {}).values()), 2) for e in all_empresas]}
@@ -1875,12 +2023,41 @@ def admin_dashboard():
         [{'empresa': e, 'total': round(sum(v.values()), 2)} for e, v in em_map.items()],
         key=lambda x: -x['total']
     )[:6]
+    medidas_empresas = obtener_medidas_empresas(conn)
+    cursor.execute("""
+        SELECT empresa, anio, unidad, valor
+        FROM medidas_productivas
+        ORDER BY empresa, anio DESC, id DESC
+    """)
+    medidas_todas = [dict(row) for row in cursor.fetchall()]
+    intensidad_empresas_labels = [emp['empresa'] for emp in empresas_filtro]
+    intensidad_series = {}
+    intensidad_latest = {}
+    for row in medidas_todas:
+        emp = row['empresa']
+        anio = str(row['anio'])
+        _, intensidad = calcular_intensidad_emisiones(conn, emp, row['anio'], row.get('valor') or 0)
+        intensidad_series.setdefault(anio, {})[emp] = round(float(intensidad or 0), 6)
+        if emp not in intensidad_latest:
+            intensidad_latest[emp] = round(float(intensidad or 0), 6)
+    intensidad_series['Todos'] = intensidad_latest
+    intensidad_empresas_values = [round(float(intensidad_latest.get(emp['empresa']) or 0), 6) for emp in empresas_filtro]
+    intensidad_series_values = {
+        key: [round(float((serie.get(emp['empresa'])) or 0), 6) for emp in empresas_filtro]
+        for key, serie in intensidad_series.items()
+    }
+    intensidad_years = sorted([k for k in intensidad_series.keys() if k != 'Todos'], reverse=True)
+    conn.close()
 
     return render_template("admin.html",
         total_empresas=t_emp, total_registros=t_reg, total_emisiones=t_em, total_pendientes=t_pend,
         ultimas_empresas=ultimas, empresas=empresas_filtro, admin_section="dashboard",
         chart_empresas=all_empresas, chart_data=chart_data, chart_anios=all_anios,
-        top_emisores=top_emisores)
+        top_emisores=top_emisores, medidas_empresas=medidas_empresas,
+        chart_intensidad_empresas=intensidad_empresas_labels, chart_intensidad_values=intensidad_empresas_values,
+        chart_intensidad_series=intensidad_series_values, chart_intensidad_years=intensidad_years,
+        sectores_empresa=SECTORES_EMPRESA, unidades_productivas=UNIDADES_PRODUCTIVAS,
+        current_year=datetime.now().year)
 
 @app.route("/admin/empresas")
 def admin_empresas():
@@ -1888,7 +2065,7 @@ def admin_empresas():
     t_emp, t_reg, t_em, t_pend = get_admin_stats()
     conn = get_db()
     cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-    cursor.execute("SELECT id, empresa, email, contacto, rut, fecha_registro FROM usuarios WHERE es_admin = 0 ORDER BY empresa")
+    cursor.execute("SELECT id, empresa, email, contacto, rut, fecha_registro, sector_empresa, tipo_empresa FROM usuarios WHERE es_admin = 0 ORDER BY empresa")
     empresas = [dict(row) for row in cursor.fetchall()]
     cursor.execute("SELECT empresa, COUNT(*) as cnt, SUM(emision) as total FROM registros GROUP BY empresa")
     em_stats = {}
@@ -1899,11 +2076,14 @@ def admin_empresas():
     anios_export = [r[0] for r in cursor.fetchall()]
     cursor.execute("SELECT DISTINCT fuente FROM registros WHERE fuente IS NOT NULL ORDER BY fuente")
     fuentes_export = [r[0] for r in cursor.fetchall()]
+    medidas_empresas = obtener_medidas_empresas(conn)
     conn.close()
 
     return render_template("admin.html", empresas=empresas, em_stats=em_stats, admin_section="empresas",
         total_empresas=t_emp, total_registros=t_reg, total_emisiones=t_em, total_pendientes=t_pend,
-        anios_export=anios_export, fuentes_export=fuentes_export)
+        anios_export=anios_export, fuentes_export=fuentes_export,
+        medidas_empresas=medidas_empresas, sectores_empresa=SECTORES_EMPRESA, unidades_productivas=UNIDADES_PRODUCTIVAS,
+        current_year=datetime.now().year)
 
 @app.route("/admin/factores", methods=["GET", "POST"])
 def admin_factores():
@@ -1939,7 +2119,9 @@ def admin_factores():
         resumen_elec[key] = resumen_elec.get(key, 0) + 1
     conn.close()
     return render_template("admin.html", factores=factores_list, factores_elec=factores_elec, resumen_elec=resumen_elec, admin_section="factores",
-        total_empresas=t_emp, total_registros=t_reg, total_emisiones=t_em, total_pendientes=t_pend)
+        total_empresas=t_emp, total_registros=t_reg, total_emisiones=t_em, total_pendientes=t_pend,
+        medidas_empresas={}, sectores_empresa=SECTORES_EMPRESA, unidades_productivas=UNIDADES_PRODUCTIVAS,
+        current_year=datetime.now().year)
 
 @app.route("/admin/editar_empresa/<int:empresa_id>", methods=["POST"])
 def admin_editar_empresa(empresa_id):
@@ -1948,6 +2130,11 @@ def admin_editar_empresa(empresa_id):
     email = request.form.get("email", "").strip()
     contacto = request.form.get("contacto", "").strip()
     rut = request.form.get("rut", "").strip()
+    sector_empresa = request.form.get("sector_empresa", "").strip() or None
+    tipo_empresa = request.form.get("tipo_empresa", "").strip() or None
+    medida_anio = request.form.get("medida_anio", "").strip()
+    medida_unidad = request.form.get("medida_unidad", "").strip()
+    medida_valor = request.form.get("medida_valor", "").strip()
     if not nombre or not email:
         flash("Nombre y email son obligatorios.", "error")
         return redirect(url_for('admin_empresas'))
@@ -1962,14 +2149,18 @@ def admin_editar_empresa(empresa_id):
             return redirect(url_for('admin_empresas'))
         nombre_anterior = row[0]
         cursor.execute("""
-            UPDATE usuarios SET empresa = %s, email = %s, contacto = %s, rut = %s
+            UPDATE usuarios SET empresa = %s, email = %s, contacto = %s, rut = %s, sector_empresa = %s, tipo_empresa = %s
             WHERE id = %s AND es_admin = 0
-        """, (nombre, email, contacto, rut, empresa_id))
+        """, (nombre, email, contacto, rut, sector_empresa, tipo_empresa, empresa_id))
         if nombre != nombre_anterior:
             for tabla in ['registros', 'combustible_movil', 'vehiculos', 'pdf_uploads',
                           'agua_consumo', 'agua_cuencas', 'agua_afluentes', 'agua_costos',
-                          'irec_certificados', 'configuracion', 'energeticos_empresa']:
+                          'irec_certificados', 'configuracion', 'energeticos_empresa', 'medidas_productivas']:
                 cursor.execute(f"UPDATE {tabla} SET empresa = %s WHERE empresa = %s", (nombre, nombre_anterior))
+        if medida_anio and medida_unidad and medida_valor:
+            anio_int = int(medida_anio)
+            valor_float = float(medida_valor.replace(',', '.'))
+            guardar_medida_productiva(cursor, nombre, anio_int, medida_unidad, valor_float)
         conn.commit()
         flash(f"Empresa '{nombre}' actualizada correctamente.", "success")
     except psycopg2.IntegrityError:
@@ -2025,7 +2216,7 @@ def admin_eliminar_empresa(empresa_id):
         nombre = row[0]
         for tabla in ['registros', 'combustible_movil', 'vehiculos', 'pdf_uploads',
                       'agua_consumo', 'agua_cuencas', 'agua_afluentes', 'agua_costos',
-                      'irec_certificados', 'configuracion', 'energeticos_empresa']:
+                      'irec_certificados', 'configuracion', 'energeticos_empresa', 'medidas_productivas']:
             cursor.execute(f"DELETE FROM {tabla} WHERE empresa = %s", (nombre,))
         cursor.execute("DELETE FROM usuarios WHERE id = %s AND es_admin = 0", (empresa_id,))
         conn.commit()
@@ -2044,14 +2235,16 @@ def admin_crear_empresa():
     empresa, email = request.form.get("empresa"), request.form.get("email")
     password = hash_password(request.form.get("password"))
     contacto, rut = request.form.get("contacto"), request.form.get("rut")
+    sector_empresa = request.form.get("sector_empresa", "").strip() or None
+    tipo_empresa = request.form.get("tipo_empresa", "").strip() or None
 
     conn = get_db()
     cursor = conn.cursor()
     try:
         cursor.execute("""
-            INSERT INTO usuarios (empresa, email, password, contacto, rut, fecha_registro, es_admin)
-            VALUES (%s, %s, %s, %s, %s, %s, 0)
-        """, (empresa, email, password, contacto, rut, datetime.now().strftime("%Y-%m-%d %H:%M")))
+            INSERT INTO usuarios (empresa, email, password, contacto, rut, sector_empresa, tipo_empresa, fecha_registro, es_admin)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 0)
+        """, (empresa, email, password, contacto, rut, sector_empresa, tipo_empresa, datetime.now().strftime("%Y-%m-%d %H:%M")))
         conn.commit()
         flash(f"Empresa '{empresa}' creada exitosamente.", "success")
     except psycopg2.IntegrityError:
@@ -2281,6 +2474,8 @@ def admin_detalle_empresa(nombre_empresa):
     conn = get_db()
     cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
     
+    cursor.execute("SELECT empresa, email, contacto, rut, sector_empresa, tipo_empresa, fecha_registro FROM usuarios WHERE empresa = %s AND es_admin = 0", (nombre_empresa,))
+    empresa_info = cursor.fetchone()
     cursor.execute("SELECT COUNT(*) as total_reg, SUM(emision) as total_emi FROM registros WHERE empresa = %s", (nombre_empresa,))
     kpis = cursor.fetchone()
 
@@ -2295,11 +2490,15 @@ def admin_detalle_empresa(nombre_empresa):
 
     cursor.execute("SELECT DISTINCT fuente FROM registros WHERE empresa = %s AND fuente IS NOT NULL ORDER BY fuente", (nombre_empresa,))
     fuentes_disponibles = [r[0] for r in cursor.fetchall()]
+    medidas_productivas = obtener_medidas_productivas(conn, nombre_empresa)
+    medida_actual = medidas_productivas[0] if medidas_productivas else None
     conn.close()
 
     return render_template("admin_detalle.html", empresa=nombre_empresa, kpis=kpis,
                            datos_fuente=datos_fuente, datos_mes=datos_mes,
-                           anios_disponibles=anios_disponibles, fuentes_disponibles=fuentes_disponibles)
+                           anios_disponibles=anios_disponibles, fuentes_disponibles=fuentes_disponibles,
+                           empresa_info=empresa_info, medidas_productivas=medidas_productivas,
+                           medida_actual=medida_actual)
 
 @app.route("/admin/exportar/<string:nombre_empresa>")
 def exportar_datos_empresa(nombre_empresa):
@@ -2646,10 +2845,105 @@ def cambiar_password():
     return redirect(url_for('mis_datos'))
 
 @app.route("/configuracion_sistema")
-def configuracion_sistema(): return redirect(url_for('mis_datos'))
+def configuracion_sistema(): return redirect(url_for('configuracion'))
 
-@app.route("/configuracion")
-def configuracion(): return redirect(url_for('mis_datos'))
+@app.route("/configuracion", methods=["GET", "POST"])
+def configuracion():
+    if 'user_id' not in session:
+        return redirect("/")
+    if session.get('es_admin') == 1:
+        return redirect(url_for('admin_dashboard'))
+
+    empresa = session.get('empresa')
+    current_year = datetime.now().year
+    anio_sel = request.args.get('anio', '').strip()
+    conn = get_db()
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+
+    if request.method == "POST":
+        anio_sel = request.form.get("medida_anio", str(current_year)).strip() or str(current_year)
+        try:
+            unidad_medida = request.form.get("medida_unidad", "").strip()
+            valor_medida = float(str(request.form.get("medida_valor", "0")).replace(",", "."))
+            info_por_unidad = 1 if request.form.get("info_unidad") else 0
+            vehiculos = 1 if request.form.get("vehiculos", "no") == "si" else 0
+            combustible_colaboradores = 1 if request.form.get("colaboradores", "no") == "si" else 0
+            tarjeta_combustible = 1 if request.form.get("tarjeta", "no") == "si" else 0
+            energeticos_sel = request.form.getlist("energeticos[]")
+
+            cursor.execute("""
+                INSERT INTO configuracion (empresa, info_por_unidad, vehiculos, combustible_colaboradores, tarjeta_combustible)
+                VALUES (%s, %s, %s, %s, %s)
+                ON CONFLICT (empresa) DO UPDATE SET
+                    info_por_unidad = EXCLUDED.info_por_unidad,
+                    vehiculos = EXCLUDED.vehiculos,
+                    combustible_colaboradores = EXCLUDED.combustible_colaboradores,
+                    tarjeta_combustible = EXCLUDED.tarjeta_combustible
+            """, (empresa, info_por_unidad, vehiculos, combustible_colaboradores, tarjeta_combustible))
+
+            cursor.execute("DELETE FROM energeticos_empresa WHERE empresa = %s", (empresa,))
+            for energetico in energeticos_sel:
+                proveedor = request.form.get(f"proveedor_{energetico}", "").strip()
+                cursor.execute("""
+                    INSERT INTO energeticos_empresa (empresa, energetico, proveedor, documento)
+                    VALUES (%s, %s, %s, %s)
+                """, (empresa, energetico, proveedor, None))
+
+            guardar_medida_productiva(cursor, empresa, int(anio_sel), unidad_medida, valor_medida)
+            conn.commit()
+            flash("Configuración guardada correctamente.", "success")
+        except Exception as e:
+            conn.rollback()
+            flash(f"No se pudo guardar la configuración: {e}", "error")
+        finally:
+            conn.close()
+        return redirect(url_for('configuracion', anio=anio_sel))
+
+    cursor.execute("SELECT * FROM configuracion WHERE empresa = %s", (empresa,))
+    configuracion_row = cursor.fetchone()
+    cursor.execute("SELECT energetico, proveedor FROM energeticos_empresa WHERE empresa = %s", (empresa,))
+    energeticos_guardados = [dict(r) for r in cursor.fetchall()]
+    cursor.execute("SELECT DISTINCT anio FROM medidas_productivas WHERE empresa = %s ORDER BY anio DESC", (empresa,))
+    anios_medidas = [r[0] for r in cursor.fetchall()]
+    if current_year not in anios_medidas:
+        anios_medidas = [current_year] + anios_medidas
+    if anio_sel:
+        try:
+            anio_sel = int(anio_sel)
+        except Exception:
+            anio_sel = current_year
+    else:
+        cursor.execute("SELECT anio FROM medidas_productivas WHERE empresa = %s ORDER BY anio DESC, id DESC LIMIT 1", (empresa,))
+        row_anio = cursor.fetchone()
+        anio_sel = int(row_anio[0]) if row_anio else current_year
+    cursor.execute("SELECT anio, unidad, valor, fecha_actualizacion FROM medidas_productivas WHERE empresa = %s AND anio = %s", (empresa, anio_sel))
+    medida_actual = cursor.fetchone()
+    if medida_actual:
+        medida_actual = dict(medida_actual)
+        total_t, intensidad = calcular_intensidad_emisiones(conn, empresa, anio_sel, medida_actual.get('valor', 0))
+        medida_actual['emisiones_anio_tco2e'] = total_t
+        medida_actual['intensidad_emisiones'] = intensidad
+    medidas_historial = obtener_medidas_productivas(conn, empresa)
+    cursor.execute("SELECT sector_empresa, tipo_empresa FROM usuarios WHERE empresa = %s", (empresa,))
+    perfil_empresa = cursor.fetchone()
+    conn.close()
+
+    energeticos_seleccionados = [r['energetico'] for r in energeticos_guardados]
+    proveedores_map = {r['energetico']: r['proveedor'] or '' for r in energeticos_guardados}
+
+    return render_template(
+        "configuracion.html",
+        empresa=empresa,
+        configuracion=configuracion_row,
+        energeticos_seleccionados=energeticos_seleccionados,
+        proveedores_map=proveedores_map,
+        medida_actual=medida_actual,
+        medidas_historial=medidas_historial,
+        anios_medidas=sorted(set(anios_medidas), reverse=True),
+        anio_seleccionado=anio_sel,
+        perfil_empresa=perfil_empresa,
+        unidades_productivas=UNIDADES_PRODUCTIVAS
+    )
 
 @app.route("/agua/registro", methods=["GET", "POST"])
 def agua_registro(): return render_template("agua_registro.html")

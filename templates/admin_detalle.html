@@ -34,6 +34,37 @@
     </div>
 </div>
 
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+    <div style="background: white; padding: 1rem 1.2rem; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">
+        <p style="margin: 0 0 0.35rem 0; font-size: 0.72rem; text-transform: uppercase; color: #94A3B8; font-weight: 700;">Sector</p>
+        <p style="margin: 0; font-size: 1rem; font-weight: 700; color: #111827;">{{ empresa_info.sector_empresa if empresa_info else 'No definido' }}</p>
+    </div>
+    <div style="background: white; padding: 1rem 1.2rem; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">
+        <p style="margin: 0 0 0.35rem 0; font-size: 0.72rem; text-transform: uppercase; color: #94A3B8; font-weight: 700;">Tipo de empresa</p>
+        <p style="margin: 0; font-size: 1rem; font-weight: 700; color: #111827;">{{ empresa_info.tipo_empresa if empresa_info else 'No definido' }}</p>
+    </div>
+    <div style="background: white; padding: 1rem 1.2rem; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">
+        <p style="margin: 0 0 0.35rem 0; font-size: 0.72rem; text-transform: uppercase; color: #94A3B8; font-weight: 700;">Medida productiva actual</p>
+        <p style="margin: 0; font-size: 1rem; font-weight: 700; color: #111827;">
+            {% if medida_actual %}
+                {{ medida_actual.anio }} · {{ medida_actual.valor }} {{ medida_actual.unidad }}
+            {% else %}
+                Sin registro
+            {% endif %}
+        </p>
+    </div>
+    <div style="background: white; padding: 1rem 1.2rem; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">
+        <p style="margin: 0 0 0.35rem 0; font-size: 0.72rem; text-transform: uppercase; color: #94A3B8; font-weight: 700;">Intensidad (kgCO2e/unidad)</p>
+        <p style="margin: 0; font-size: 1rem; font-weight: 700; color: #111827;">
+            {% if medida_actual and medida_actual.intensidad_emisiones is not none %}
+                {{ '%.6f'|format(medida_actual.intensidad_emisiones) }} kgCO2e / unidad
+            {% else %}
+                —
+            {% endif %}
+        </p>
+    </div>
+</div>
+
 {% if datos_fuente or datos_mes %}
 <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 1.5rem; margin-bottom: 1.5rem;">
 

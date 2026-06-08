@@ -1,51 +1,67 @@
 {% extends "base.html" %}
-
 {% block title %}Configuración - GreenTrack{% endblock %}
 
 {% block content %}
-<div style="max-width: 1000px; margin: 0 auto;">
+{% set cfg = configuracion or {} %}
+{% set medida = medida_actual or {} %}
+{% set perfil = perfil_empresa or {} %}
+
+<div style="max-width: 1100px; margin: 0 auto;">
     <div style="margin-bottom: 2rem;">
         <a href="{{ url_for('dashboard') }}" style="display: inline-flex; align-items: center; gap: 8px; color: #10B981; text-decoration: none; font-weight: 500;">
             <i class="fas fa-arrow-left"></i> Volver al Dashboard
         </a>
     </div>
-    
-    <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
-        <h1 style="margin-bottom: 0.5rem; color: #111827; display: flex; align-items: center; gap: 10px;">
-            <i class="fas fa-cog" style="color: #10B981;"></i> Configuración de la Empresa
-        </h1>
-        <p style="color: #6B7280; margin-bottom: 2rem;">Complete la información de configuración de su empresa</p>
-        
+
+    <div style="background: white; padding: 2rem; border-radius: 14px; box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08); border: 1px solid #E5E7EB;">
+        <div style="display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; align-items: start; margin-bottom: 1.75rem;">
+            <div>
+                <h1 style="margin: 0 0 0.5rem 0; color: #111827; display: flex; align-items: center; gap: 10px;">
+                    <i class="fas fa-cog" style="color: #10B981;"></i> Configuración de la Empresa
+                </h1>
+                <p style="color: #6B7280; margin: 0;">Complete la información de configuración de su empresa</p>
+            </div>
+            <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px; padding: 1rem 1.25rem; min-width: 240px;">
+                <p style="margin: 0 0 0.35rem 0; font-size: 0.72rem; font-weight: 700; color: #94A3B8; text-transform: uppercase;">Empresa</p>
+                <p style="margin: 0; font-size: 1rem; font-weight: 700; color: #0F172A;">{{ empresa }}</p>
+                <p style="margin: 0.35rem 0 0 0; font-size: 0.84rem; color: #475569;">
+                    Sector: <strong>{{ perfil.sector_empresa or 'No definido' }}</strong><br>
+                    Tipo: <strong>{{ perfil.tipo_empresa or 'No definido' }}</strong>
+                </p>
+            </div>
+        </div>
+
         <form method="POST">
-            <!-- Energéticos Consumidos -->
             <div style="margin-bottom: 2.5rem;">
-                <h2 style="margin-bottom: 1.5rem; color: #374151; padding-bottom: 0.5rem; border-bottom: 2px solid #E5E7EB;">
+                <h2 style="margin-bottom: 1.25rem; color: #374151; padding-bottom: 0.5rem; border-bottom: 2px solid #E5E7EB;">
                     <i class="fas fa-bolt"></i> Energéticos Consumidos
                 </h2>
-                <p style="color: #6B7280; margin-bottom: 1.5rem;">Seleccione los energéticos que consume su empresa e indique el proveedor:</p>
-                
-                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem;">
+                <p style="color: #6B7280; margin-bottom: 1.25rem;">Seleccione los energéticos que consume su empresa e indique el proveedor:</p>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1rem;">
                     {% for e in ["GLP","Diésel","Bencina","Parafina","Petróleo Pesado","Carbón","Gas Natural","Otro"] %}
-                    <div style="background: #F9FAFB; padding: 1rem; border-radius: 8px; display: flex; align-items: center; gap: 1rem;">
+                    <div style="background: #F9FAFB; padding: 1rem; border-radius: 10px; display: flex; align-items: center; gap: 1rem; border: 1px solid #E5E7EB;">
                         <input type="checkbox" id="energetico_{{ loop.index }}" name="energeticos[]" value="{{ e }}"
+                               {% if e in energeticos_seleccionados %}checked{% endif %}
                                style="width: 18px; height: 18px;">
-                        <label for="energetico_{{ loop.index }}" style="flex: 1; font-weight: 600; color: #374151;">
+                        <label for="energetico_{{ loop.index }}" style="flex: 1; font-weight: 600; color: #374151; min-width: 0;">
                             {{ e }}
                         </label>
                         <input type="text" name="proveedor_{{ e }}" placeholder="Proveedor"
+                               value="{{ proveedores_map.get(e, '') }}"
                                style="flex: 2; padding: 8px 12px; border: 1px solid #D1D5DB; border-radius: 6px; font-size: 0.9rem;"
-                               disabled>
+                               {% if e not in energeticos_seleccionados %}disabled{% endif %}>
                     </div>
                     {% endfor %}
                 </div>
             </div>
-            
+
             <hr style="border: none; border-top: 1px solid #E5E7EB; margin: 2rem 0;">
-            
-            <!-- Información por Unidad -->
+
             <div style="margin-bottom: 2.5rem;">
-                <label style="display: flex; align-items: center; gap: 1rem; cursor: pointer; padding: 1rem; background: #F0F9FF; border-radius: 8px;">
-                    <input type="checkbox" name="info_unidad" 
+                <label style="display: flex; align-items: center; gap: 1rem; cursor: pointer; padding: 1rem; background: #F0F9FF; border-radius: 10px; border: 1px solid #D6EAF8;">
+                    <input type="checkbox" name="info_unidad"
+                           {% if cfg.info_por_unidad %}checked{% endif %}
                            style="width: 20px; height: 20px;">
                     <div>
                         <div style="font-weight: 600; color: #1E40AF; margin-bottom: 0.25rem;">
@@ -57,49 +73,151 @@
                     </div>
                 </label>
             </div>
-            
+
             <hr style="border: none; border-top: 1px solid #E5E7EB; margin: 2rem 0;">
-            
-            <!-- Preguntas de Configuración -->
+
             <div>
-                <h2 style="margin-bottom: 1.5rem; color: #374151;">
+                <h2 style="margin-bottom: 1.25rem; color: #374151;">
                     <i class="fas fa-question-circle"></i> Preguntas de Configuración
                 </h2>
-                
+
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
                     <div>
                         <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #374151;">
                             ¿La empresa cuenta con vehículos corporativos?
                         </label>
-                        <select name="vehiculos" style="width: 100%; padding: 10px 14px; border: 2px solid #E5E7EB; border-radius: 8px; font-size: 1rem;">
-                            <option value="si">Sí</option>
-                            <option value="no" selected>No</option>
+                        <select name="vehiculos" style="width: 100%; padding: 10px 14px; border: 2px solid #E5E7EB; border-radius: 8px; font-size: 1rem; background: white;">
+                            <option value="si" {% if cfg.vehiculos %}selected{% endif %}>Sí</option>
+                            <option value="no" {% if not cfg.vehiculos %}selected{% endif %}>No</option>
                         </select>
                     </div>
-                    
+
                     <div>
                         <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #374151;">
                             ¿La empresa paga combustible de colaboradores?
                         </label>
-                        <select name="colaboradores" style="width: 100%; padding: 10px 14px; border: 2px solid #E5E7EB; border-radius: 8px; font-size: 1rem;">
-                            <option value="si">Sí</option>
-                            <option value="no" selected>No</option>
+                        <select name="colaboradores" style="width: 100%; padding: 10px 14px; border: 2px solid #E5E7EB; border-radius: 8px; font-size: 1rem; background: white;">
+                            <option value="si" {% if cfg.combustible_colaboradores %}selected{% endif %}>Sí</option>
+                            <option value="no" {% if not cfg.combustible_colaboradores %}selected{% endif %}>No</option>
                         </select>
                     </div>
-                    
+
                     <div>
                         <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #374151;">
                             ¿Cuenta con tarjeta o convenio de carga?
                         </label>
-                        <select name="tarjeta" style="width: 100%; padding: 10px 14px; border: 2px solid #E5E7EB; border-radius: 8px; font-size: 1rem;">
-                            <option value="si">Sí</option>
-                            <option value="no" selected>No</option>
+                        <select name="tarjeta" style="width: 100%; padding: 10px 14px; border: 2px solid #E5E7EB; border-radius: 8px; font-size: 1rem; background: white;">
+                            <option value="si" {% if cfg.tarjeta_combustible %}selected{% endif %}>Sí</option>
+                            <option value="no" {% if not cfg.tarjeta_combustible %}selected{% endif %}>No</option>
                         </select>
                     </div>
                 </div>
             </div>
-            
-            <!-- Botón de Guardar -->
+
+            <hr style="border: none; border-top: 1px solid #E5E7EB; margin: 2rem 0;">
+
+            <div style="margin-bottom: 2.5rem;">
+                <h2 style="margin-bottom: 1rem; color: #374151; display: flex; align-items: center; gap: 10px;">
+                    <i class="fas fa-chart-line" style="color: #10B981;"></i> Medida productiva e intensidad de emisiones
+                </h2>
+                <p style="color: #6B7280; margin-bottom: 1.25rem;">
+                    Registre la unidad productiva del año para calcular la intensidad de emisiones.
+                </p>
+
+                <div style="display: grid; grid-template-columns: 140px 1.4fr 1fr; gap: 1rem; align-items: end;">
+                    <div>
+                        <label style="display: block; font-weight: 700; color: #374151; font-size: 0.8rem; margin-bottom: 6px;">Año</label>
+                        <select name="medida_anio" style="width: 100%; padding: 10px 12px; border: 1px solid #D1D5DB; border-radius: 8px; font-size: 0.95rem; background: white;">
+                            {% for y in anios_medidas %}
+                            <option value="{{ y }}" {% if y == anio_seleccionado %}selected{% endif %}>{{ y }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display: block; font-weight: 700; color: #374151; font-size: 0.8rem; margin-bottom: 6px;">Unidad de medida</label>
+                        <select name="medida_unidad" required style="width: 100%; padding: 10px 12px; border: 1px solid #D1D5DB; border-radius: 8px; font-size: 0.95rem; background: white;">
+                            <option value="">Selecciona una unidad</option>
+                            {% for unidad in unidades_productivas %}
+                            <option value="{{ unidad }}" {% if medida.unidad == unidad %}selected{% endif %}>{{ unidad }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display: block; font-weight: 700; color: #374151; font-size: 0.8rem; margin-bottom: 6px;">Valor de la medida</label>
+                        <input type="number" name="medida_valor" step="0.01" min="0" required
+                               value="{{ medida.valor if medida else '' }}"
+                               placeholder="Ej: 125.50"
+                               style="width: 100%; padding: 10px 12px; border: 1px solid #D1D5DB; border-radius: 8px; font-size: 0.95rem; box-sizing: border-box;">
+                    </div>
+                </div>
+
+                <div style="margin-top: 1rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 1rem;">
+                    <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 1rem;">
+                        <p style="margin: 0 0 0.35rem 0; font-size: 0.72rem; color: #94A3B8; text-transform: uppercase; font-weight: 700;">Emisiones del año</p>
+                        <p style="margin: 0; font-size: 1.2rem; font-weight: 700; color: #111827;">
+                            {% if medida and medida.emisiones_anio_tco2e is not none %}
+                                {{ '%.4f'|format(medida.emisiones_anio_tco2e) }} tCO2e
+                            {% else %}
+                                —
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div style="background: #ECFDF5; border: 1px solid #A7F3D0; border-radius: 10px; padding: 1rem;">
+                        <p style="margin: 0 0 0.35rem 0; font-size: 0.72rem; color: #059669; text-transform: uppercase; font-weight: 700;">Intensidad resultante (kgCO2e/unidad)</p>
+                        <p style="margin: 0; font-size: 1.2rem; font-weight: 700; color: #065F46;">
+                            {% if medida and medida.intensidad_emisiones is not none %}
+                                {{ '%.6f'|format(medida.intensidad_emisiones) }} kgCO2e / unidad
+                            {% else %}
+                                —
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div style="background: #FFF7ED; border: 1px solid #FED7AA; border-radius: 10px; padding: 1rem;">
+                        <p style="margin: 0 0 0.35rem 0; font-size: 0.72rem; color: #C2410C; text-transform: uppercase; font-weight: 700;">Última actualización</p>
+                        <p style="margin: 0; font-size: 1rem; font-weight: 700; color: #9A3412;">
+                            {% if medida and medida.fecha_actualizacion %}{{ medida.fecha_actualizacion }}{% else %}Sin registro{% endif %}
+                        </p>
+                    </div>
+                </div>
+
+                <div style="margin-top: 1.5rem; border: 1px solid #E5E7EB; border-radius: 10px; overflow: hidden;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                        <thead style="background: #F8FAFC;">
+                            <tr>
+                                <th style="padding: 10px 12px; text-align: left; color: #475569; font-size: 0.72rem; text-transform: uppercase;">Año</th>
+                                <th style="padding: 10px 12px; text-align: left; color: #475569; font-size: 0.72rem; text-transform: uppercase;">Unidad</th>
+                                <th style="padding: 10px 12px; text-align: right; color: #475569; font-size: 0.72rem; text-transform: uppercase;">Valor</th>
+                                <th style="padding: 10px 12px; text-align: right; color: #475569; font-size: 0.72rem; text-transform: uppercase;">Emisiones (tCO2e)</th>
+                                <th style="padding: 10px 12px; text-align: right; color: #475569; font-size: 0.72rem; text-transform: uppercase;">Intensidad (kgCO2e/unidad)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if medidas_historial %}
+                                {% for item in medidas_historial %}
+                                <tr style="border-top: 1px solid #E5E7EB;">
+                                    <td style="padding: 10px 12px; color: #111827; font-weight: 600;">{{ item.anio }}</td>
+                                    <td style="padding: 10px 12px; color: #334155;">{{ item.unidad }}</td>
+                                    <td style="padding: 10px 12px; text-align: right; color: #334155;">{{ '%.2f'|format(item.valor or 0) }}</td>
+                                    <td style="padding: 10px 12px; text-align: right; color: #334155;">{{ '%.4f'|format(item.emisiones_anio_tco2e or 0) }}</td>
+                                    <td style="padding: 10px 12px; text-align: right; color: #059669; font-weight: 700;">
+                                        {% if item.intensidad_emisiones is not none %}
+                                            {{ '%.6f'|format(item.intensidad_emisiones) }}
+                                        {% else %}
+                                            —
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="5" style="padding: 1rem 12px; color: #94A3B8; text-align: center;">Aún no has registrado medidas productivas.</td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
             <div style="margin-top: 3rem; text-align: center;">
                 <button type="submit" style="background: #10B981; color: white; border: none; padding: 14px 40px; border-radius: 8px; font-size: 1.1rem; font-weight: 600; cursor: pointer; transition: all 0.3s; display: inline-flex; align-items: center; gap: 10px;">
                     <i class="fas fa-save"></i> Guardar Configuración
@@ -110,9 +228,8 @@
             </div>
         </form>
     </div>
-    
-    <!-- Información Adicional -->
-    <div style="margin-top: 2rem; background: #F0F9FF; padding: 1.5rem; border-radius: 8px;">
+
+    <div style="margin-top: 2rem; background: #F0F9FF; padding: 1.5rem; border-radius: 10px; border: 1px solid #D6EAF8;">
         <h3 style="margin-bottom: 1rem; color: #1E40AF; display: flex; align-items: center; gap: 10px;">
             <i class="fas fa-info-circle"></i> ¿Por qué es importante esta información?
         </h3>
@@ -134,59 +251,57 @@
 </div>
 
 <script>
-    // Habilitar/deshabilitar campos de proveedor según checkbox
     document.querySelectorAll('input[type="checkbox"][name^="energeticos"]').forEach(checkbox => {
         const energetico = checkbox.value;
         const proveedorInput = document.querySelector(`input[name="proveedor_${energetico}"]`);
-        
+
         checkbox.addEventListener('change', function() {
             proveedorInput.disabled = !this.checked;
             if (!this.checked) {
                 proveedorInput.value = '';
             }
         });
-        
-        // Inicializar estado
+
         proveedorInput.disabled = !checkbox.checked;
     });
-    
-    // Mejorar experiencia en formularios
+
     document.querySelectorAll('select').forEach(select => {
         select.addEventListener('focus', function() {
             this.style.borderColor = '#10B981';
             this.style.boxShadow = '0 0 0 3px rgba(16, 185, 129, 0.1)';
         });
-        
+
         select.addEventListener('blur', function() {
             this.style.borderColor = '#E5E7EB';
             this.style.boxShadow = 'none';
         });
     });
-    
-    document.querySelectorAll('input[type="text"]').forEach(input => {
+
+    document.querySelectorAll('input[type="text"], input[type="number"]').forEach(input => {
         input.addEventListener('focus', function() {
             if (!this.disabled) {
                 this.style.borderColor = '#10B981';
                 this.style.boxShadow = '0 0 0 3px rgba(16, 185, 129, 0.1)';
             }
         });
-        
+
         input.addEventListener('blur', function() {
             this.style.borderColor = '#D1D5DB';
             this.style.boxShadow = 'none';
         });
     });
-    
-    // Botón hover effect
-    document.querySelector('button').addEventListener('mouseenter', function() {
-        this.style.background = '#059669';
-        this.style.transform = 'translateY(-2px)';
-    });
-    
-    document.querySelector('button').addEventListener('mouseleave', function() {
-        this.style.background = '#10B981';
-        this.style.transform = 'translateY(0)';
-    });
+
+    const submitBtn = document.querySelector('button[type="submit"]');
+    if (submitBtn) {
+        submitBtn.addEventListener('mouseenter', function() {
+            this.style.background = '#059669';
+            this.style.transform = 'translateY(-2px)';
+        });
+        submitBtn.addEventListener('mouseleave', function() {
+            this.style.background = '#10B981';
+            this.style.transform = 'translateY(0)';
+        });
+    }
 </script>
 
 <style>
@@ -194,21 +309,21 @@
         .form-grid {
             grid-template-columns: 1fr !important;
         }
-        
+
         .question-grid {
             grid-template-columns: 1fr !important;
         }
-        
+
         button {
             width: 100% !important;
             justify-content: center;
         }
     }
-    
+
     input[type="checkbox"]:checked {
         accent-color: #10B981;
     }
-    
+
     select:focus, input:focus:not(:disabled) {
         outline: none;
     }

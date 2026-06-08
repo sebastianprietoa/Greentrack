@@ -6,7 +6,7 @@
     <title>GreenTrack - {% block title %}{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <script src="{{ url_for('static', filename='vendor/chart.min.js') }}"></script>
     <style>
         *, *::before, *::after { box-sizing: border-box; }
 
@@ -366,6 +366,7 @@
 
                     <div class="menu-category">Herramientas</div>
                     <a href="{{ url_for('mis_datos') }}" class="menu-link"><i class="fas fa-user-circle" style="color: #B9D0D8;"></i> Mis Datos</a>
+                    <a href="{{ url_for('configuracion') }}" class="menu-link"><i class="fas fa-cog" style="color: #10B981;"></i> Configuración Empresa</a>
                     <a href="{{ url_for('exportar') }}" class="menu-link"><i class="fas fa-file-excel" style="color: #4AA383;"></i> Exportar Excel</a>
                 {% endif %}
             </div>
@@ -431,7 +432,6 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
     <script>
         const sidebar = document.getElementById('sidebar');
         const overlay = document.getElementById('sidebarOverlay');
