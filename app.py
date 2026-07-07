@@ -9,10 +9,27 @@ import io
 import json
 import re
 import tempfile
+from decimal import Decimal
 from extractor_sinader import extract_sinader_data
 from extractor_sidrep import extract_sidrep_data, clasificar_defra
 from auth_utils import hash_password, verify_password, verify_api_token
 from routes import register_blueprints
+from services.huella_agua import (
+    HuellaAguaError,
+    buscar_factor_escasez_mas_especifico,
+    calcular_captacion_total,
+    calcular_consumo_operativo_estimado,
+    calcular_huella_escasez,
+    calcular_retornos_mismo_sistema,
+    calcular_retornos_totales,
+    calcular_reuso_interno,
+    consolidar_resultado_sede,
+    construir_reporte_huella,
+    clasificar_resultado_huella,
+    generar_indicador_calidad_datos,
+    validar_factor_escasez,
+    validar_resultado_no_duplicado,
+)
 
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "clave_segura_provisional")
@@ -293,6 +310,86 @@ def init_db():
     cursor.execute("CREATE TABLE IF NOT EXISTS vehiculos (id SERIAL PRIMARY KEY, empresa TEXT, patente TEXT NOT NULL, tipo TEXT, marca TEXT, modelo TEXT, anio INTEGER, estado INTEGER DEFAULT 1, fecha_registro TEXT, FOREIGN KEY (empresa) REFERENCES usuarios(empresa))")
     cursor.execute("CREATE TABLE IF NOT EXISTS combustible_movil (id SERIAL PRIMARY KEY, empresa TEXT, vehiculo_id INTEGER, periodo TEXT, combustible TEXT, cantidad REAL, unidad TEXT, costo REAL, fecha_registro TEXT, FOREIGN KEY (empresa) REFERENCES usuarios(empresa))")
     cursor.execute("CREATE TABLE IF NOT EXISTS agua_costos (id SERIAL PRIMARY KEY, empresa TEXT, fecha TEXT, concepto TEXT, cantidad REAL, unidad TEXT, costo_usd REAL, costo_clp REAL, FOREIGN KEY (empresa) REFERENCES usuarios(empresa))")
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS agua_sedes (
+        id SERIAL PRIMARY KEY,
+        empresa TEXT NOT NULL,
+        nombre_sede TEXT NOT NULL,
+        region TEXT,
+        comuna TEXT,
+        latitud NUMERIC(12, 8),
+        longitud NUMERIC(12, 8),
+        codigo_cuenca TEXT,
+        nombre_cuenca TEXT,
+        nivel_ubicacion TEXT,
+        activo BOOLEAN DEFAULT TRUE,
+        fecha_creacion TIMESTAMP NOT NULL DEFAULT NOW(),
+        FOREIGN KEY (empresa) REFERENCES usuarios(empresa)
+    )
+    """)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS agua_flujos (
+        id SERIAL PRIMARY KEY,
+        empresa TEXT NOT NULL,
+        sede_id INTEGER,
+        periodo DATE NOT NULL,
+        tipo_flujo TEXT NOT NULL CHECK (tipo_flujo IN ('captacion', 'retorno', 'reuso')),
+        fuente_agua TEXT,
+        destino_agua TEXT,
+        volumen_m3 NUMERIC(18, 6) NOT NULL DEFAULT 0,
+        proceso_o_area TEXT,
+        retorna_mismo_sistema_hidrico BOOLEAN DEFAULT FALSE,
+        tiene_tratamiento BOOLEAN DEFAULT FALSE,
+        calidad_dato TEXT,
+        evidencia TEXT,
+        observaciones TEXT,
+        fecha_registro TIMESTAMP NOT NULL DEFAULT NOW(),
+        FOREIGN KEY (empresa) REFERENCES usuarios(empresa),
+        FOREIGN KEY (sede_id) REFERENCES agua_sedes(id)
+    )
+    """)
+    cursor.execute("ALTER TABLE IF EXISTS agua_flujos ALTER COLUMN sede_id DROP NOT NULL")
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS factores_escasez_agua (
+        id SERIAL PRIMARY KEY,
+        metodo TEXT NOT NULL,
+        version_metodo TEXT NOT NULL,
+        actividad TEXT,
+        nivel_geografico TEXT NOT NULL CHECK (nivel_geografico IN ('cuenca', 'subnacional', 'pais')),
+        codigo_geografico TEXT NOT NULL,
+        periodo_inicio DATE,
+        periodo_fin DATE,
+        factor_m3eq_m3 NUMERIC(18, 8) NOT NULL,
+        fuente TEXT NOT NULL,
+        referencia TEXT,
+        fecha_carga TIMESTAMP NOT NULL DEFAULT NOW(),
+        activo BOOLEAN DEFAULT TRUE
+    )
+    """)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS resultados_huella_agua (
+        id SERIAL PRIMARY KEY,
+        empresa TEXT NOT NULL,
+        sede_id INTEGER NOT NULL,
+        periodo DATE NOT NULL,
+        captacion_m3 NUMERIC(18, 6) NOT NULL DEFAULT 0,
+        retorno_m3 NUMERIC(18, 6) NOT NULL DEFAULT 0,
+        retorno_mismo_sistema_m3 NUMERIC(18, 6) NOT NULL DEFAULT 0,
+        reuso_m3 NUMERIC(18, 6) NOT NULL DEFAULT 0,
+        consumo_operativo_m3 NUMERIC(18, 6) NOT NULL DEFAULT 0,
+        factor_escasez_aplicado NUMERIC(18, 8),
+        huella_escasez_m3eq NUMERIC(18, 8),
+        id_factor_escasez INTEGER,
+        nivel_calculo TEXT NOT NULL,
+        calidad_resultado TEXT,
+        version_calculo TEXT NOT NULL,
+        fecha_calculo TIMESTAMP NOT NULL DEFAULT NOW(),
+        FOREIGN KEY (empresa) REFERENCES usuarios(empresa),
+        FOREIGN KEY (sede_id) REFERENCES agua_sedes(id),
+        FOREIGN KEY (id_factor_escasez) REFERENCES factores_escasez_agua(id),
+        UNIQUE (empresa, sede_id, periodo, version_calculo)
+    )
+    """)
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS factores_electricos (
         anio INTEGER,
@@ -767,31 +864,310 @@ def electricidad_dashboard():
         tendencia_elec=tendencia_elec,
     )
 
+def _agua_es_admin():
+    return session.get("es_admin") == 1
+
+
+def _agua_puede_ver_empresa(empresa_objivo):
+    return _agua_es_admin() or session.get("empresa") == empresa_objivo
+
+
+def _agua_periodo_mes(periodo):
+    if not periodo:
+        return None
+    if isinstance(periodo, str) and len(periodo) >= 7:
+        return periodo[:7]
+    return str(periodo)[:7]
+
+
+def _agua_calcular_resumen(conn, empresa, periodo=None):
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    params = [empresa]
+    where_periodo = ""
+    if periodo:
+        where_periodo = " AND to_char(periodo, 'YYYY-MM') = %s"
+        params.append(periodo)
+
+    cursor.execute(
+        f"""
+        SELECT sede_id, periodo, tipo_flujo, fuente_agua, destino_agua, volumen_m3,
+               retorna_mismo_sistema_hidrico, tiene_tratamiento, calidad_dato, evidencia, observaciones
+        FROM agua_flujos
+        WHERE empresa = %s{where_periodo}
+        ORDER BY periodo DESC, id DESC
+        """,
+        tuple(params),
+    )
+    flujos = [dict(r) for r in cursor.fetchall()]
+
+    cursor.execute("SELECT * FROM agua_sedes WHERE empresa = %s ORDER BY nombre_sede", (empresa,))
+    sedes = [dict(r) for r in cursor.fetchall()]
+    sede_map = {s["id"]: s for s in sedes}
+
+    cursor.execute(
+        """
+        SELECT * FROM factores_escasez_agua
+        WHERE activo = TRUE
+        ORDER BY fecha_carga DESC
+        """
+    )
+    factores = [dict(r) for r in cursor.fetchall()]
+
+    captacion_total = calcular_captacion_total(flujos)
+    retornos_totales = calcular_retornos_totales(flujos)
+    retorno_mismo = calcular_retornos_mismo_sistema(flujos)
+    reuso = calcular_reuso_interno(flujos)
+    consumo = Decimal("0")
+    factor = None
+    huella = None
+    nivel = "Datos insuficientes"
+    calidad = generar_indicador_calidad_datos(flujos) if flujos else "baja"
+    valor_intensidad = None
+    valor_intensidad_esc = None
+
+    try:
+        if flujos:
+            consumo = calcular_consumo_operativo_estimado(captacion_total, retorno_mismo, reuso)
+            nivel = "Solo inventario físico disponible"
+            periodo_elegido = periodo or (_agua_periodo_mes(flujos[0].get("periodo")) if flujos else None)
+            for sede in sedes:
+                if not _agua_puede_ver_empresa(sede["empresa"]):
+                    continue
+                factor = buscar_factor_escasez_mas_especifico(factores, sede, periodo_elegido)
+                if factor:
+                    break
+            if factor:
+                huella = calcular_huella_escasez(consumo, factor)
+                nivel = clasificar_resultado_huella(consumo, factor)
+    except HuellaAguaError:
+        nivel = "Datos insuficientes"
+
+    cursor.execute("SELECT COUNT(*) FROM agua_sedes WHERE empresa = %s", (empresa,))
+    total_sedes = cursor.fetchone()[0] or 0
+    cursor.execute("SELECT COUNT(DISTINCT sede_id) FROM agua_flujos WHERE empresa = %s AND sede_id IS NOT NULL", (empresa,))
+    sedes_con_datos = cursor.fetchone()[0] or 0
+    cursor.execute("SELECT COUNT(DISTINCT to_char(periodo, 'YYYY-MM')) FROM agua_flujos WHERE empresa = %s", (empresa,))
+    periodos_con_datos = cursor.fetchone()[0] or 0
+    cursor.execute(
+        """
+        SELECT COUNT(*)
+        FROM (
+            SELECT to_char(periodo, 'YYYY-MM') AS periodo,
+                   SUM(CASE WHEN tipo_flujo = 'captacion' THEN volumen_m3 ELSE 0 END) AS captacion,
+                   SUM(CASE WHEN tipo_flujo = 'retorno' THEN volumen_m3 ELSE 0 END) AS retorno,
+                   SUM(CASE WHEN tipo_flujo = 'reuso' THEN volumen_m3 ELSE 0 END) AS reuso
+            FROM agua_flujos
+            WHERE empresa = %s
+            GROUP BY 1
+        ) meses
+        WHERE captacion > 0 AND retorno > 0
+        """,
+        (empresa,),
+    )
+    periodos_inventario_completo = cursor.fetchone()[0] or 0
+
+    cursor.execute("SELECT SUM(valor) FROM medidas_productivas WHERE empresa = %s", (empresa,))
+    # No se usa directamente: evitamos confundir intensidad por suma anual.
+
+    # Intensidad hídrica usando la medida productiva del período visible si existe
+    intensidad_hidrica = None
+    intensidad_escasez = None
+    medida_actual = None
+    if periodo:
+        cursor.execute(
+            "SELECT anio, unidad, valor FROM medidas_productivas WHERE empresa = %s AND anio = %s ORDER BY id DESC LIMIT 1",
+            (empresa, int(periodo[:4])),
+        )
+        medida_actual = cursor.fetchone()
+    else:
+        cursor.execute(
+            "SELECT anio, unidad, valor FROM medidas_productivas WHERE empresa = %s ORDER BY anio DESC, id DESC LIMIT 1",
+            (empresa,),
+        )
+        medida_actual = cursor.fetchone()
+
+    medida_valor = 0
+    if medida_actual and medida_actual[2]:
+        try:
+            medida_valor = float(medida_actual[2])
+        except Exception:
+            medida_valor = 0
+    if medida_valor > 0:
+        intensidad_hidrica = round(float(consumo) / medida_valor, 6)
+        if huella is not None:
+            intensidad_escasez = round(float(huella) / medida_valor, 6)
+
+    tendencia = {}
+    cursor.execute(
+        """
+        SELECT to_char(periodo, 'YYYY-MM') AS mes,
+               SUM(CASE WHEN tipo_flujo = 'captacion' THEN volumen_m3 ELSE 0 END) AS captacion,
+               SUM(CASE WHEN tipo_flujo = 'retorno' AND retorna_mismo_sistema_hidrico = TRUE THEN volumen_m3 ELSE 0 END) AS retorno,
+               SUM(CASE WHEN tipo_flujo = 'reuso' THEN volumen_m3 ELSE 0 END) AS reuso
+        FROM agua_flujos
+        WHERE empresa = %s
+        GROUP BY 1
+        ORDER BY 1
+        """,
+        (empresa,),
+    )
+    for row in cursor.fetchall():
+        tendencia[row[0]] = {
+            "captacion": float(row[1] or 0),
+            "retorno": float(row[2] or 0),
+            "reuso": float(row[3] or 0),
+        }
+
+    por_fuente = {}
+    cursor.execute(
+        """
+        SELECT COALESCE(fuente_agua, 'Sin fuente') AS fuente, SUM(volumen_m3) AS total
+        FROM agua_flujos
+        WHERE empresa = %s AND tipo_flujo = 'captacion'
+        GROUP BY 1
+        ORDER BY total DESC
+        """,
+        (empresa,),
+    )
+    for row in cursor.fetchall():
+        por_fuente[row[0]] = float(row[1] or 0)
+
+    por_sede = {}
+    cursor.execute(
+        """
+        SELECT sede_id, SUM(CASE WHEN tipo_flujo = 'captacion' THEN volumen_m3 ELSE 0 END) AS captacion,
+               SUM(CASE WHEN tipo_flujo = 'retorno' AND retorna_mismo_sistema_hidrico = TRUE THEN volumen_m3 ELSE 0 END) AS retorno,
+               SUM(CASE WHEN tipo_flujo = 'reuso' THEN volumen_m3 ELSE 0 END) AS reuso
+        FROM agua_flujos
+        WHERE empresa = %s
+        GROUP BY sede_id
+        ORDER BY captacion DESC
+        """,
+        (empresa,),
+    )
+    for row in cursor.fetchall():
+        sede = sede_map.get(row[0], {})
+        nombre_sede = sede.get("nombre_sede") if sede else "Empresa"
+        por_sede[nombre_sede if row[0] is not None else "Empresa"] = {
+            "captacion": float(row[1] or 0),
+            "retorno": float(row[2] or 0),
+            "reuso": float(row[3] or 0),
+        }
+
+    # Cobertura por sede para el dashboard
+    cobertura = []
+    if sedes:
+        sedes_iter = sedes
+    else:
+        sedes_iter = [{"id": None, "nombre_sede": "Empresa", "empresa": empresa, "region": None, "comuna": None, "latitud": None, "longitud": None, "codigo_cuenca": None, "nombre_cuenca": None}]
+    for sede in sedes_iter:
+        cursor.execute(
+            """
+            SELECT to_char(periodo, 'YYYY-MM') AS periodo,
+                   SUM(CASE WHEN tipo_flujo = 'captacion' THEN volumen_m3 ELSE 0 END) AS captacion,
+                   SUM(CASE WHEN tipo_flujo = 'retorno' THEN volumen_m3 ELSE 0 END) AS retorno,
+                   SUM(CASE WHEN tipo_flujo = 'reuso' THEN volumen_m3 ELSE 0 END) AS reuso
+            FROM agua_flujos
+            WHERE empresa = %s AND sede_id IS NOT DISTINCT FROM %s
+            GROUP BY 1
+            ORDER BY 1 DESC
+            LIMIT 1
+            """,
+            (empresa, sede["id"]),
+        )
+        row = cursor.fetchone()
+        has_data = bool(row and any(float(v or 0) > 0 for v in row[1:]))
+        factor_sede = buscar_factor_escasez_mas_especifico(factores, sede, periodo or (row[0] if row else None))
+        huella_sede = None
+        if row and factor_sede:
+            try:
+                capt = Decimal(str(float(row[1] or 0)))
+                ret = Decimal(str(float(row[2] or 0)))
+                cons = calcular_consumo_operativo_estimado(capt, ret, Decimal(str(float(row[3] or 0))))
+                huella_sede = calcular_huella_escasez(cons, factor_sede)
+            except Exception:
+                huella_sede = None
+        cobertura.append({
+            "sede": sede,
+            "periodo": row[0] if row else None,
+            "captacion": float(row[1] or 0) if row else 0.0,
+            "retorno": float(row[2] or 0) if row else 0.0,
+            "reuso": float(row[3] or 0) if row else 0.0,
+            "ubicacion": "Completa" if sede.get("codigo_cuenca") and sede.get("nombre_cuenca") and sede.get("region") and sede.get("comuna") else "Parcial" if sede.get("region") or sede.get("comuna") else "Pendiente",
+            "factor_disponible": bool(factor_sede),
+            "resultado": "Huella de escasez calculada" if factor_sede and has_data else ("Solo inventario físico disponible" if has_data else "Datos insuficientes"),
+            "huella_escasez": float(huella_sede) if huella_sede is not None else None,
+        })
+
+    return {
+        "sedes": sedes,
+        "flujos": flujos,
+        "captacion_total": float(captacion_total or 0),
+        "retornos_totales": float(retornos_totales or 0),
+        "retorno_mismo": float(retorno_mismo or 0),
+        "reuso": float(reuso or 0),
+        "consumo": float(consumo or 0),
+        "factor": factor,
+        "huella": float(huella or 0) if huella is not None else None,
+        "nivel": nivel,
+        "calidad": calidad,
+        "intensidad_hidrica": intensidad_hidrica,
+        "intensidad_escasez": intensidad_escasez,
+        "tendencia": tendencia,
+        "por_fuente": por_fuente,
+        "por_sede": por_sede,
+        "cobertura": cobertura,
+        "factores": factores,
+        "total_sedes": total_sedes,
+        "sedes_con_datos": sedes_con_datos,
+        "periodos_con_datos": periodos_con_datos,
+        "periodos_inventario_completo": periodos_inventario_completo,
+    }
+
+
+def _agua_agrupar_resultados_reportes(flujos, sedes, factores, medida_valor=None, vista="mensual"):
+    sede_map = {s["id"]: s for s in sedes}
+    grupos = {}
+    for flujo in flujos:
+        periodo_flujo = str(flujo["periodo"])[:7] if vista == "mensual" else str(flujo["periodo"])[:4]
+        grupos.setdefault((flujo["sede_id"], periodo_flujo), []).append(flujo)
+
+    resultados = []
+    for (sede_id, periodo_sel), grupo in grupos.items():
+        sede = sede_map.get(sede_id, {"id": sede_id, "nombre_sede": "Empresa" if sede_id is None else f"Sede {sede_id}"})
+        resultado = consolidar_resultado_sede(grupo, sede, factores, periodo_sel, medida_valor)
+        resultados.append({
+            "sede_id": sede_id,
+            "nombre_sede": sede.get("nombre_sede"),
+            "periodo": periodo_sel,
+            "factor_metodo": resultado["factor"].metodo if resultado.get("factor") else None,
+            "factor_version": resultado["factor"].version_metodo if resultado.get("factor") else None,
+            "factor_codigo": resultado["factor"].codigo_geografico if resultado.get("factor") else None,
+            "factor_fuente": resultado["factor"].fuente if resultado.get("factor") else None,
+            "factor_vigencia_inicio": resultado["factor"].periodo_inicio if resultado.get("factor") else None,
+            "factor_vigencia_fin": resultado["factor"].periodo_fin if resultado.get("factor") else None,
+            **{k: (float(v) if isinstance(v, Decimal) else v) for k, v in resultado.items() if k != "factor"},
+        })
+    return resultados
+
+
 @app.route("/agua")
 def agua_dashboard():
-    if 'user_id' not in session: return redirect("/")
-    
+    if 'user_id' not in session:
+        return redirect("/")
     empresa = session.get('empresa')
+    periodo = request.args.get("periodo")
     conn = get_db()
-    cursor = conn.cursor()
-    
-    cursor.execute("SELECT fecha, agua_embotellada_litros, hielo_comprado_kg, hielo_producido_kg FROM agua_consumo WHERE empresa = %s ORDER BY fecha DESC LIMIT 5", (empresa,))
-    consumo_data = cursor.fetchall()
-    
-    cursor.execute("SELECT tipo_cuenca, SUM(cantidad_m3) FROM agua_cuencas WHERE empresa = %s GROUP BY tipo_cuenca", (empresa,))
-    cuencas_data = cursor.fetchall()
-    
-    cursor.execute("SELECT SUM(agua_embotellada_litros * 0.25 + hielo_comprado_kg * 0.18 + hielo_producido_kg * 0.15) FROM agua_consumo WHERE empresa = %s", (empresa,))
-    res = cursor.fetchone()
-    total_emision = res[0] if res and res[0] else 0
-    
-    cursor.execute("SELECT SUM(costo_usd), SUM(costo_clp) FROM agua_costos WHERE empresa = %s", (empresa,))
-    costos = cursor.fetchone()
-    total_usd = costos[0] if costos and costos[0] else 0
-    total_clp = costos[1] if costos and costos[1] else 0
-    
+    data = _agua_calcular_resumen(conn, empresa, periodo)
     conn.close()
-    return render_template("agua_dashboard.html", empresa=empresa, consumo_data=consumo_data, cuencas_data=cuencas_data, total_emision=total_emision, total_usd=total_usd, total_clp=total_clp)
+    return render_template(
+        "agua_dashboard.html",
+        empresa=empresa,
+        periodo=periodo,
+        menu_activo="resumen",
+        historia_url=url_for("agua_reporte"),
+        **data,
+    )
 
 @app.route("/refrigerantes")
 def refrigerantes_dashboard():
@@ -1249,6 +1625,14 @@ def _resolver_datos_alcance1(form):
     return categoria, unidad, actividad, factor
 
 
+def _obtener_sede_activa_predeterminada(cursor, empresa):
+    cursor.execute(
+        "SELECT id, nombre_sede FROM agua_sedes WHERE empresa = %s AND activo = TRUE ORDER BY nombre_sede ASC, id ASC LIMIT 1",
+        (empresa,),
+    )
+    return cursor.fetchone()
+
+
 def _calcular_factores_electricos(cursor, sistema, anio_reg, mes_reg, origen, tiene_irec):
     cursor.execute(
         "SELECT factor_emision_avg FROM factores_electricos WHERE sistema = %s AND anio = %s AND mes = %s",
@@ -1310,6 +1694,102 @@ def registro():
         
         conn = get_db()
         cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+
+        if alcance == 'Agua':
+            periodo_agua = request.form.get('periodo') or None
+            tipo_flujo_agua = request.form.get('tipo_flujo', 'captacion')
+            modo_registro_agua = request.form.get('modo_registro', 'individual')
+            volumen_agua = _parse_float_input(request.form.get('volumen_m3', '0'))
+            if modo_registro_agua == 'multiple' and not periodo_agua:
+                periodo_agua = request.form.get('fecha_inicio')
+            if not periodo_agua:
+                conn.close()
+                flash("Debes seleccionar el período del registro de agua.", "error")
+                return redirect("/registro")
+            if tipo_flujo_agua not in ('captacion', 'retorno', 'reuso'):
+                conn.close()
+                flash("El tipo de flujo no es válido.", "error")
+                return redirect("/registro")
+            try:
+                periodo_agua = datetime.strptime(f"{periodo_agua}-01", "%Y-%m-%d").date()
+            except ValueError:
+                conn.close()
+                flash("El período de agua no tiene un formato válido.", "error")
+                return redirect("/registro")
+            destino_agua = request.form.get('destino_agua') if tipo_flujo_agua in ('retorno', 'reuso') else None
+            valor_retorno = request.form.get('retorna_mismo_sistema_hidrico', 'no_informado')
+            retorna_mismo = None if valor_retorno == 'no_informado' else valor_retorno == 'si'
+            valor_tratamiento = request.form.get('tiene_tratamiento', 'no_informado')
+            tiene_tratamiento = None if valor_tratamiento == 'no_informado' else valor_tratamiento == 'si'
+            cantidades_lote = request.form.getlist('batch_cantidad[]')
+            if modo_registro_agua == 'multiple':
+                fecha_inicio = request.form.get('fecha_inicio')
+                fecha_fin = request.form.get('fecha_fin')
+                if not fecha_inicio or not fecha_fin:
+                    conn.close()
+                    flash("Debes seleccionar un mes de inicio y un mes de final.", "error")
+                    return redirect("/registro")
+                try:
+                    meses_lote = _meses_entre(fecha_inicio, fecha_fin)
+                except ValueError as exc:
+                    conn.close()
+                    flash(str(exc), "error")
+                    return redirect("/registro")
+                if len(cantidades_lote) != len(meses_lote):
+                    conn.close()
+                    flash("La tabla generada no coincide con el rango seleccionado.", "error")
+                    return redirect("/registro")
+                try:
+                    for idx, mes in enumerate(meses_lote):
+                        cantidad_lote = _parse_float_input(cantidades_lote[idx], None)
+                        if cantidad_lote is None or cantidad_lote < 0:
+                            raise ValueError(f"Cantidad inválida para {mes}.")
+                        fecha_lote = datetime.strptime(f"{mes}-01", "%Y-%m-%d").date()
+                        cursor.execute("""
+                            INSERT INTO agua_flujos
+                            (empresa, sede_id, periodo, tipo_flujo, fuente_agua, destino_agua, volumen_m3, proceso_o_area, retorna_mismo_sistema_hidrico, tiene_tratamiento, calidad_dato, evidencia, observaciones, fecha_registro)
+                            VALUES (%s, NULL, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())
+                        """, (
+                            empresa, fecha_lote, tipo_flujo_agua,
+                            request.form.get('fuente_agua'), destino_agua, cantidad_lote,
+                            request.form.get('proceso_o_area'), retorna_mismo,
+                            tiene_tratamiento, request.form.get('calidad_dato'),
+                            request.form.get('evidencia'), request.form.get('observaciones'),
+                        ))
+                    conn.commit()
+                except Exception as exc:
+                    conn.rollback()
+                    conn.close()
+                    flash(f"No se pudo guardar el lote de agua: {exc}", "error")
+                    return redirect("/registro")
+                conn.close()
+                flash(f"Se guardaron {len(meses_lote)} registros de agua entre {fecha_inicio} y {fecha_fin}.", "success")
+                return redirect("/agua")
+            if volumen_agua < 0:
+                conn.close()
+                flash("El volumen no puede ser negativo.", "error")
+                return redirect("/registro")
+            try:
+                cursor.execute("""
+                    INSERT INTO agua_flujos
+                    (empresa, sede_id, periodo, tipo_flujo, fuente_agua, destino_agua, volumen_m3, proceso_o_area, retorna_mismo_sistema_hidrico, tiene_tratamiento, calidad_dato, evidencia, observaciones, fecha_registro)
+                    VALUES (%s, NULL, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())
+                """, (
+                    empresa, periodo_agua, tipo_flujo_agua,
+                    request.form.get('fuente_agua'), destino_agua, volumen_agua,
+                    request.form.get('proceso_o_area'), retorna_mismo,
+                    tiene_tratamiento, request.form.get('calidad_dato'),
+                    request.form.get('evidencia'), request.form.get('observaciones'),
+                ))
+                conn.commit()
+            except Exception as exc:
+                conn.rollback()
+                conn.close()
+                flash(f"No se pudo guardar el registro de agua: {exc}", "error")
+                return redirect("/registro")
+            conn.close()
+            flash("Registro de agua guardado exitosamente.", "success")
+            return redirect("/agua")
 
         if alcance == 'Alcance 1' and modo_registro == 'multiple':
             fecha_inicio = request.form.get('fecha_inicio')
@@ -2122,6 +2602,301 @@ def admin_factores():
         total_empresas=t_emp, total_registros=t_reg, total_emisiones=t_em, total_pendientes=t_pend,
         medidas_empresas={}, sectores_empresa=SECTORES_EMPRESA, unidades_productivas=UNIDADES_PRODUCTIVAS,
         current_year=datetime.now().year)
+
+def _huella_permiso_admin():
+    return session.get("user_id") and session.get("es_admin") == 1
+
+def _huella_permiso_autenticado():
+    return session.get("user_id") is not None
+
+def _huella_es_admin():
+    return session.get("es_admin") == 1
+
+def _huella_estado_ubicacion(row):
+    completos = [
+        row.get("region"),
+        row.get("comuna"),
+        row.get("latitud"),
+        row.get("longitud"),
+        row.get("codigo_cuenca"),
+        row.get("nombre_cuenca"),
+    ]
+    llenos = sum(1 for v in completos if v not in (None, "", "nan"))
+    if llenos >= len(completos):
+        return "Completa"
+    if llenos >= 2:
+        return "Parcial"
+    return "Pendiente"
+
+def _huella_sede_factor_disponible(cursor, sede):
+    codigo_cuenca = sede.get("codigo_cuenca")
+    region = sede.get("region")
+    comuna = sede.get("comuna")
+    cursor.execute("""
+        SELECT 1
+        FROM factores_escasez_agua
+        WHERE activo = TRUE
+          AND (
+                (nivel_geografico = 'cuenca' AND codigo_geografico = %s)
+             OR (nivel_geografico = 'subnacional' AND codigo_geografico IN (%s, %s))
+             OR (nivel_geografico = 'pais' AND codigo_geografico = 'Chile')
+          )
+        LIMIT 1
+    """, (codigo_cuenca, region, comuna))
+    return cursor.fetchone() is not None
+
+@app.route("/admin/huella-hidrica")
+def admin_huella_hidrica():
+    if not _huella_permiso_admin():
+        return redirect("/")
+    t_emp, t_reg, t_em, t_pend = get_admin_stats()
+    conn = get_db()
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    cursor.execute("SELECT id, empresa, nombre_sede, region, comuna, latitud, longitud, codigo_cuenca, nombre_cuenca, nivel_ubicacion, activo, fecha_creacion FROM agua_sedes ORDER BY empresa, nombre_sede")
+    sedes_raw = [dict(r) for r in cursor.fetchall()]
+    sedes = []
+    for sede in sedes_raw:
+        sede["estado_ubicacion"] = _huella_estado_ubicacion(sede)
+        sede["factor_disponible"] = _huella_sede_factor_disponible(cursor, sede)
+        sedes.append(sede)
+
+    cursor.execute("SELECT * FROM factores_escasez_agua ORDER BY fecha_carga DESC, nivel_geografico, codigo_geografico")
+    factores = [dict(r) for r in cursor.fetchall()]
+
+    cursor.execute("""
+        SELECT empresa, sede_id, periodo,
+               SUM(CASE WHEN tipo_flujo = 'captacion' THEN volumen_m3 ELSE 0 END) AS captacion_m3,
+               SUM(CASE WHEN tipo_flujo = 'retorno' THEN volumen_m3 ELSE 0 END) AS retorno_m3,
+               SUM(CASE WHEN tipo_flujo = 'retorno' AND retorna_mismo_sistema_hidrico = TRUE THEN volumen_m3 ELSE 0 END) AS retorno_mismo_sistema_m3,
+               SUM(CASE WHEN tipo_flujo = 'reuso' THEN volumen_m3 ELSE 0 END) AS reuso_m3
+        FROM agua_flujos
+        GROUP BY empresa, sede_id, periodo
+        ORDER BY periodo DESC, empresa
+    """)
+    coberturas = [dict(r) for r in cursor.fetchall()]
+    sede_map = {s["id"]: s for s in sedes}
+    cobertura_rows = []
+    for row in coberturas:
+        sede = sede_map.get(row["sede_id"], {})
+        factor_disponible = _huella_sede_factor_disponible(cursor, sede) if sede else False
+        cobertura_rows.append({
+            **row,
+            "nombre_sede": sede.get("nombre_sede", "—"),
+            "ubicacion_configurada": _huella_estado_ubicacion(sede) if sede else "Pendiente",
+            "factor_disponible": factor_disponible,
+            "resultado_calculable": "Sí" if (factor_disponible and (row.get("captacion_m3") or 0) > 0) else "Pendiente",
+        })
+    conn.close()
+    return render_template(
+        "admin_huella_hidrica.html",
+        total_empresas=t_emp,
+        total_registros=t_reg,
+        total_emisiones=t_em,
+        total_pendientes=t_pend,
+        sedes=sedes,
+        factores=factores,
+        coberturas=cobertura_rows,
+        admin_section="huella_hidrica",
+    )
+
+@app.route("/admin/huella-hidrica/sedes", methods=["GET", "POST"])
+def admin_huella_sedes():
+    if not _huella_permiso_admin():
+        return redirect("/")
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        if request.method == "POST":
+            sede_id = request.form.get("sede_id")
+            payload = (
+                request.form.get("empresa", "").strip(),
+                request.form.get("nombre_sede", "").strip(),
+                request.form.get("region", "").strip() or None,
+                request.form.get("comuna", "").strip() or None,
+                request.form.get("latitud", "").strip() or None,
+                request.form.get("longitud", "").strip() or None,
+                request.form.get("codigo_cuenca", "").strip() or None,
+                request.form.get("nombre_cuenca", "").strip() or None,
+                request.form.get("nivel_ubicacion", "").strip() or None,
+            )
+            if not payload[0] or not payload[1]:
+                flash("Empresa y nombre de sede son obligatorios.", "error")
+            else:
+                if sede_id:
+                    cursor.execute("""
+                        UPDATE agua_sedes
+                        SET empresa=%s, nombre_sede=%s, region=%s, comuna=%s, latitud=%s, longitud=%s, codigo_cuenca=%s, nombre_cuenca=%s, nivel_ubicacion=%s
+                        WHERE id=%s
+                    """, (*payload, sede_id))
+                    flash("Sede actualizada correctamente.", "success")
+                else:
+                    cursor.execute("""
+                        INSERT INTO agua_sedes (empresa, nombre_sede, region, comuna, latitud, longitud, codigo_cuenca, nombre_cuenca, nivel_ubicacion)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    """, payload)
+                    flash("Sede creada correctamente.", "success")
+                conn.commit()
+    except Exception as e:
+        conn.rollback()
+        flash(f"No se pudo guardar la sede: {e}", "danger")
+    finally:
+        conn.close()
+    return redirect(url_for("admin_huella_hidrica"))
+
+@app.route("/admin/huella-hidrica/sedes/<int:sede_id>/toggle", methods=["POST"])
+def admin_huella_toggle_sede(sede_id):
+    if not _huella_permiso_admin():
+        return redirect("/")
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE agua_sedes SET activo = NOT activo WHERE id = %s", (sede_id,))
+    conn.commit()
+    conn.close()
+    flash("Estado de sede actualizado.", "info")
+    return redirect(url_for("admin_huella_hidrica"))
+
+@app.route("/admin/huella-hidrica/factores", methods=["GET", "POST"])
+def admin_huella_factores():
+    if not _huella_permiso_admin():
+        return redirect("/")
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        if request.method == "POST":
+            factor_id = request.form.get("factor_id")
+            metodo = request.form.get("metodo", "").strip()
+            version_metodo = request.form.get("version_metodo", "").strip()
+            actividad = request.form.get("actividad", "").strip()
+            nivel_geografico = request.form.get("nivel_geografico", "").strip()
+            codigo_geografico = request.form.get("codigo_geografico", "").strip()
+            factor_m3eq_m3 = request.form.get("factor_m3eq_m3", "").strip()
+            fuente = request.form.get("fuente", "").strip()
+            referencia = request.form.get("referencia", "").strip()
+            periodo_inicio = request.form.get("periodo_inicio") or None
+            periodo_fin = request.form.get("periodo_fin") or None
+            if not metodo or not version_metodo or not nivel_geografico or not codigo_geografico or not factor_m3eq_m3 or not fuente:
+                flash("Completa método, versión, nivel geográfico, código, factor y fuente.", "error")
+            else:
+                factor_val = float(factor_m3eq_m3.replace(",", "."))
+                if factor_val <= 0:
+                    raise ValueError("El factor debe ser mayor que cero.")
+                if factor_id:
+                    cursor.execute("""
+                        UPDATE factores_escasez_agua
+                        SET metodo=%s, version_metodo=%s, actividad=%s, nivel_geografico=%s, codigo_geografico=%s,
+                            periodo_inicio=%s, periodo_fin=%s, factor_m3eq_m3=%s, fuente=%s, referencia=%s
+                        WHERE id=%s
+                    """, (metodo, version_metodo, actividad, nivel_geografico, codigo_geografico, periodo_inicio, periodo_fin, factor_val, fuente, referencia, factor_id))
+                    flash("Factor actualizado correctamente.", "success")
+                else:
+                    cursor.execute("""
+                        INSERT INTO factores_escasez_agua (metodo, version_metodo, actividad, nivel_geografico, codigo_geografico, periodo_inicio, periodo_fin, factor_m3eq_m3, fuente, referencia)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    """, (metodo, version_metodo, actividad, nivel_geografico, codigo_geografico, periodo_inicio, periodo_fin, factor_val, fuente, referencia))
+                    flash("Factor creado correctamente.", "success")
+                conn.commit()
+    except Exception as e:
+        conn.rollback()
+        flash(f"No se pudo guardar el factor: {e}", "danger")
+    finally:
+        conn.close()
+    return redirect(url_for("admin_huella_hidrica"))
+
+@app.route("/admin/huella-hidrica/factores/<int:factor_id>/toggle", methods=["POST"])
+def admin_huella_toggle_factor(factor_id):
+    if not _huella_permiso_admin():
+        return redirect("/")
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE factores_escasez_agua SET activo = NOT activo WHERE id = %s", (factor_id,))
+    conn.commit()
+    conn.close()
+    flash("Estado del factor actualizado.", "info")
+    return redirect(url_for("admin_huella_hidrica"))
+
+@app.route("/admin/huella-hidrica/factores/preview", methods=["POST"])
+def admin_huella_preview_factores():
+    if not _huella_permiso_admin():
+        return redirect("/")
+    archivo = request.files.get("archivo_factores")
+    if not archivo or archivo.filename == "":
+        flash("Selecciona un archivo Excel o CSV.", "danger")
+        return redirect(url_for("admin_huella_hidrica"))
+    try:
+        if archivo.filename.lower().endswith(".csv"):
+            df = pd.read_csv(archivo)
+        else:
+            df = pd.read_excel(archivo)
+        filas = []
+        errores = []
+        columnas_requeridas = ["metodo", "version_metodo", "actividad", "nivel_geografico", "codigo_geografico", "factor_m3eq_m3", "fuente", "referencia", "periodo_inicio", "periodo_fin"]
+        for col in columnas_requeridas:
+            if col not in df.columns:
+                errores.append(f"Falta la columna requerida: {col}")
+        for idx, row in df.iterrows():
+            try:
+                factor_val = float(str(row.get("factor_m3eq_m3", "")).replace(",", "."))
+                if factor_val <= 0:
+                    raise ValueError("factor <= 0")
+                if not str(row.get("metodo", "")).strip() or not str(row.get("version_metodo", "")).strip() or not str(row.get("fuente", "")).strip():
+                    raise ValueError("metadatos incompletos")
+                filas.append(row.to_dict())
+            except Exception as e:
+                errores.append(f"Fila {idx + 2}: {e}")
+        return render_template("admin_huella_factores_preview.html", filas=filas, errores=errores, datos_json=json.dumps(filas, default=str))
+    except Exception as e:
+        flash(f"No se pudo leer el archivo: {e}", "danger")
+        return redirect(url_for("admin_huella_hidrica"))
+
+@app.route("/admin/huella-hidrica/factores/cargar", methods=["POST"])
+def admin_huella_cargar_factores():
+    if not _huella_permiso_admin():
+        return redirect("/")
+    datos_json = request.form.get("datos_json")
+    if not datos_json:
+        flash("No hay datos para cargar.", "danger")
+        return redirect(url_for("admin_huella_hidrica"))
+    filas = json.loads(datos_json)
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        insertados = 0
+        for row in filas:
+            factor_val = float(str(row.get("factor_m3eq_m3", "")).replace(",", "."))
+            if factor_val <= 0:
+                continue
+            cursor.execute("""
+                INSERT INTO factores_escasez_agua
+                (metodo, version_metodo, actividad, nivel_geografico, codigo_geografico, periodo_inicio, periodo_fin, factor_m3eq_m3, fuente, referencia)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """, (
+                row.get("metodo"), row.get("version_metodo"), row.get("actividad"), row.get("nivel_geografico"),
+                row.get("codigo_geografico"), row.get("periodo_inicio") or None, row.get("periodo_fin") or None,
+                factor_val, row.get("fuente"), row.get("referencia"),
+            ))
+            insertados += 1
+        conn.commit()
+        flash(f"Se cargaron {insertados} factores correctamente.", "success")
+    except Exception as e:
+        conn.rollback()
+        flash(f"No se pudo cargar la información: {e}", "danger")
+    finally:
+        conn.close()
+    return redirect(url_for("admin_huella_hidrica"))
+
+@app.route("/huella-hidrica/sedes")
+def huella_sedes_publico():
+    if not _huella_permiso_autenticado():
+        return redirect("/")
+    conn = get_db()
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    if _huella_es_admin():
+        cursor.execute("SELECT * FROM agua_sedes ORDER BY empresa, nombre_sede")
+    else:
+        cursor.execute("SELECT * FROM agua_sedes WHERE empresa = %s ORDER BY nombre_sede", (session.get("empresa"),))
+    sedes = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return render_template("huella_hidrica_sedes.html", sedes=sedes, es_admin=_huella_es_admin())
 
 @app.route("/admin/editar_empresa/<int:empresa_id>", methods=["POST"])
 def admin_editar_empresa(empresa_id):
@@ -2946,9 +3721,117 @@ def configuracion():
     )
 
 @app.route("/agua/registro", methods=["GET", "POST"])
-def agua_registro(): return render_template("agua_registro.html")
+def agua_registro():
+    if 'user_id' not in session:
+        return redirect("/")
+    return render_template("agua_registro.html")
 @app.route("/agua/reporte")
-def agua_reporte(): return render_template("agua_reporte.html")
+def agua_reporte():
+    if 'user_id' not in session:
+        return redirect("/")
+    return render_template("agua_reporte.html")
+
+
+@app.route("/agua/registrar", methods=["GET", "POST"])
+def agua_registrar_datos():
+    if 'user_id' not in session:
+        return redirect("/")
+    return redirect(url_for("registro"))
+
+
+@app.route("/agua/retornos-reuso", methods=["GET", "POST"])
+def agua_retorno_reuso():
+    if 'user_id' not in session:
+        return redirect("/")
+    return redirect(url_for("registro"))
+
+
+@app.route("/agua/resultados")
+def agua_resultados():
+    if 'user_id' not in session:
+        return redirect("/")
+    empresa = session.get("empresa")
+    periodo = request.args.get("periodo")
+    vista = request.args.get("vista", "mensual")
+    conn = get_db()
+    data = _agua_calcular_resumen(conn, empresa, periodo)
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    cursor.execute("SELECT id, anio, unidad, valor FROM medidas_productivas WHERE empresa = %s ORDER BY anio DESC, id DESC", (empresa,))
+    medida_row = cursor.fetchone()
+    medida_valor = medida_row["valor"] if medida_row else None
+    resultados = _agua_agrupar_resultados_reportes(data["flujos"], data["sedes"], data["factores"], medida_valor=medida_valor, vista=vista)
+    conn.close()
+    return render_template("agua_resultados.html", empresa=empresa, periodo=periodo, resultados=resultados, **data, menu_activo="resultados")
+
+
+@app.route("/agua/metodologia")
+def agua_metodologia():
+    if 'user_id' not in session:
+        return redirect("/")
+    return render_template("agua_metodologia.html", menu_activo="metodologia")
+
+
+@app.route("/agua/resultados/descargar")
+def agua_resultados_descargar():
+    if 'user_id' not in session:
+        return redirect("/")
+    empresa = session.get("empresa")
+    periodo = request.args.get("periodo")
+    vista = request.args.get("vista", "mensual")
+    conn = get_db()
+    data = _agua_calcular_resumen(conn, empresa, periodo)
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    cursor.execute("SELECT id, anio, unidad, valor, fecha_actualizacion FROM medidas_productivas WHERE empresa = %s ORDER BY anio DESC, id DESC LIMIT 1", (empresa,))
+    medida_row = cursor.fetchone()
+    medida_valor = medida_row["valor"] if medida_row else None
+    reporte = construir_reporte_huella(empresa, periodo or vista, data["flujos"], data["sedes"], data["factores"], medida_productiva=medida_valor, vista=vista)
+    df_resumen = pd.DataFrame(reporte["Resumen"])
+    df_flujos = pd.DataFrame(reporte["Flujos de agua"])
+    df_resultados = pd.DataFrame(reporte["Resultados por sede"])
+    df_intensidades = pd.DataFrame(reporte["Intensidades"])
+    df_factores = pd.DataFrame(reporte["Factores de escasez aplicados"])
+    df_cobertura = pd.DataFrame(reporte["Cobertura y calidad de datos"])
+    df_metodologia = pd.DataFrame(reporte["Metodología y supuestos"])
+    sedes_incluidas = [s["nombre_sede"] for s in data["sedes"]]
+
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
+        df_resumen.to_excel(writer, index=False, sheet_name="Resumen")
+        df_flujos.to_excel(writer, index=False, sheet_name="Flujos de agua")
+        df_resultados.to_excel(writer, index=False, sheet_name="Resultados por sede")
+        df_intensidades.to_excel(writer, index=False, sheet_name="Intensidades")
+        df_factores.to_excel(writer, index=False, sheet_name="Factores de escasez")
+        df_cobertura.to_excel(writer, index=False, sheet_name="Cobertura y calidad")
+        df_metodologia.to_excel(writer, index=False, sheet_name="Metodología y supuestos")
+        workbook = writer.book
+        money_fmt = workbook.add_format({"num_format": "0.000000"})
+        eq_fmt = workbook.add_format({"num_format": "0.000000"})
+        text_fmt = workbook.add_format({"text_wrap": True})
+        for sheet_name in ["Resumen", "Flujos de agua", "Resultados por sede", "Intensidades", "Factores de escasez", "Cobertura y calidad", "Metodología y supuestos"]:
+            ws = writer.sheets[sheet_name]
+            ws.set_column(0, 0, 26)
+            ws.set_column(1, 6, 22)
+            ws.set_column(7, 20, 18)
+            ws.freeze_panes(1, 0)
+        if not df_resumen.empty:
+            ws = writer.sheets["Resumen"]
+            ws.set_column(0, 0, 36)
+            ws.set_column(1, 1, 16)
+            ws.set_column(2, 2, 22, money_fmt)
+        if not df_flujos.empty:
+            ws = writer.sheets["Flujos de agua"]
+            ws.set_column(0, len(df_flujos.columns) - 1, 18)
+        if not df_resultados.empty:
+            ws = writer.sheets["Resultados por sede"]
+            ws.set_column(0, len(df_resultados.columns) - 1, 18)
+        if not df_metodologia.empty:
+            ws = writer.sheets["Metodología y supuestos"]
+            ws.set_column(0, 0, 24)
+            ws.set_column(1, 1, 120, text_fmt)
+    output.seek(0)
+    conn.close()
+    nombre = f"huella_hidrica_{empresa}_{periodo or vista}.xlsx".replace(" ", "_")
+    return send_file(output, download_name=nombre, as_attachment=True)
 @app.route("/residuos/registro", methods=["GET", "POST"])
 def residuos_registro(): return render_template("residuos_registro.html")
 @app.route("/residuos/reporte")

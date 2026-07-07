@@ -20,6 +20,9 @@
         <button onclick="cambiarPestana('a3')" id="btn_a3" style="background: #F3F4F6; color: #4B5563; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.3s;">
             <i class="fas fa-truck" style="color: #10B981;"></i> Alcance 3
         </button>
+        <button onclick="cambiarPestana('agua')" id="btn_agua" style="background: #F3F4F6; color: #4B5563; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.3s;">
+            <i class="fas fa-tint" style="color: #4AA0E6;"></i> Agua
+        </button>
     </div>
 
     <div id="form_a1" style="background: white; padding: 2.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border-top: 5px solid #3B82F6;">
@@ -277,16 +280,153 @@
         </div>
     </div>
 
+    <div id="form_agua" style="display: none; background: white; padding: 2.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border-top: 5px solid #4AA0E6; margin-top: 1.5rem;">
+        <h2 style="margin: 0 0 0.5rem 0; color: #111827; display: flex; align-items: center; gap: 10px;">
+            <i class="fas fa-tint" style="color: #4AA0E6;"></i> Agua - Estimación simplificada
+        </h2>
+        <p style="color: #6B7280; margin: 0 0 1.5rem 0; font-size: 0.95rem; line-height: 1.5;">
+            Registra captación, retornos o reúso interno. La huella de escasez requiere un factor local válido y la intensidad hídrica requiere una medida productiva del período.
+        </p>
+
+        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:1.5rem;">
+            <button type="button" id="modo_individual_agua" onclick="establecerModoAgua('individual')" style="background:#4AA0E6; color:white; border:none; padding:10px 16px; border-radius:8px; font-weight:600; cursor:pointer;">
+                Registro individual
+            </button>
+            <button type="button" id="modo_multiple_agua" onclick="establecerModoAgua('multiple')" style="background:#F3F4F6; color:#4B5563; border:none; padding:10px 16px; border-radius:8px; font-weight:600; cursor:pointer;">
+                Carga múltiple
+            </button>
+        </div>
+
+        <form action="/registro" method="POST">
+            <input type="hidden" name="alcance_oculto" value="Agua">
+            <input type="hidden" name="modo_registro" id="modo_registro_agua" value="individual">
+
+            <div id="agua_batch_panel" style="display:none; background:#F9FAFB; padding:1.25rem; border-radius:10px; margin-bottom:1.5rem; border:1px solid #D1D5DB;">
+                <div style="display:grid; grid-template-columns: 1fr 1fr auto; gap:1rem; align-items:end; margin-bottom:1rem;">
+                    <div>
+                        <label style="display:block; font-weight:600; color:#374151; margin-bottom:8px;">Mes de inicio</label>
+                        <input type="month" id="fecha_inicio_agua" name="fecha_inicio" style="width:100%; padding:10px; border:1px solid #D1D5DB; border-radius:6px; box-sizing:border-box;">
+                    </div>
+                    <div>
+                        <label style="display:block; font-weight:600; color:#374151; margin-bottom:8px;">Mes de final</label>
+                        <input type="month" id="fecha_fin_agua" name="fecha_fin" style="width:100%; padding:10px; border:1px solid #D1D5DB; border-radius:6px; box-sizing:border-box;">
+                    </div>
+                    <button type="button" onclick="generarTablaAgua()" style="background:#111827; color:white; border:none; padding:10px 16px; border-radius:8px; font-weight:600; cursor:pointer; height:42px;">
+                        Generar tabla
+                    </button>
+                </div>
+                <p id="batch_summary_agua" style="margin:0 0 1rem 0; color:#6B7280; font-size:0.95rem;">Selecciona un rango de meses y genera la tabla.</p>
+                <div style="overflow-x:auto;">
+                    <table style="width:100%; border-collapse:collapse; background:white; border-radius:8px; overflow:hidden;">
+                        <thead>
+                            <tr style="background:#E0F2FE; color:#1F2937;">
+                                <th style="text-align:left; padding:10px; border-bottom:1px solid #BAE6FD;">Mes</th>
+                                <th style="text-align:left; padding:10px; border-bottom:1px solid #BAE6FD;">Volumen [m³]</th>
+                            </tr>
+                        </thead>
+                        <tbody id="batch_body_agua">
+                            <tr>
+                                <td colspan="2" style="padding:12px; color:#6B7280;">Aún no se ha generado una tabla.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="agua_individual_fields">
+                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:1.2rem;">
+                    <div id="agua_periodo_individual">
+                        <label style="display:block; font-weight:600; color:#374151; margin-bottom:8px;">Mes del registro</label>
+                        <input type="month" name="periodo" required style="width:100%; padding:10px; border:1px solid #D1D5DB; border-radius:6px; box-sizing:border-box;">
+                    </div>
+                    <div>
+                        <label style="display:block; font-weight:600; color:#374151; margin-bottom:8px;">Tipo de flujo</label>
+                        <select name="tipo_flujo" required style="width:100%; padding:10px; border:1px solid #D1D5DB; border-radius:6px; box-sizing:border-box;">
+                            <option value="captacion">Captación</option>
+                            <option value="retorno">Retorno</option>
+                            <option value="reuso">Reúso interno</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display:block; font-weight:600; color:#374151; margin-bottom:8px;">Fuente de agua</label>
+                        <select name="fuente_agua" required style="width:100%; padding:10px; border:1px solid #D1D5DB; border-radius:6px; box-sizing:border-box;">
+                            <option value="">Seleccione...</option>
+                            <option>Red pública</option>
+                            <option>Agua superficial</option>
+                            <option>Agua subterránea</option>
+                            <option>Agua lluvia</option>
+                            <option>Agua desalinizada</option>
+                            <option>Agua de tercero</option>
+                            <option>Otra</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display:block; font-weight:600; color:#374151; margin-bottom:8px;">Volumen [m³]</label>
+                        <input type="number" step="0.000001" min="0" name="volumen_m3" required placeholder="Ej: 20.50" style="width:100%; padding:10px; border:1px solid #D1D5DB; border-radius:6px; box-sizing:border-box;">
+                    </div>
+                    <div>
+                        <label style="display:block; font-weight:600; color:#374151; margin-bottom:8px;">Calidad de dato</label>
+                        <select name="calidad_dato" required style="width:100%; padding:10px; border:1px solid #D1D5DB; border-radius:6px; box-sizing:border-box;">
+                            <option value="">Seleccione...</option>
+                            <option>Medición directa</option>
+                            <option>Factura</option>
+                            <option>Estimación</option>
+                            <option>Otro</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display:block; font-weight:600; color:#374151; margin-bottom:8px;">Área o proceso</label>
+                        <input type="text" name="proceso_o_area" placeholder="Ej: Planta de producción" style="width:100%; padding:10px; border:1px solid #D1D5DB; border-radius:6px; box-sizing:border-box;">
+                    </div>
+                    <div>
+                        <label style="display:block; font-weight:600; color:#374151; margin-bottom:8px;">Evidencia</label>
+                        <input type="text" name="evidencia" placeholder="Referencia documental" style="width:100%; padding:10px; border:1px solid #D1D5DB; border-radius:6px; box-sizing:border-box;">
+                    </div>
+                    <div>
+                        <label style="display:block; font-weight:600; color:#374151; margin-bottom:8px;">Destino</label>
+                        <input type="text" name="destino_agua" placeholder="Ej: misma cuenca, planta, riego" style="width:100%; padding:10px; border:1px solid #D1D5DB; border-radius:6px; box-sizing:border-box;">
+                    </div>
+                    <div>
+                        <label style="display:block; font-weight:600; color:#374151; margin-bottom:8px;">¿Retorna al mismo sistema hídrico?</label>
+                        <select name="retorna_mismo_sistema_hidrico" style="width:100%; padding:10px; border:1px solid #D1D5DB; border-radius:6px; box-sizing:border-box;">
+                            <option value="no_informado">No informado</option>
+                            <option value="si">Sí</option>
+                            <option value="no">No</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display:block; font-weight:600; color:#374151; margin-bottom:8px;">¿Tiene tratamiento?</label>
+                        <select name="tiene_tratamiento" style="width:100%; padding:10px; border:1px solid #D1D5DB; border-radius:6px; box-sizing:border-box;">
+                            <option value="no_informado">No informado</option>
+                            <option value="si">Sí</option>
+                            <option value="no">No</option>
+                        </select>
+                    </div>
+                    <div style="grid-column:1 / -1;">
+                        <label style="display:block; font-weight:600; color:#374151; margin-bottom:8px;">Observaciones</label>
+                        <textarea name="observaciones" rows="3" placeholder="Observaciones" style="width:100%; padding:10px; border:1px solid #D1D5DB; border-radius:6px; box-sizing:border-box; resize:vertical;"></textarea>
+                    </div>
+                </div>
+
+                <div style="margin-top:1.5rem;">
+                    <button type="submit" style="width:100%; background:#4AA0E6; color:white; padding:12px; border:none; border-radius:8px; font-weight:600; font-size:1.05rem; cursor:pointer; box-shadow:0 4px 6px rgba(74,160,230,0.2);">
+                        <i class="fas fa-tint"></i> Guardar flujo de agua
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
 </div>
  
 <script>
     // 1. Lógica de Pestañas
     function cambiarPestana(tab) {
-        ['form_a1', 'form_a2', 'form_a3'].forEach(id => {
+        ['form_a1', 'form_a2', 'form_a3', 'form_agua'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.style.display = 'none';
         });
-        ['a1', 'a2', 'a3'].forEach(id => {
+        ['a1', 'a2', 'a3', 'agua'].forEach(id => {
             const btn = document.getElementById('btn_' + id);
             if (btn) { btn.style.background = '#F3F4F6'; btn.style.color = '#4B5563'; }
         });
@@ -298,6 +438,7 @@
             if (tab === 'a1') activeBtn.style.background = '#3B82F6';
             if (tab === 'a2') activeBtn.style.background = '#F59E0B';
             if (tab === 'a3') activeBtn.style.background = '#10B981';
+            if (tab === 'agua') activeBtn.style.background = '#4AA0E6';
         }
     }
 
@@ -668,6 +809,123 @@
 
         aplicarEstadoModoA2('multiple');
     }
+
+    const modoRegistroAgua = document.getElementById('modo_registro_agua');
+    const btnModoIndividualAgua = document.getElementById('modo_individual_agua');
+    const btnModoMultipleAgua = document.getElementById('modo_multiple_agua');
+    const panelBatchAgua = document.getElementById('agua_batch_panel');
+    const aguaIndividualFields = document.getElementById('agua_individual_fields');
+    const fechaInicioAgua = document.getElementById('fecha_inicio_agua');
+    const fechaFinAgua = document.getElementById('fecha_fin_agua');
+    const batchBodyAgua = document.getElementById('batch_body_agua');
+    const batchSummaryAgua = document.getElementById('batch_summary_agua');
+    const btnSubmitAgua = document.querySelector('#form_agua button[type="submit"]');
+    const periodoIndividualAgua = document.querySelector('#form_agua input[name="periodo"]');
+    const volumenIndividualAgua = document.querySelector('#form_agua input[name="volumen_m3"]');
+    const tipoFlujoAgua = document.querySelector('#form_agua select[name="tipo_flujo"]');
+    const camposRetornoAgua = [
+        document.querySelector('#form_agua input[name="destino_agua"]')?.parentElement,
+        document.querySelector('#form_agua select[name="retorna_mismo_sistema_hidrico"]')?.parentElement,
+        document.querySelector('#form_agua select[name="tiene_tratamiento"]')?.parentElement
+    ].filter(Boolean);
+
+    function limpiarTablaAgua(mensaje) {
+        if (!batchBodyAgua) return;
+        batchBodyAgua.innerHTML = `
+            <tr>
+                <td colspan="2" style="padding:12px; color:#6B7280;">${mensaje}</td>
+            </tr>
+        `;
+    }
+
+    function aplicarEstadoModoAgua(modo) {
+        const esIndividual = modo !== 'multiple';
+        if (modoRegistroAgua) modoRegistroAgua.value = esIndividual ? 'individual' : 'multiple';
+        if (panelBatchAgua) panelBatchAgua.style.display = esIndividual ? 'none' : 'block';
+        if (periodoIndividualAgua) {
+            periodoIndividualAgua.required = esIndividual;
+            periodoIndividualAgua.disabled = !esIndividual;
+            periodoIndividualAgua.parentElement.style.display = esIndividual ? 'block' : 'none';
+        }
+        if (volumenIndividualAgua) {
+            volumenIndividualAgua.required = esIndividual;
+            volumenIndividualAgua.disabled = !esIndividual;
+            volumenIndividualAgua.parentElement.style.display = esIndividual ? 'block' : 'none';
+        }
+        if (fechaInicioAgua) fechaInicioAgua.required = !esIndividual;
+        if (fechaFinAgua) fechaFinAgua.required = !esIndividual;
+        if (btnModoIndividualAgua) {
+            btnModoIndividualAgua.style.background = esIndividual ? '#4AA0E6' : '#F3F4F6';
+            btnModoIndividualAgua.style.color = esIndividual ? 'white' : '#4B5563';
+        }
+        if (btnModoMultipleAgua) {
+            btnModoMultipleAgua.style.background = esIndividual ? '#F3F4F6' : '#111827';
+            btnModoMultipleAgua.style.color = esIndividual ? '#4B5563' : 'white';
+        }
+        if (btnSubmitAgua) {
+            btnSubmitAgua.innerHTML = esIndividual
+                ? '<i class="fas fa-tint"></i> Guardar flujo de agua'
+                : '<i class="fas fa-layer-group"></i> Guardar lote de agua';
+        }
+    }
+
+    function establecerModoAgua(modo) {
+        aplicarEstadoModoAgua(modo);
+    }
+
+    function actualizarCamposRetornoAgua() {
+        const tipo = tipoFlujoAgua ? tipoFlujoAgua.value : 'captacion';
+        const mostrarRetorno = tipo !== 'captacion';
+        camposRetornoAgua.forEach(campo => {
+            campo.style.display = mostrarRetorno ? 'block' : 'none';
+        });
+    }
+
+    function generarTablaAgua() {
+        if (!fechaInicioAgua || !fechaFinAgua || !batchBodyAgua || !batchSummaryAgua) return;
+        aplicarEstadoModoAgua('multiple');
+        const inicio = fechaInicioAgua.value;
+        const fin = fechaFinAgua.value;
+        if (!inicio || !fin) {
+            limpiarTablaAgua('Selecciona un rango de meses y genera la tabla.');
+            batchSummaryAgua.textContent = 'Selecciona un rango de meses y genera la tabla.';
+            return;
+        }
+        const [anioInicio, mesInicio] = inicio.split('-').map(Number);
+        const [anioFin, mesFin] = fin.split('-').map(Number);
+        const cursorInicio = new Date(anioInicio, mesInicio - 1, 1);
+        const cursorFin = new Date(anioFin, mesFin - 1, 1);
+        if (cursorInicio > cursorFin) {
+            limpiarTablaAgua('El mes de inicio no puede ser posterior al mes de final.');
+            batchSummaryAgua.textContent = 'El mes de inicio no puede ser posterior al mes de final.';
+            return;
+        }
+        const meses = [];
+        const cursor = new Date(cursorInicio.getFullYear(), cursorInicio.getMonth(), 1);
+        while (cursor <= cursorFin) {
+            const anio = cursor.getFullYear();
+            const mes = String(cursor.getMonth() + 1).padStart(2, '0');
+            meses.push(`${anio}-${mes}`);
+            cursor.setMonth(cursor.getMonth() + 1);
+        }
+        batchBodyAgua.innerHTML = '';
+        meses.forEach(mesValor => {
+            const fila = document.createElement('tr');
+            fila.innerHTML = `
+                <td style="padding:10px; border-bottom:1px solid #E5E7EB;">${mesValor}</td>
+                <td style="padding:10px; border-bottom:1px solid #E5E7EB;">
+                    <input type="number" step="0.000001" min="0" name="batch_cantidad[]" required placeholder="Volumen para ${mesValor}" style="width:100%; padding:10px; border:1px solid #D1D5DB; border-radius:6px; box-sizing:border-box;">
+                </td>
+            `;
+            batchBodyAgua.appendChild(fila);
+        });
+        if (modoRegistroAgua) modoRegistroAgua.value = 'multiple';
+        batchSummaryAgua.textContent = `Se generaron ${meses.length} filas entre ${meses[0]} y ${meses[meses.length - 1]}.`;
+    }
+
+    aplicarEstadoModoAgua('individual');
+    if (tipoFlujoAgua) tipoFlujoAgua.addEventListener('change', actualizarCamposRetornoAgua);
+    actualizarCamposRetornoAgua();
 
     establecerModoA2('individual');
 
