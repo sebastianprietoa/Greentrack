@@ -1,8 +1,8 @@
-# Plan técnico: Huella Hídrica Simplificada
+# Plan técnico: Water Footprint
 
 ## Objetivo
 
-Diseñar e implementar un nuevo módulo de **Huella Hídrica Simplificada** para GreenTrack, alineado conceptualmente con principios de ISO 14046, sin declarar cumplimiento ni certificación ISO.
+Diseñar e implementar un nuevo módulo de **Water Footprint** para GreenTrack, basado en una estimación operacional simplificada de flujos directos de agua.
 
 El módulo debe registrar y mostrar, por sede o empresa:
 
@@ -63,7 +63,7 @@ Condición obligatoria:
 
 ### Modelo actual detectado
 
-El módulo actual está orientado a “Emisiones al Agua” y a costos asociados. Según `app.py`, hoy existen estas tablas:
+El módulo histórico de agua está orientado a calidad de efluentes y costos asociados. Según `app.py`, hoy existen estas tablas:
 
 - `agua_consumo`
   - `empresa`
@@ -416,7 +416,6 @@ No hacer una migración automática completa de los datos actuales a métricas n
 
 ## 12. Recomendación final
 
-La transición más segura es crear un **nuevo módulo paralelo** de Huella Hídrica Simplificada, mantener el módulo actual de agua como histórico/compatibilidad, y mover la lógica de cálculo a un servicio dedicado antes de reemplazar cualquier vista o ruta existente.
+La transición más segura es consolidar el módulo principal como **Water Footprint**, mantener el módulo histórico de agua como compatibilidad, y mover la lógica de cálculo a un servicio dedicado antes de reemplazar cualquier vista o ruta existente.
 
 Esto reduce riesgo, protege datos históricos y permite evolucionar el producto sin romper los flujos actuales.
-

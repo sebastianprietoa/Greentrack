@@ -1,4 +1,5 @@
 import unittest
+from datetime import date
 from decimal import Decimal
 
 from services.huella_agua import (
@@ -94,7 +95,7 @@ class HuellaAguaServiceTests(unittest.TestCase):
     def test_sede_con_factor(self):
         factor = validar_factor_escasez({
             "id": 1,
-            "metodo": "Alineado con principios de ISO 14046",
+            "metodo": "Water Footprint operacional",
             "version_metodo": "v1",
             "actividad": "Agua",
             "nivel_geografico": "cuenca",
@@ -138,7 +139,7 @@ class HuellaAguaServiceTests(unittest.TestCase):
         factores = [
             {
                 "id": 1,
-                "metodo": "Alineado con principios de ISO 14046",
+                "metodo": "Water Footprint operacional",
                 "version_metodo": "v1",
                 "actividad": "Agua",
                 "nivel_geografico": "pais",
@@ -153,7 +154,7 @@ class HuellaAguaServiceTests(unittest.TestCase):
             },
             {
                 "id": 2,
-                "metodo": "Alineado con principios de ISO 14046",
+                "metodo": "Water Footprint operacional",
                 "version_metodo": "v1",
                 "actividad": "Agua",
                 "nivel_geografico": "cuenca",
@@ -170,6 +171,14 @@ class HuellaAguaServiceTests(unittest.TestCase):
         sede = {"codigo_cuenca": "C-01", "region": "RM", "comuna": "Santiago", "pais": "Chile"}
         factor = buscar_factor_escasez_mas_especifico(factores, sede, "2025-06-01")
         self.assertEqual(factor.id, 2)
+
+    def test_busqueda_factor_con_fecha_date(self):
+        factores = [
+            {"id": 7, "metodo": "M", "version_metodo": "1", "actividad": "A", "nivel_geografico": "cuenca", "codigo_geografico": "C-01", "periodo_inicio": "2025-01-01", "periodo_fin": "2025-12-31", "factor_m3eq_m3": "0.7", "fuente": "Cuenca", "referencia": "R", "fecha_carga": "2025-01-01", "activo": True},
+        ]
+        sede = {"codigo_cuenca": "C-01", "region": "RM", "comuna": "Santiago", "pais": "Chile"}
+        factor = buscar_factor_escasez_mas_especifico(factores, sede, date(2025, 6, 1))
+        self.assertEqual(factor.id, 7)
 
     def test_jerarquia_factor_cuenca_subnacional_pais(self):
         factores = [
@@ -217,6 +226,19 @@ class HuellaAguaServiceTests(unittest.TestCase):
         self.assertEqual(reporte["Resultados por sede"][0]["Huella [m³-eq]"], Decimal("40.0"))
         self.assertEqual(reporte["Resultados por sede"][0]["Intensidad hídrica [m³/unidad]"], Decimal("8"))
         self.assertEqual(reporte["Factores de escasez aplicados"][0]["Factor [m³-eq/m³]"], Decimal("0.5"))
+
+    def test_exportacion_mixta_sin_factor_no_agrega_huella(self):
+        sedes = [
+            {"id": 1, "nombre_sede": "Casa Matriz", "region": "RM", "comuna": "Santiago", "codigo_cuenca": "C-01", "nombre_cuenca": "Cuenca 1"},
+            {"id": 2, "nombre_sede": "Planta Norte", "region": "RM", "comuna": "Tiltil", "codigo_cuenca": "C-99", "nombre_cuenca": "Cuenca 99"},
+        ]
+        flujos = [
+            {"sede_id": 1, "periodo": "2025-06-01", "tipo_flujo": "captacion", "fuente_agua": "Red pública", "destino_agua": None, "volumen_m3": "100", "proceso_o_area": "Operación", "retorna_mismo_sistema_hidrico": False, "tiene_tratamiento": False, "calidad_dato": "Medición directa", "evidencia": "Factura", "observaciones": ""},
+            {"sede_id": 2, "periodo": "2025-06-01", "tipo_flujo": "captacion", "fuente_agua": "Red pública", "destino_agua": None, "volumen_m3": "50", "proceso_o_area": "Operación", "retorna_mismo_sistema_hidrico": False, "tiene_tratamiento": False, "calidad_dato": "Medición directa", "evidencia": "Factura", "observaciones": ""},
+        ]
+        factores = [{"id": 9, "metodo": "M", "version_metodo": "1", "actividad": "A", "nivel_geografico": "cuenca", "codigo_geografico": "C-01", "periodo_inicio": "2025-01-01", "periodo_fin": "2025-12-31", "factor_m3eq_m3": "0.5", "fuente": "Oficial", "referencia": "R", "fecha_carga": "2025-01-01", "activo": True}]
+        reporte = construir_reporte_huella("Empresa", "2025-06", flujos, sedes, factores, medida_productiva=10)
+        self.assertEqual(reporte["Resumen"][-1]["Valor"], "No disponible")
 
     def test_indicador_calidad_datos(self):
         calidad = generar_indicador_calidad_datos(self.flujos)

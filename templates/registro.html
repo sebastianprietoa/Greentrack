@@ -45,7 +45,7 @@
                         <label style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">Mes de inicio</label>
                         <input type="month" id="fecha_inicio_a1" name="fecha_inicio" style="width: 100%; padding: 10px; border: 1px solid #D1D5DB; border-radius: 6px; box-sizing: border-box;">
                     </div>
-                    <div>
+                    <div data-water-field="retorna">
                         <label style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">Mes de final</label>
                         <input type="month" id="fecha_fin_a1" name="fecha_fin" style="width: 100%; padding: 10px; border: 1px solid #D1D5DB; border-radius: 6px; box-sizing: border-box;">
                     </div>
@@ -282,10 +282,10 @@
 
     <div id="form_agua" style="display: none; background: white; padding: 2.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border-top: 5px solid #4AA0E6; margin-top: 1.5rem;">
         <h2 style="margin: 0 0 0.5rem 0; color: #111827; display: flex; align-items: center; gap: 10px;">
-            <i class="fas fa-tint" style="color: #4AA0E6;"></i> Agua - Estimación simplificada
+            <i class="fas fa-tint" style="color: #4AA0E6;"></i> Agua - Water Footprint
         </h2>
         <p style="color: #6B7280; margin: 0 0 1.5rem 0; font-size: 0.95rem; line-height: 1.5;">
-            Registra captación, retornos o reúso interno. La huella de escasez requiere un factor local válido y la intensidad hídrica requiere una medida productiva del período.
+            Registra captación, retornos y reúso interno para el inventario Water Footprint. La huella de escasez requiere un factor local válido y la intensidad hídrica requiere una medida productiva del período.
         </p>
 
         <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:1.5rem;">
@@ -347,7 +347,7 @@
                             <option value="reuso">Reúso interno</option>
                         </select>
                     </div>
-                    <div>
+                    <div data-water-field="fuente">
                         <label style="display:block; font-weight:600; color:#374151; margin-bottom:8px;">Fuente de agua</label>
                         <select name="fuente_agua" required style="width:100%; padding:10px; border:1px solid #D1D5DB; border-radius:6px; box-sizing:border-box;">
                             <option value="">Seleccione...</option>
@@ -359,6 +359,11 @@
                             <option>Agua de tercero</option>
                             <option>Otra</option>
                         </select>
+                    </div>
+                    <div data-water-field="origen">
+                        <label style="display:block; font-weight:600; color:#374151; margin-bottom:8px;">Sistema hidrico / cuenca de origen</label>
+                        <input type="text" name="origen_hidrico" placeholder="Ej: red publica, pozo, cuenca o acuifero" style="width:100%; padding:10px; border:1px solid #D1D5DB; border-radius:6px; box-sizing:border-box;">
+                        <p style="margin:6px 0 0 0; color:#6B7280; font-size:0.82rem;">Ayuda a trazar de donde proviene el agua captada.</p>
                     </div>
                     <div>
                         <label style="display:block; font-weight:600; color:#374151; margin-bottom:8px;">Volumen [m³]</label>
@@ -382,9 +387,9 @@
                         <label style="display:block; font-weight:600; color:#374151; margin-bottom:8px;">Evidencia</label>
                         <input type="text" name="evidencia" placeholder="Referencia documental" style="width:100%; padding:10px; border:1px solid #D1D5DB; border-radius:6px; box-sizing:border-box;">
                     </div>
-                    <div>
-                        <label style="display:block; font-weight:600; color:#374151; margin-bottom:8px;">Destino</label>
-                        <input type="text" name="destino_agua" placeholder="Ej: misma cuenca, planta, riego" style="width:100%; padding:10px; border:1px solid #D1D5DB; border-radius:6px; box-sizing:border-box;">
+                    <div data-water-field="destino">
+                        <label style="display:block; font-weight:600; color:#374151; margin-bottom:8px;">Sistema hidrico / destino del retorno</label>
+                        <input type="text" name="destino_agua" placeholder="Ej: misma cuenca, alcantarillado, PTAR, riego" style="width:100%; padding:10px; border:1px solid #D1D5DB; border-radius:6px; box-sizing:border-box;">
                     </div>
                     <div>
                         <label style="display:block; font-weight:600; color:#374151; margin-bottom:8px;">¿Retorna al mismo sistema hídrico?</label>
@@ -393,8 +398,9 @@
                             <option value="si">Sí</option>
                             <option value="no">No</option>
                         </select>
+                        <p style="margin:6px 0 0 0; color:#6B7280; font-size:0.82rem;">Solo descuenta de la huella azul si vuelve al mismo sistema hidrico de origen.</p>
                     </div>
-                    <div>
+                    <div data-water-field="tratamiento">
                         <label style="display:block; font-weight:600; color:#374151; margin-bottom:8px;">¿Tiene tratamiento?</label>
                         <select name="tiene_tratamiento" style="width:100%; padding:10px; border:1px solid #D1D5DB; border-radius:6px; box-sizing:border-box;">
                             <option value="no_informado">No informado</option>
@@ -404,7 +410,8 @@
                     </div>
                     <div style="grid-column:1 / -1;">
                         <label style="display:block; font-weight:600; color:#374151; margin-bottom:8px;">Observaciones</label>
-                        <textarea name="observaciones" rows="3" placeholder="Observaciones" style="width:100%; padding:10px; border:1px solid #D1D5DB; border-radius:6px; box-sizing:border-box; resize:vertical;"></textarea>
+                        <textarea name="observaciones" rows="3" placeholder="Observaciones, supuestos o justificacion si el reuso supera la captacion" style="width:100%; padding:10px; border:1px solid #D1D5DB; border-radius:6px; box-sizing:border-box; resize:vertical;"></textarea>
+                        <p style="margin:6px 0 0 0; color:#6B7280; font-size:0.82rem;">El reuso interno se informa aparte y no se descuenta dos veces de la huella azul fisica.</p>
                     </div>
                 </div>
 
@@ -823,10 +830,17 @@
     const periodoIndividualAgua = document.querySelector('#form_agua input[name="periodo"]');
     const volumenIndividualAgua = document.querySelector('#form_agua input[name="volumen_m3"]');
     const tipoFlujoAgua = document.querySelector('#form_agua select[name="tipo_flujo"]');
+    const fuenteAgua = document.querySelector('#form_agua select[name="fuente_agua"]');
+    const origenHidricoAgua = document.querySelector('#form_agua input[name="origen_hidrico"]');
+    const destinoAgua = document.querySelector('#form_agua input[name="destino_agua"]');
+    const retornaMismoAgua = document.querySelector('#form_agua select[name="retorna_mismo_sistema_hidrico"]');
+    const tratamientoAgua = document.querySelector('#form_agua select[name="tiene_tratamiento"]');
+    const campoFuenteAgua = document.querySelector('#form_agua [data-water-field="fuente"]') || (fuenteAgua ? fuenteAgua.parentElement : null);
+    const campoOrigenAgua = document.querySelector('#form_agua [data-water-field="origen"]') || (origenHidricoAgua ? origenHidricoAgua.parentElement : null);
     const camposRetornoAgua = [
-        document.querySelector('#form_agua input[name="destino_agua"]')?.parentElement,
-        document.querySelector('#form_agua select[name="retorna_mismo_sistema_hidrico"]')?.parentElement,
-        document.querySelector('#form_agua select[name="tiene_tratamiento"]')?.parentElement
+        document.querySelector('#form_agua [data-water-field="destino"]') || (destinoAgua ? destinoAgua.parentElement : null),
+        document.querySelector('#form_agua [data-water-field="retorna"]') || (retornaMismoAgua ? retornaMismoAgua.parentElement : null),
+        document.querySelector('#form_agua [data-water-field="tratamiento"]') || (tratamientoAgua ? tratamientoAgua.parentElement : null)
     ].filter(Boolean);
 
     function limpiarTablaAgua(mensaje) {
@@ -875,7 +889,20 @@
 
     function actualizarCamposRetornoAgua() {
         const tipo = tipoFlujoAgua ? tipoFlujoAgua.value : 'captacion';
-        const mostrarRetorno = tipo !== 'captacion';
+        const esCaptacion = tipo === 'captacion';
+        const mostrarRetorno = !esCaptacion;
+        if (campoFuenteAgua) campoFuenteAgua.style.display = esCaptacion ? 'block' : 'none';
+        if (campoOrigenAgua) campoOrigenAgua.style.display = esCaptacion ? 'block' : 'none';
+        if (fuenteAgua) {
+            fuenteAgua.required = esCaptacion;
+            fuenteAgua.disabled = !esCaptacion;
+        }
+        if (origenHidricoAgua) {
+            origenHidricoAgua.disabled = !esCaptacion;
+        }
+        if (destinoAgua) destinoAgua.required = mostrarRetorno;
+        if (retornaMismoAgua) retornaMismoAgua.required = mostrarRetorno;
+        if (tratamientoAgua) tratamientoAgua.required = mostrarRetorno;
         camposRetornoAgua.forEach(campo => {
             campo.style.display = mostrarRetorno ? 'block' : 'none';
         });
@@ -928,6 +955,10 @@
     actualizarCamposRetornoAgua();
 
     establecerModoA2('individual');
+    const tabInicial = new URLSearchParams(window.location.search).get('tab');
+    if (tabInicial === 'agua') {
+        cambiarPestana('agua');
+    }
 
     // 2. FILTRADO INTELIGENTE Y REDIRECCIÓN
     function configurarFiltros(idFuente, idCat, idUni, idFac, idMan) {

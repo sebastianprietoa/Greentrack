@@ -5,17 +5,15 @@
     <div style="margin-bottom: 1.5rem;">
         <h1 style="color: #EAF2FF; margin: 0 0 0.4rem 0; font-size: 2.1rem;">Retornos y reúso</h1>
         <p style="color: #AAB7C6; margin: 0; line-height: 1.6;">
-            Registra retornos y reúso interno de agua por período. La sede se asigna automáticamente desde la configuración activa.
+            Registra retornos verificables y reúso interno de agua por período. La sede se asigna automáticamente desde la configuración activa.
         </p>
-        {% if sede_predeterminada %}
-            <div style="margin-top: 0.9rem; padding: 0.8rem 1rem; border-radius: 10px; background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.35); color: #D1FAE5; font-size: 0.95rem;">
+        <div style="margin-top: 0.9rem; padding: 0.8rem 1rem; border-radius: 10px; background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.35); color: #D1FAE5; font-size: 0.95rem;">
+            {% if sede_predeterminada %}
                 Sede activa detectada: <strong>{{ sede_predeterminada.nombre_sede }}</strong>.
-            </div>
-        {% else %}
-            <div style="margin-top: 0.9rem; padding: 0.8rem 1rem; border-radius: 10px; background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.35); color: #FECACA; font-size: 0.95rem;">
+            {% else %}
                 No hay una sede activa configurada. Crea o activa una sede para poder registrar retornos o reúso.
-            </div>
-        {% endif %}
+            {% endif %}
+        </div>
     </div>
 
     <form method="POST" style="background: #121212; border: 1px solid rgba(255,255,255,0.08); padding: 1.6rem; border-radius: 18px; box-shadow: 0 10px 30px rgba(0,0,0,0.28);">
@@ -36,6 +34,16 @@
             <div>
                 <label style="display:block; margin-bottom: .45rem; color:#E5EEF8; font-weight:600;">Volumen [m³]</label>
                 <input type="number" step="0.000001" min="0" name="volumen_m3" placeholder="Ej: 12.75" required style="width:100%; background:#2A2A2A; color:#fff; border:1px solid rgba(255,255,255,.14); padding:12px 14px; border-radius:10px;">
+            </div>
+            <div>
+                <label style="display:block; margin-bottom: .45rem; color:#E5EEF8; font-weight:600;">Calidad de dato</label>
+                <select name="calidad_dato" required style="width:100%; background:#2A2A2A; color:#fff; border:1px solid rgba(255,255,255,.14); padding:12px 14px; border-radius:10px;">
+                    <option value="">Calidad de dato</option>
+                    <option>Medición directa</option>
+                    <option>Factura</option>
+                    <option>Estimación</option>
+                    <option>Otro</option>
+                </select>
             </div>
             <div>
                 <label style="display:block; margin-bottom: .45rem; color:#E5EEF8; font-weight:600;">Destino</label>
@@ -71,7 +79,7 @@
             </div>
         </div>
         <div style="margin-top: 1.2rem; display:flex; justify-content:flex-end;">
-            <button type="submit" style="background:#10B981; color:white; border:none; padding:12px 18px; border-radius:10px; font-weight:700; box-shadow:0 10px 20px rgba(16,185,129,.25);">Guardar flujo</button>
+            <button type="submit" style="background:#10B981; color:white; border:none; padding:12px 18px; border-radius:10px; font-weight:700; box-shadow:0 10px 20px rgba(16,185,129,.25);">Guardar flujo de agua</button>
         </div>
     </form>
 </div>

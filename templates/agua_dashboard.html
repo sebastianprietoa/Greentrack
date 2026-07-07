@@ -1,16 +1,16 @@
 {% extends "base.html" %}
-{% block title %}Huella Hídrica Simplificada - GreenTrack{% endblock %}
+{% block title %}Water Footprint - GreenTrack{% endblock %}
 
 {% block content %}
 <div style="max-width: 1280px; margin: 0 auto;">
     <div style="display:flex; justify-content:space-between; gap:1rem; flex-wrap:wrap; align-items:flex-end; margin-bottom:1.2rem;">
         <div>
-            <h1 style="margin:0; color:#111827;">Huella Hídrica Simplificada</h1>
-            <p style="margin:6px 0 0 0; color:#6B7280;">Metodología simplificada alineada con principios de ISO 14046.</p>
+            <h1 style="margin:0; color:#111827;">Water Footprint</h1>
+            <p style="margin:6px 0 0 0; color:#6B7280;">Metodología Water Footprint para operaciones directas. Los resultados físicos se muestran en m³ y los caracterizados por escasez en m³-eq.</p>
         </div>
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
             <a href="{{ url_for('agua_dashboard') }}" class="menu-link" style="background: {{ '#E0F2FE' if menu_activo=='resumen' else 'white' }};">Resumen</a>
-            <a href="{{ url_for('agua_registrar_datos') }}" class="menu-link" style="background: {{ '#E0F2FE' if menu_activo=='registrar' else 'white' }};">Registrar datos</a>
+            <a href="{{ url_for('registro', tab='agua') }}" class="menu-link" style="background: {{ '#E0F2FE' if menu_activo=='registrar' else 'white' }};">Registrar datos</a>
             <a href="{{ url_for('agua_retorno_reuso') }}" class="menu-link" style="background: {{ '#E0F2FE' if menu_activo=='retornos' else 'white' }};">Retornos y reúso</a>
             <a href="{{ url_for('agua_resultados') }}" class="menu-link" style="background: {{ '#E0F2FE' if menu_activo=='resultados' else 'white' }};">Resultados</a>
             <a href="{{ url_for('agua_metodologia') }}" class="menu-link" style="background: {{ '#E0F2FE' if menu_activo=='metodologia' else 'white' }};">Metodología</a>
@@ -20,38 +20,47 @@
     <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:1rem; margin-bottom:1rem;">
         <div style="background:white; padding:1rem; border-radius:12px; border-top:4px solid #4AA0E6;">
             <div style="font-size:0.75rem; color:#9CA3AF; font-weight:700;">Captación total</div>
-            <div style="font-size:1.8rem; font-weight:700;">{{ '%.2f'|format(captacion_total or 0) }} m³</div>
+            <div style="font-size:1.8rem; font-weight:700;">{{ (captacion_total or 0) | formato_entero_cl }} m³</div>
         </div>
         <div style="background:white; padding:1rem; border-radius:12px; border-top:4px solid #10B981;">
-            <div style="font-size:0.75rem; color:#9CA3AF; font-weight:700;">Consumo operativo estimado</div>
-            <div style="font-size:1.8rem; font-weight:700;">{{ '%.2f'|format(consumo or 0) }} m³</div>
+            <div style="font-size:0.75rem; color:#9CA3AF; font-weight:700;">Huella azul fisica</div>
+            <div style="font-size:1.8rem; font-weight:700;">{{ (consumo or 0) | formato_entero_cl }} m³</div>
+            <div style="font-size:0.78rem; color:#6B7280; margin-top:6px;">Captacion - retorno al mismo sistema</div>
+        </div>
+        <div style="background:white; padding:1rem; border-radius:12px; border-top:4px solid #38BDF8;">
+            <div style="font-size:0.75rem; color:#9CA3AF; font-weight:700;">Retorno total</div>
+            <div style="font-size:1.8rem; font-weight:700;">{{ (retornos_totales or 0) | formato_entero_cl }} m³</div>
+        </div>
+        <div style="background:white; padding:1rem; border-radius:12px; border-top:4px solid #0EA5E9;">
+            <div style="font-size:0.75rem; color:#9CA3AF; font-weight:700;">Retorno mismo sistema</div>
+            <div style="font-size:1.8rem; font-weight:700;">{{ (retorno_mismo or 0) | formato_entero_cl }} m³</div>
         </div>
         <div style="background:white; padding:1rem; border-radius:12px; border-top:4px solid #F59E0B;">
             <div style="font-size:0.75rem; color:#9CA3AF; font-weight:700;">Agua reutilizada</div>
-            <div style="font-size:1.8rem; font-weight:700;">{{ '%.2f'|format(reuso or 0) }} m³</div>
+            <div style="font-size:1.8rem; font-weight:700;">{{ (reuso or 0) | formato_entero_cl }} m³</div>
         </div>
         <div style="background:white; padding:1rem; border-radius:12px; border-top:4px solid #6366F1;">
             <div style="font-size:0.75rem; color:#9CA3AF; font-weight:700;">Tasa de reúso</div>
-            <div style="font-size:1.8rem; font-weight:700;">{{ ('%.1f'|format((reuso / captacion_total * 100) if captacion_total else 0)) }}%</div>
+            <div style="font-size:1.8rem; font-weight:700;">{{ ((reuso / captacion_total * 100) if captacion_total else 0) | formato_entero_cl }}%</div>
         </div>
         <div style="background:white; padding:1rem; border-radius:12px; border-top:4px solid #EF4444;">
             <div style="font-size:0.75rem; color:#9CA3AF; font-weight:700;">Huella de escasez</div>
-            <div style="font-size:1.8rem; font-weight:700;">{% if huella is not none %}{{ '%.2f'|format(huella) }} m³-eq{% else %}No disponible{% endif %}</div>
+            <div style="font-size:1.8rem; font-weight:700;">{% if huella is not none %}{{ huella | formato_entero_cl }} m³-eq{% else %}No disponible{% endif %}</div>
         </div>
         <div style="background:white; padding:1rem; border-radius:12px; border-top:4px solid #14B8A6;">
             <div style="font-size:0.75rem; color:#9CA3AF; font-weight:700;">Intensidad hídrica</div>
-            <div style="font-size:1.8rem; font-weight:700;">{% if intensidad_hidrica is not none %}{{ '%.4f'|format(intensidad_hidrica) }} m³/unidad{% else %}No disponible{% endif %}</div>
+            <div style="font-size:1.8rem; font-weight:700;">{% if intensidad_hidrica is not none %}{{ intensidad_hidrica | formato_entero_cl }} m³/unidad{% else %}No disponible{% endif %}</div>
         </div>
         <div style="background:white; padding:1rem; border-radius:12px; border-top:4px solid #0F766E;">
             <div style="font-size:0.75rem; color:#9CA3AF; font-weight:700;">Intensidad de escasez</div>
-            <div style="font-size:1.8rem; font-weight:700;">{% if intensidad_escasez is not none %}{{ '%.4f'|format(intensidad_escasez) }} m³-eq/unidad{% else %}No disponible{% endif %}</div>
+            <div style="font-size:1.8rem; font-weight:700;">{% if intensidad_escasez is not none %}{{ intensidad_escasez | formato_entero_cl }} m³-eq/unidad{% else %}No disponible{% endif %}</div>
         </div>
     </div>
 
     <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:1rem; margin-bottom:1rem;">
-        <div style="background:white; padding:1rem; border-radius:12px;"><h3>Tendencia mensual</h3><canvas id="chartTendencia" height="160"></canvas></div>
-        <div style="background:white; padding:1rem; border-radius:12px;"><h3>Captación por fuente</h3><canvas id="chartFuente" height="160"></canvas></div>
-        <div style="background:white; padding:1rem; border-radius:12px;"><h3>Consumo operativo</h3><canvas id="chartSede" height="160"></canvas></div>
+        <div style="background:white; padding:1rem; border-radius:12px;"><h3>Tendencia mensual [m³]</h3><canvas id="chartTendencia" height="160"></canvas></div>
+        <div style="background:white; padding:1rem; border-radius:12px;"><h3>Captación por fuente [m³]</h3><canvas id="chartFuente" height="160"></canvas></div>
+        <div style="background:white; padding:1rem; border-radius:12px;"><h3>Huella azul fisica por empresa [m³]</h3><canvas id="chartSede" height="160"></canvas></div>
         <div style="background:white; padding:1rem; border-radius:12px;"><h3>Estado de cobertura</h3>
             <div style="display:flex; gap:1rem; align-items:center;">
                 <div><strong>{{ periodos_con_datos }}</strong> meses con datos</div>
@@ -60,13 +69,13 @@
             <canvas id="chartCobertura" height="160" style="margin-top:12px;"></canvas>
         </div>
         {% if huella is not none %}
-        <div style="background:white; padding:1rem; border-radius:12px; grid-column: 1 / -1;"><h3>Huella de escasez por sede</h3><canvas id="chartEscasez" height="110"></canvas></div>
+        <div style="background:white; padding:1rem; border-radius:12px; grid-column: 1 / -1;"><h3>Huella de escasez por sede [m³-eq]</h3><canvas id="chartEscasez" height="110"></canvas></div>
         {% endif %}
     </div>
 
     <div style="background:white; padding:1rem; border-radius:12px;">
         <h3>Acceso histórico</h3>
-        <p style="color:#6B7280;">El formulario histórico de Emisiones al Agua sigue disponible como submódulo secundario para evaluación de calidad de efluentes.</p>
+        <p style="color:#6B7280;">El formulario histórico de agua sigue disponible como submódulo secundario para evaluación de calidad de efluentes y trazabilidad histórica.</p>
         <a href="{{ url_for('agua_registro') }}" style="color:#4AA0E6; font-weight:700;">Abrir formulario histórico</a>
     </div>
 </div>
@@ -91,7 +100,8 @@ makeChart({
             labels: Object.keys(tendencia),
             datasets: [
                 {label: 'Captación', data: Object.values(tendencia).map(v => v.captacion), borderColor:'#4AA0E6', backgroundColor:'rgba(74,160,230,0.1)', tension:0.35},
-                {label: 'Consumo operativo', data: Object.values(tendencia).map(v => v.captacion - v.retorno), borderColor:'#10B981', backgroundColor:'rgba(16,185,129,0.1)', tension:0.35},
+                {label: 'Huella azul fisica', data: Object.values(tendencia).map(v => v.captacion - v.retorno), borderColor:'#10B981', backgroundColor:'rgba(16,185,129,0.1)', tension:0.35},
+                {label: 'Retorno mismo sistema', data: Object.values(tendencia).map(v => v.retorno), borderColor:'#38BDF8', backgroundColor:'rgba(56,189,248,0.1)', tension:0.35},
                 {label: 'Reúso', data: Object.values(tendencia).map(v => v.reuso), borderColor:'#F59E0B', backgroundColor:'rgba(245,158,11,0.1)', tension:0.35}
             ]
         },

@@ -1,17 +1,18 @@
-"""Lógica de huella hídrica simplificada para GreenTrack."""
+"""Logica de huella hidrica simplificada para GreenTrack."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 from typing import Any, Iterable, Optional
 
 
-SERVICE_VERSION = "1.0.0"
+SERVICE_VERSION = "1.1.0"
 
 
 class HuellaAguaError(ValueError):
-    """Error de validación o consistencia para el módulo de huella hídrica."""
+    """Error de validacion o consistencia para el modulo de huella hidrica."""
 
 
 def _to_decimal(value: Any, field_name: str) -> Decimal:
@@ -22,13 +23,38 @@ def _to_decimal(value: Any, field_name: str) -> Decimal:
     try:
         return Decimal(str(value))
     except (InvalidOperation, ValueError, TypeError) as exc:
-        raise HuellaAguaError(f"{field_name} debe ser numérico.") from exc
+        raise HuellaAguaError(f"{field_name} debe ser numerico.") from exc
 
 
 def _ensure_non_negative(value: Decimal, field_name: str) -> Decimal:
     if value < 0:
         raise HuellaAguaError(f"{field_name} no puede ser negativo.")
     return value
+
+
+def _normalizar_fecha_periodo(valor: Any) -> Optional[date]:
+    if valor in (None, ""):
+        return None
+    if isinstance(valor, datetime):
+        return valor.date()
+    if isinstance(valor, date):
+        return valor
+
+    texto = str(valor).strip()
+    if not texto:
+        return None
+
+    for fmt in ("%Y-%m-%d", "%Y-%m", "%Y"):
+        try:
+            parsed = datetime.strptime(texto, fmt)
+        except ValueError:
+            continue
+        if fmt == "%Y":
+            return parsed.date().replace(month=1, day=1)
+        if fmt == "%Y-%m":
+            return parsed.date().replace(day=1)
+        return parsed.date()
+    return None
 
 
 def calcular_captacion_total(flujos: Iterable[dict[str, Any]]) -> Decimal:
@@ -74,9 +100,9 @@ def calcular_consumo_operativo_estm(
     reuso = _ensure_non_negative(_to_decimal(reuso_interno, "reuso_interno"), "reuso_interno")
 
     if retornos > captacion:
-        raise HuellaAguaError("Los retornos al mismo sistema no pueden superar la captación total.")
+        raise HuellaAguaError("Los retornos al mismo sistema no pueden superar la captacion total.")
     if reuso > captacion and not justifico_reuso_superior:
-        raise HuellaAguaError("El reúso interno no puede superar la captación total sin justificación explícita.")
+        raise HuellaAguaError("El reuso interno no puede superar la captacion total sin justificacion explicita.")
 
     consumo = captacion - retornos
     return consumo if consumo >= 0 else Decimal("0")
@@ -123,7 +149,7 @@ def validar_factor_escasez(factor: dict[str, Any] | FactorEscasez) -> FactorEsca
     if factor_value <= 0:
         raise HuellaAguaError("El factor de escasez debe ser mayor que cero.")
     if not metodo or not version_metodo or not fuente:
-        raise HuellaAguaError("El factor de escasez debe incluir metodología, versión y fuente.")
+        raise HuellaAguaError("El factor de escasez debe incluir metodologia, version y fuente.")
 
     return FactorEscasez(
         id=data.get("id"),
@@ -152,14 +178,17 @@ def buscar_factor_escasez_mas_especifico(
     region = (sede.get("region") or "").strip()
     pais = (sede.get("pais") or "Chile").strip()
     comuna = (sede.get("comuna") or "").strip()
+    periodo_normalizado = _normalizar_fecha_periodo(periodo)
 
     for factor in factores:
         parsed = validar_factor_escasez(factor)
         if not parsed.activo:
             continue
-        if parsed.periodo_inicio and str(periodo) < str(parsed.periodo_inicio):
+        periodo_inicio = _normalizar_fecha_periodo(parsed.periodo_inicio)
+        periodo_fin = _normalizar_fecha_periodo(parsed.periodo_fin)
+        if periodo_normalizado and periodo_inicio and periodo_normalizado < periodo_inicio:
             continue
-        if parsed.periodo_fin and str(periodo) > str(parsed.periodo_fin):
+        if periodo_normalizado and periodo_fin and periodo_normalizado > periodo_fin:
             continue
         codigo = parsed.codigo_geografico.strip()
         if parsed.nivel_geografico == "cuenca" and codigo and codigo == codigo_cuenca:
@@ -240,7 +269,7 @@ def validar_resultado_no_duplicado(conn, empresa: str, sede_id: Any, periodo: An
         (empresa, sede_id, periodo),
     )
     if cur.fetchone():
-        raise HuellaAguaError("Ya existe un resultado para la misma empresa, sede y período.")
+        raise HuellaAguaError("Ya existe un resultado para la misma empresa, sede y periodo.")
 
 
 def consolidar_resultado_sede(
@@ -250,14 +279,15 @@ def consolidar_resultado_sede(
     periodo: Any,
     medida_productiva: Any = None,
 ) -> dict[str, Any]:
-    captacion = calcular_captacion_total(flujos)
-    retorno = calcular_retornos_totales(flujos)
-    retorno_mismo = calcular_retornos_mismo_sistema(flujos)
-    reuso = calcular_reuso_interno(flujos)
+    flujos_lista = list(flujos)
+    captacion = calcular_captacion_total(flujos_lista)
+    retorno = calcular_retornos_totales(flujos_lista)
+    retorno_mismo = calcular_retornos_mismo_sistema(flujos_lista)
+    reuso = calcular_reuso_interno(flujos_lista)
     consumo = calcular_consumo_operativo_estimado(captacion, retorno_mismo, reuso)
     factor = seleccionar_factor_para_sede(factores, sede, periodo)
     huella = calcular_huella_escasez(consumo, factor) if factor else None
-    nivel = clasificar_resultado_huella(consumo, factor, datos_suficientes=bool(list(flujos)))
+    nivel = clasificar_resultado_huella(consumo, factor, datos_suficientes=bool(flujos_lista))
 
     intensidad = None
     intensidad_escasez = None
@@ -306,71 +336,100 @@ def construir_reporte_huella(
     for (sede_id, periodo_sel), grupo in grupos.items():
         sede = sedes_map.get(sede_id, {"id": sede_id, "nombre_sede": f"Sede {sede_id}"})
         consolidado = consolidar_resultado_sede(grupo, sede, factores, periodo_sel, medida_productiva)
-        resultados.append({
-            "Empresa": empresa,
-            "Sede": sede.get("nombre_sede"),
-            "Período": periodo_sel,
-            "Captación [m³]": consolidado["captacion_m3"],
-            "Retorno [m³]": consolidado["retorno_m3"],
-            "Retorno mismo sistema [m³]": consolidado["retorno_mismo_sistema_m3"],
-            "Reúso [m³]": consolidado["reuso_m3"],
-            "Consumo operativo [m³]": consolidado["consumo_operativo_m3"],
-            "Factor [m³-eq/m³]": consolidado["factor_escasez_aplicado"],
-            "Huella [m³-eq]": consolidado["huella_escasez_m3eq"],
-            "Nivel": consolidado["nivel_calculo"],
-            "Intensidad hídrica [m³/unidad]": consolidado["intensidad_hidrica"] if consolidado["intensidad_hidrica"] is not None else "No disponible",
-            "Intensidad de escasez [m³-eq/unidad]": consolidado["intensidad_escasez"] if consolidado["intensidad_escasez"] is not None else "No disponible",
-        })
+        resultados.append(
+            {
+                "Empresa": empresa,
+                "Sede": sede.get("nombre_sede"),
+                "Período": periodo_sel,
+                "Captación [m³]": consolidado["captacion_m3"],
+                "Retorno [m³]": consolidado["retorno_m3"],
+                "Retorno mismo sistema [m³]": consolidado["retorno_mismo_sistema_m3"],
+                "Reúso [m³]": consolidado["reuso_m3"],
+                "Consumo operativo [m³]": consolidado["consumo_operativo_m3"],
+                "Factor [m³-eq/m³]": consolidado["factor_escasez_aplicado"],
+                "Huella [m³-eq]": consolidado["huella_escasez_m3eq"],
+                "Nivel": consolidado["nivel_calculo"],
+                "Intensidad hídrica [m³/unidad]": consolidado["intensidad_hidrica"] if consolidado["intensidad_hidrica"] is not None else "No disponible",
+                "Intensidad de escasez [m³-eq/unidad]": consolidado["intensidad_escasez"] if consolidado["intensidad_escasez"] is not None else "No disponible",
+            }
+        )
 
     resumen = [
         {"Indicador": "Captación [m³]", "Unidad": "m³", "Valor": sum(float(r["Captación [m³]"] or 0) for r in resultados)},
         {"Indicador": "Retorno [m³]", "Unidad": "m³", "Valor": sum(float(r["Retorno [m³]"] or 0) for r in resultados)},
         {"Indicador": "Reúso [m³]", "Unidad": "m³", "Valor": sum(float(r["Reúso [m³]"] or 0) for r in resultados)},
         {"Indicador": "Consumo operativo estimado [m³]", "Unidad": "m³", "Valor": sum(float(r["Consumo operativo [m³]"] or 0) for r in resultados)},
-        {"Indicador": "Huella de escasez [m³-eq]", "Unidad": "m³-eq", "Valor": sum(float(r["Huella [m³-eq]"] or 0) for r in resultados if r["Huella [m³-eq]"] not in (None, "No disponible")) if any(r["Huella [m³-eq]"] not in (None, "No disponible") for r in resultados) else "No disponible"},
     ]
+    resultados_con_consumo = [r for r in resultados if float(r["Consumo operativo [m³]"] or 0) > 0]
+    huella_completa = bool(resultados_con_consumo) and all(
+        r["Huella [m³-eq]"] not in (None, "No disponible") for r in resultados_con_consumo
+    )
+    resumen.append(
+        {
+            "Indicador": "Huella de escasez [m³-eq]",
+            "Unidad": "m³-eq",
+            "Valor": sum(float(r["Huella [m³-eq]"] or 0) for r in resultados_con_consumo) if huella_completa else "No disponible",
+        }
+    )
 
     factores_aplicados = []
     for f in factores:
         parsed = validar_factor_escasez(f)
-        factores_aplicados.append({
-            "Método": parsed.metodo,
-            "Versión": parsed.version_metodo,
-            "Actividad": parsed.actividad,
-            "Nivel geográfico": parsed.nivel_geografico,
-            "Código geográfico": parsed.codigo_geografico,
-            "Factor [m³-eq/m³]": parsed.factor_m3eq_m3,
-            "Vigencia inicio": parsed.periodo_inicio,
-            "Vigencia fin": parsed.periodo_fin,
-            "Fuente": parsed.fuente,
-            "Referencia": parsed.referencia,
-            "Fecha de carga": parsed.fecha_carga,
-        })
+        factores_aplicados.append(
+            {
+                "Método": parsed.metodo,
+                "Versión": parsed.version_metodo,
+                "Actividad": parsed.actividad,
+                "Nivel geográfico": parsed.nivel_geografico,
+                "Código geográfico": parsed.codigo_geografico,
+                "Factor [m³-eq/m³]": parsed.factor_m3eq_m3,
+                "Vigencia inicio": parsed.periodo_inicio,
+                "Vigencia fin": parsed.periodo_fin,
+                "Fuente": parsed.fuente,
+                "Referencia": parsed.referencia,
+                "Fecha de carga": parsed.fecha_carga,
+            }
+        )
 
     cobertura = []
     for sede in sedes:
         has_data = any(f.get("sede_id") == sede.get("id") for f in flujos)
         factor = seleccionar_factor_para_sede(factores, sede, periodo)
-        cobertura.append({
-            "Empresa": empresa,
-            "Sede": sede.get("nombre_sede"),
-            "Ubicación": "Completa" if sede.get("codigo_cuenca") and sede.get("nombre_cuenca") and sede.get("region") and sede.get("comuna") else "Parcial" if sede.get("region") or sede.get("comuna") else "Pendiente",
-            "Factor disponible": "Sí" if factor else "No",
-            "Resultado": "Huella de escasez calculada" if factor and has_data else ("Solo inventario físico disponible" if has_data else "Datos insuficientes"),
-            "Calidad": generar_indicador_calidad_datos([f for f in flujos if f.get("sede_id") == sede.get("id")]) if has_data else "baja",
-        })
+        cobertura.append(
+            {
+                "Empresa": empresa,
+                "Sede": sede.get("nombre_sede"),
+                "Ubicación": "Completa"
+                if sede.get("codigo_cuenca") and sede.get("nombre_cuenca") and sede.get("region") and sede.get("comuna")
+                else "Parcial"
+                if sede.get("region") or sede.get("comuna")
+                else "Pendiente",
+                "Factor disponible": "Sí" if factor else "No",
+                "Resultado": "Huella de escasez calculada"
+                if factor and has_data
+                else ("Solo inventario físico disponible" if has_data else "Datos insuficientes"),
+                "Calidad": generar_indicador_calidad_datos([f for f in flujos if f.get("sede_id") == sede.get("id")]) if has_data else "baja",
+            }
+        )
 
     metodologia = [
         {"Sección": "Empresa", "Contenido": empresa},
         {"Sección": "Período", "Contenido": periodo or vista},
         {"Sección": "Sedes incluidas", "Contenido": ", ".join([s.get("nombre_sede") for s in sedes]) or "Sin sedes"},
-        {"Sección": "Fuentes de agua consideradas", "Contenido": ", ".join(sorted({f.get("fuente_agua") or "Sin fuente" for f in flujos if f.get("tipo_flujo") == "captacion"})) or "Sin fuentes"},
+        {
+            "Sección": "Fuentes de agua consideradas",
+            "Contenido": ", ".join(sorted({f.get("fuente_agua") or "Sin fuente" for f in flujos if f.get("tipo_flujo") == "captacion"}))
+            or "Sin fuentes",
+        },
         {"Sección": "Supuestos", "Contenido": "La huella de escasez solo se calcula cuando existe un factor válido configurado."},
         {"Sección": "Exclusiones", "Contenido": "Cadena de valor, agua indirecta y evaluación de calidad de agua."},
         {"Sección": "Calidad de datos", "Contenido": generar_indicador_calidad_datos(flujos) if flujos else "baja"},
         {"Sección": "Fecha de cálculo", "Contenido": "generada por el sistema"},
         {"Sección": "Versión del cálculo", "Contenido": SERVICE_VERSION},
-        {"Sección": "Mensaje obligatorio", "Contenido": "Este reporte presenta una estimación simplificada de huella hídrica para operaciones directas, alineada con principios de ISO 14046. No constituye una declaración de conformidad, certificación ISO 14046 ni una evaluación completa de ciclo de vida."},
+        {
+            "Sección": "Mensaje obligatorio",
+            "Contenido": "Este reporte presenta una estimación operacional simplificada basada en metodología Water Footprint para operaciones directas. No constituye una verificación externa ni una evaluación completa de ciclo de vida.",
+        },
     ]
 
     return {
@@ -385,8 +444,17 @@ def construir_reporte_huella(
                 "Intensidad de escasez [m³-eq/unidad]": r["Intensidad de escasez [m³-eq/unidad]"],
             }
             for r in resultados
-        ] or [{"Sede": "No disponible", "Período": "No disponible", "Intensidad hídrica [m³/unidad]": "No disponible", "Intensidad de escasez [m³-eq/unidad]": "No disponible"}],
+        ]
+        or [
+            {
+                "Sede": "No disponible",
+                "Período": "No disponible",
+                "Intensidad hídrica [m³/unidad]": "No disponible",
+                "Intensidad de escasez [m³-eq/unidad]": "No disponible",
+            }
+        ],
         "Factores de escasez aplicados": factores_aplicados or [{"Método": "No disponible"}],
-        "Cobertura y calidad de datos": cobertura or [{"Empresa": empresa, "Sede": "Sin sedes", "Ubicación": "Pendiente", "Factor disponible": "No", "Resultado": "Datos insuficientes", "Calidad": "baja"}],
+        "Cobertura y calidad de datos": cobertura
+        or [{"Empresa": empresa, "Sede": "Sin sedes", "Ubicación": "Pendiente", "Factor disponible": "No", "Resultado": "Datos insuficientes", "Calidad": "baja"}],
         "Metodología y supuestos": metodologia,
     }

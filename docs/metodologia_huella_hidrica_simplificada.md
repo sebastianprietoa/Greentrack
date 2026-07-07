@@ -1,4 +1,4 @@
-# Metodología Huella Hídrica Simplificada
+# Metodología Water Footprint
 
 ## Propósito
 
@@ -39,5 +39,4 @@ Si no existe factor válido, el sistema muestra solo los indicadores físicos en
 
 ## Mensaje obligatorio
 
-Este reporte presenta una estimación simplificada de huella hídrica para operaciones directas, alineada con principios de ISO 14046. No constituye una declaración de conformidad, certificación ISO 14046 ni una evaluación completa de ciclo de vida.
-
+Este reporte presenta una estimación operacional simplificada basada en metodología Water Footprint para operaciones directas. No constituye una verificación externa ni una evaluación completa de ciclo de vida.

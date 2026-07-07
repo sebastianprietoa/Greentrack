@@ -1,26 +1,20 @@
 {% extends "base.html" %}
-{% block title %}Registrar datos de agua - GreenTrack{% endblock %}
+{% block title %}Registrar datos - Water Footprint{% endblock %}
 {% block content %}
 <div style="max-width: 1100px; margin: 0 auto; padding: 2rem;">
     <div style="margin-bottom: 1.5rem;">
-        <h1 style="color: #EAF2FF; margin: 0 0 0.4rem 0; font-size: 2.1rem;">Registrar datos de agua</h1>
+        <h1 style="color: #EAF2FF; margin: 0 0 0.4rem 0; font-size: 2.1rem;">Registrar captación de agua</h1>
         <p style="color: #AAB7C6; margin: 0; line-height: 1.6;">
-            Captación mensual de agua para la metodología simplificada alineada con principios de ISO 14046.
+            Registra entradas mensuales de agua en m³ para el inventario físico del Water Footprint.
         </p>
-        {% if sede_predeterminada %}
-            <div style="margin-top: 0.9rem; padding: 0.8rem 1rem; border-radius: 10px; background: rgba(74,160,230,0.12); border: 1px solid rgba(74,160,230,0.35); color: #D7E9FF; font-size: 0.95rem;">
-                La sede se asigna automáticamente desde la configuración activa: <strong>{{ sede_predeterminada.nombre_sede }}</strong>.
-            </div>
-        {% else %}
-            <div style="margin-top: 0.9rem; padding: 0.8rem 1rem; border-radius: 10px; background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.35); color: #FECACA; font-size: 0.95rem;">
-                No hay una sede activa configurada. Crea o activa una sede para poder registrar agua.
-            </div>
-        {% endif %}
+        <div style="margin-top: 0.9rem; padding: 0.8rem 1rem; border-radius: 10px; background: rgba(74,160,230,0.12); border: 1px solid rgba(74,160,230,0.35); color: #D7E9FF; font-size: 0.95rem;">
+            La sede activa se asigna automáticamente. Este formulario guarda indicadores físicos en m³ y alimenta el cálculo de consumo operativo.
+        </div>
     </div>
 
     <form method="POST" style="background: #121212; border: 1px solid rgba(255,255,255,0.08); padding: 1.6rem; border-radius: 18px; box-shadow: 0 10px 30px rgba(0,0,0,0.28);">
         <input type="hidden" name="sede_id" value="{{ sede_predeterminada.id if sede_predeterminada else '' }}">
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 1rem 1.1rem;">
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap:1rem 1.1rem;">
             <div>
                 <label style="display:block; margin-bottom: .45rem; color:#E5EEF8; font-weight:600;">Mes / período</label>
                 <input type="month" name="periodo" required style="width:100%; background:#2A2A2A; color:#fff; border:1px solid rgba(255,255,255,.14); padding:12px 14px; border-radius:10px;">
@@ -57,7 +51,7 @@
             </div>
         </div>
         <div style="margin-top: 1.2rem; display:flex; justify-content:flex-end;">
-            <button type="submit" style="background:#4AA0E6; color:white; border:none; padding:12px 18px; border-radius:10px; font-weight:700; box-shadow:0 10px 20px rgba(74,160,230,.25);">Guardar registro de agua</button>
+            <button type="submit" style="background:#4AA0E6; color:white; border:none; padding:12px 18px; border-radius:10px; font-weight:700; box-shadow:0 10px 20px rgba(74,160,230,.25);">Guardar captación de agua</button>
         </div>
     </form>
 </div>

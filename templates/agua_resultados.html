@@ -1,11 +1,11 @@
 {% extends "base.html" %}
-{% block title %}Resultados - Huella Hídrica{% endblock %}
+{% block title %}Resultados - Water Footprint{% endblock %}
 {% block content %}
 <div style="max-width:1200px; margin:0 auto;">
     <div style="display:flex; justify-content:space-between; gap:1rem; align-items:center; flex-wrap:wrap;">
         <div>
             <h1 style="margin:0;">Resultados</h1>
-            <p style="color:#6B7280;">Resultados mensuales y anuales en m³ y m³-eq.</p>
+            <p style="color:#6B7280;">Resultados mensuales y anuales separados en indicadores físicos [m³] y caracterizados [m³-eq].</p>
         </div>
         <a href="{{ url_for('agua_resultados_descargar', periodo=periodo or '') }}" style="background:#4AA0E6; color:white; padding:10px 14px; border-radius:8px; text-decoration:none; font-weight:700;">Descargar Excel</a>
     </div>
@@ -15,7 +15,20 @@
     </div>
     <div style="background:white; padding:1rem; border-radius:12px; box-shadow:0 4px 16px rgba(0,0,0,0.06); margin-top:1rem; overflow-x:auto;">
         <table style="width:100%; border-collapse:collapse;">
-            <thead><tr style="background:#F9FAFB;"><th style="padding:10px;">Sede</th><th style="padding:10px;">Período</th><th style="padding:10px;">Captación</th><th style="padding:10px;">Retorno</th><th style="padding:10px;">Retorno mismo sistema</th><th style="padding:10px;">Reúso</th><th style="padding:10px;">Consumo operativo</th><th style="padding:10px;">Factor</th><th style="padding:10px;">Huella</th><th style="padding:10px;">Nivel</th></tr></thead>
+            <thead>
+                <tr style="background:#F9FAFB;">
+                    <th style="padding:10px;">Sede</th>
+                    <th style="padding:10px;">Período</th>
+                    <th style="padding:10px;">Captación [m³]</th>
+                    <th style="padding:10px;">Retorno [m³]</th>
+                    <th style="padding:10px;">Retorno mismo sistema [m³]</th>
+                    <th style="padding:10px;">Reúso [m³]</th>
+                    <th style="padding:10px;">Consumo operativo [m³]</th>
+                    <th style="padding:10px;">Factor [m³-eq/m³]</th>
+                    <th style="padding:10px;">Huella [m³-eq]</th>
+                    <th style="padding:10px;">Nivel</th>
+                </tr>
+            </thead>
             <tbody>
                 {% for r in resultados %}
                 <tr style="border-bottom:1px solid #E5E7EB;">
