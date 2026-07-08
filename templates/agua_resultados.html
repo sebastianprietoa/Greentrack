@@ -1,32 +1,35 @@
 {% extends "base.html" %}
-{% block title %}Resultados - Water Footprint{% endblock %}
+{% block title %}Registros - Huella Hidrica{% endblock %}
 {% block content %}
 <div style="max-width:1200px; margin:0 auto;">
     <div style="display:flex; justify-content:space-between; gap:1rem; align-items:center; flex-wrap:wrap;">
         <div>
-            <h1 style="margin:0;">Resultados</h1>
-            <p style="color:#6B7280;">Resultados mensuales y anuales separados en indicadores físicos [m³] y caracterizados [m³-eq].</p>
+            <h1 style="margin:0;">Registros</h1>
+            <p style="color:#6B7280;">Registros mensuales y anuales separados en indicadores fisicos [m&sup3;] y caracterizados [m&sup3;-eq].</p>
         </div>
         <a href="{{ url_for('agua_resultados_descargar', periodo=periodo or '') }}" style="background:#4AA0E6; color:white; padding:10px 14px; border-radius:8px; text-decoration:none; font-weight:700;">Descargar Excel</a>
     </div>
+
     <div style="display:flex; gap:8px; margin-top:1rem; flex-wrap:wrap;">
         <a href="{{ url_for('agua_resultados', vista='mensual', periodo=periodo or '') }}" style="padding:8px 12px; border-radius:8px; text-decoration:none; border:1px solid #D1D5DB; background: {{ '#E0F2FE' if request.args.get('vista','mensual')=='mensual' else 'white' }};">Mensual</a>
         <a href="{{ url_for('agua_resultados', vista='anual', periodo=periodo or '') }}" style="padding:8px 12px; border-radius:8px; text-decoration:none; border:1px solid #D1D5DB; background: {{ '#E0F2FE' if request.args.get('vista')=='anual' else 'white' }};">Anual</a>
     </div>
+
     <div style="background:white; padding:1rem; border-radius:12px; box-shadow:0 4px 16px rgba(0,0,0,0.06); margin-top:1rem; overflow-x:auto;">
         <table style="width:100%; border-collapse:collapse;">
             <thead>
                 <tr style="background:#F9FAFB;">
                     <th style="padding:10px;">Sede</th>
-                    <th style="padding:10px;">Período</th>
-                    <th style="padding:10px;">Captación [m³]</th>
-                    <th style="padding:10px;">Retorno [m³]</th>
-                    <th style="padding:10px;">Retorno mismo sistema [m³]</th>
-                    <th style="padding:10px;">Reúso [m³]</th>
-                    <th style="padding:10px;">Consumo operativo [m³]</th>
-                    <th style="padding:10px;">Factor [m³-eq/m³]</th>
-                    <th style="padding:10px;">Huella [m³-eq]</th>
+                    <th style="padding:10px;">Periodo</th>
+                    <th style="padding:10px;">Captacion [m&sup3;]</th>
+                    <th style="padding:10px;">Retorno [m&sup3;]</th>
+                    <th style="padding:10px;">Retorno mismo sistema [m&sup3;]</th>
+                    <th style="padding:10px;">Reuso [m&sup3;]</th>
+                    <th style="padding:10px;">Consumo operativo [m&sup3;]</th>
+                    <th style="padding:10px;">Factor [m&sup3;-eq/m&sup3;]</th>
+                    <th style="padding:10px;">Huella [m&sup3;-eq]</th>
                     <th style="padding:10px;">Nivel</th>
+                    <th style="padding:10px; text-align:center;">Acciones</th>
                 </tr>
             </thead>
             <tbody>
@@ -34,20 +37,32 @@
                 <tr style="border-bottom:1px solid #E5E7EB;">
                     <td style="padding:10px;">{{ r.nombre_sede }}</td>
                     <td style="padding:10px;">{{ r.periodo }}</td>
-                    <td style="padding:10px;">{{ r.captacion_m3 }} m³</td>
-                    <td style="padding:10px;">{{ r.retorno_m3 }} m³</td>
-                    <td style="padding:10px;">{{ r.retorno_mismo_sistema_m3 }} m³</td>
-                    <td style="padding:10px;">{{ r.reuso_m3 }} m³</td>
-                    <td style="padding:10px;">{{ r.consumo_operativo_m3 }} m³</td>
+                    <td style="padding:10px;">{{ r.captacion_m3 }} m&sup3;</td>
+                    <td style="padding:10px;">{{ r.retorno_m3 }} m&sup3;</td>
+                    <td style="padding:10px;">{{ r.retorno_mismo_sistema_m3 }} m&sup3;</td>
+                    <td style="padding:10px;">{{ r.reuso_m3 }} m&sup3;</td>
+                    <td style="padding:10px;">{{ r.consumo_operativo_m3 }} m&sup3;</td>
                     <td style="padding:10px;">{{ r.factor_escasez_aplicado if r.factor_escasez_aplicado is not none else 'No disponible' }}</td>
                     <td style="padding:10px;">{{ r.huella_escasez_m3eq if r.huella_escasez_m3eq is not none else 'No disponible' }}</td>
                     <td style="padding:10px;">{{ r.nivel_calculo }}</td>
+                    <td style="padding:10px; text-align:center;">
+                        <form method="POST" action="{{ url_for('agua_eliminar_registros') }}" style="margin:0; display:inline;">
+                            <input type="hidden" name="sede_id" value="{{ r.sede_id if r.sede_id is not none else '' }}">
+                            <input type="hidden" name="periodo" value="{{ r.periodo }}">
+                            <input type="hidden" name="vista" value="{{ vista or request.args.get('vista','mensual') }}">
+                            <button type="submit"
+                                    onclick="return confirm('Eliminar los registros de agua de {{ r.nombre_sede }} para el periodo {{ r.periodo }}? Esta accion no se puede deshacer.')"
+                                    style="background:#FEE2E2; color:#991B1B; border:1px solid #FCA5A5; padding:7px 10px; border-radius:8px; font-weight:700; cursor:pointer;">
+                                <i class="fas fa-trash"></i> Eliminar
+                            </button>
+                        </form>
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
         {% if not resultados %}
-        <div style="padding:2rem; color:#6B7280; text-align:center;">No hay resultados aún.</div>
+        <div style="padding:2rem; color:#6B7280; text-align:center;">No hay registros aun.</div>
         {% endif %}
     </div>
 </div>

@@ -1,120 +1,269 @@
 {% extends "base.html" %}
-{% block title %}Water Footprint - GreenTrack{% endblock %}
+{% block title %}Huella Hidrica - GreenTrack{% endblock %}
 
 {% block content %}
-<div style="max-width: 1280px; margin: 0 auto;">
-    <div style="display:flex; justify-content:space-between; gap:1rem; flex-wrap:wrap; align-items:flex-end; margin-bottom:1.2rem;">
-        <div>
-            <h1 style="margin:0; color:#111827;">Water Footprint</h1>
-            <p style="margin:6px 0 0 0; color:#6B7280;">Metodología Water Footprint para operaciones directas. Los resultados físicos se muestran en m³ y los caracterizados por escasez en m³-eq.</p>
-        </div>
-        <div style="display:flex; gap:8px; flex-wrap:wrap;">
-            <a href="{{ url_for('agua_dashboard') }}" class="menu-link" style="background: {{ '#E0F2FE' if menu_activo=='resumen' else 'white' }};">Resumen</a>
-            <a href="{{ url_for('registro', tab='agua') }}" class="menu-link" style="background: {{ '#E0F2FE' if menu_activo=='registrar' else 'white' }};">Registrar datos</a>
-            <a href="{{ url_for('agua_retorno_reuso') }}" class="menu-link" style="background: {{ '#E0F2FE' if menu_activo=='retornos' else 'white' }};">Retornos y reúso</a>
-            <a href="{{ url_for('agua_resultados') }}" class="menu-link" style="background: {{ '#E0F2FE' if menu_activo=='resultados' else 'white' }};">Resultados</a>
-            <a href="{{ url_for('agua_metodologia') }}" class="menu-link" style="background: {{ '#E0F2FE' if menu_activo=='metodologia' else 'white' }};">Metodología</a>
-        </div>
-    </div>
+{% set huella_azul = consumo or 0 %}
+{% set huella_verde = 0 %}
+{% set huella_suministro = huella_suministro_total or 0 %}
+{% set huella_total = huella_azul + huella_verde + huella_suministro %}
+{% set cobertura_pct = ((periodos_inventario_completo / periodos_con_datos * 100) if periodos_con_datos else 0) %}
 
-    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:1rem; margin-bottom:1rem;">
-        <div style="background:white; padding:1rem; border-radius:12px; border-top:4px solid #4AA0E6;">
-            <div style="font-size:0.75rem; color:#9CA3AF; font-weight:700;">Captación total</div>
-            <div style="font-size:1.8rem; font-weight:700;">{{ (captacion_total or 0) | formato_entero_cl }} m³</div>
-        </div>
-        <div style="background:white; padding:1rem; border-radius:12px; border-top:4px solid #10B981;">
-            <div style="font-size:0.75rem; color:#9CA3AF; font-weight:700;">Huella azul fisica</div>
-            <div style="font-size:1.8rem; font-weight:700;">{{ (consumo or 0) | formato_entero_cl }} m³</div>
-            <div style="font-size:0.78rem; color:#6B7280; margin-top:6px;">Captacion - retorno al mismo sistema</div>
-        </div>
-        <div style="background:white; padding:1rem; border-radius:12px; border-top:4px solid #38BDF8;">
-            <div style="font-size:0.75rem; color:#9CA3AF; font-weight:700;">Retorno total</div>
-            <div style="font-size:1.8rem; font-weight:700;">{{ (retornos_totales or 0) | formato_entero_cl }} m³</div>
-        </div>
-        <div style="background:white; padding:1rem; border-radius:12px; border-top:4px solid #0EA5E9;">
-            <div style="font-size:0.75rem; color:#9CA3AF; font-weight:700;">Retorno mismo sistema</div>
-            <div style="font-size:1.8rem; font-weight:700;">{{ (retorno_mismo or 0) | formato_entero_cl }} m³</div>
-        </div>
-        <div style="background:white; padding:1rem; border-radius:12px; border-top:4px solid #F59E0B;">
-            <div style="font-size:0.75rem; color:#9CA3AF; font-weight:700;">Agua reutilizada</div>
-            <div style="font-size:1.8rem; font-weight:700;">{{ (reuso or 0) | formato_entero_cl }} m³</div>
-        </div>
-        <div style="background:white; padding:1rem; border-radius:12px; border-top:4px solid #6366F1;">
-            <div style="font-size:0.75rem; color:#9CA3AF; font-weight:700;">Tasa de reúso</div>
-            <div style="font-size:1.8rem; font-weight:700;">{{ ((reuso / captacion_total * 100) if captacion_total else 0) | formato_entero_cl }}%</div>
-        </div>
-        <div style="background:white; padding:1rem; border-radius:12px; border-top:4px solid #EF4444;">
-            <div style="font-size:0.75rem; color:#9CA3AF; font-weight:700;">Huella de escasez</div>
-            <div style="font-size:1.8rem; font-weight:700;">{% if huella is not none %}{{ huella | formato_entero_cl }} m³-eq{% else %}No disponible{% endif %}</div>
-        </div>
-        <div style="background:white; padding:1rem; border-radius:12px; border-top:4px solid #14B8A6;">
-            <div style="font-size:0.75rem; color:#9CA3AF; font-weight:700;">Intensidad hídrica</div>
-            <div style="font-size:1.8rem; font-weight:700;">{% if intensidad_hidrica is not none %}{{ intensidad_hidrica | formato_entero_cl }} m³/unidad{% else %}No disponible{% endif %}</div>
-        </div>
-        <div style="background:white; padding:1rem; border-radius:12px; border-top:4px solid #0F766E;">
-            <div style="font-size:0.75rem; color:#9CA3AF; font-weight:700;">Intensidad de escasez</div>
-            <div style="font-size:1.8rem; font-weight:700;">{% if intensidad_escasez is not none %}{{ intensidad_escasez | formato_entero_cl }} m³-eq/unidad{% else %}No disponible{% endif %}</div>
-        </div>
-    </div>
+<link rel="stylesheet" href="{{ url_for('static', filename='agua_dashboard.css') }}">
 
-    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:1rem; margin-bottom:1rem;">
-        <div style="background:white; padding:1rem; border-radius:12px;"><h3>Tendencia mensual [m³]</h3><canvas id="chartTendencia" height="160"></canvas></div>
-        <div style="background:white; padding:1rem; border-radius:12px;"><h3>Captación por fuente [m³]</h3><canvas id="chartFuente" height="160"></canvas></div>
-        <div style="background:white; padding:1rem; border-radius:12px;"><h3>Huella azul fisica por empresa [m³]</h3><canvas id="chartSede" height="160"></canvas></div>
-        <div style="background:white; padding:1rem; border-radius:12px;"><h3>Estado de cobertura</h3>
-            <div style="display:flex; gap:1rem; align-items:center;">
-                <div><strong>{{ periodos_con_datos }}</strong> meses con datos</div>
-                <div><strong>{{ periodos_inventario_completo }}</strong> meses con captación y retorno</div>
+<div class="wf-shell">
+    <header class="wf-hero">
+        <div class="wf-title">
+            <div class="wf-title-icon"><i class="fa-solid fa-umbrella"></i></div>
+            <div class="wf-title-copy">
+                <h1>Huella Hidrica</h1>
+                <p>Metodologia Water Footprint para operaciones directas y suministro energetico. Los resultados se muestran en <strong>m&sup3;</strong>.</p>
             </div>
-            <canvas id="chartCobertura" height="160" style="margin-top:12px;"></canvas>
         </div>
-        {% if huella is not none %}
-        <div style="background:white; padding:1rem; border-radius:12px; grid-column: 1 / -1;"><h3>Huella de escasez por sede [m³-eq]</h3><canvas id="chartEscasez" height="110"></canvas></div>
-        {% endif %}
-    </div>
+        <div class="wf-actions">
+            <form method="GET" action="{{ url_for('agua_dashboard') }}" style="margin:0;">
+                <label class="wf-action" style="padding:0; overflow:hidden;">
+                    <span style="display:inline-flex; align-items:center; gap:8px; padding:10px 14px;">
+                        <i class="fa-regular fa-calendar"></i>
+                    </span>
+                    <select name="periodo" onchange="this.form.submit()" style="background:transparent; border:none; color:inherit; font:inherit; font-weight:700; outline:none; cursor:pointer; padding:10px 14px 10px 0;">
+                        <option value="" {% if not periodo %}selected{% endif %}>Todos los periodos</option>
+                        {% for p in periodos_disponibles %}
+                        <option value="{{ p }}" {% if periodo == p %}selected{% endif %}>{{ p }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+            </form>
+            <a class="wf-action" href="{{ url_for('exportar') }}"><i class="fa-solid fa-arrow-up-from-bracket"></i> Exportar</a>
+        </div>
+    </header>
 
-    <div style="background:white; padding:1rem; border-radius:12px;">
-        <h3>Acceso histórico</h3>
-        <p style="color:#6B7280;">El formulario histórico de agua sigue disponible como submódulo secundario para evaluación de calidad de efluentes y trazabilidad histórica.</p>
-        <a href="{{ url_for('agua_registro') }}" style="color:#4AA0E6; font-weight:700;">Abrir formulario histórico</a>
-    </div>
+    <nav class="wf-tabs" aria-label="Navegacion Huella Hidrica">
+        <a class="wf-tab active" href="{{ url_for('agua_dashboard') }}">Resumen</a>
+        <a class="wf-tab" href="{{ url_for('registro', tab='agua') }}">Registrar datos</a>
+        <a class="wf-tab" href="{{ url_for('agua_retorno_reuso') }}">Retornos y reuso</a>
+        <a class="wf-tab" href="{{ url_for('agua_resultados') }}">Registros</a>
+        <a class="wf-tab" href="{{ url_for('agua_metodologia') }}">Metodologia</a>
+    </nav>
+
+    <section class="wf-kpi-grid" aria-label="Indicadores Water Footprint">
+        <article class="wf-card wf-kpi wf-accent-blue">
+            <div class="wf-kpi-icon"><i class="fa-solid fa-droplet"></i></div>
+            <div class="wf-kpi-body">
+                <div class="wf-label">Captacion total</div>
+                <div class="wf-value">{{ (captacion_total or 0) | formato_entero_cl }} m&sup3;</div>
+            </div>
+        </article>
+        <article class="wf-card wf-kpi wf-accent-sky">
+            <div class="wf-kpi-icon"><i class="fa-solid fa-arrows-rotate"></i></div>
+            <div class="wf-kpi-body">
+                <div class="wf-label">Retorno total</div>
+                <div class="wf-value">{{ (retornos_totales or 0) | formato_entero_cl }} m&sup3;</div>
+            </div>
+        </article>
+        <article class="wf-card wf-kpi wf-accent-teal">
+            <div class="wf-kpi-icon"><i class="fa-solid fa-recycle"></i></div>
+            <div class="wf-kpi-body">
+                <div class="wf-label">Retorno mismo sistema</div>
+                <div class="wf-value">{{ (retorno_mismo or 0) | formato_entero_cl }} m&sup3;</div>
+            </div>
+        </article>
+        <article class="wf-card wf-kpi wf-accent-teal">
+            <div class="wf-kpi-icon"><i class="fa-solid fa-droplet-slash"></i></div>
+            <div class="wf-kpi-body">
+                <div class="wf-label">Agua reutilizada</div>
+                <div class="wf-value">{{ (reuso or 0) | formato_entero_cl }} m&sup3;</div>
+            </div>
+        </article>
+        <article class="wf-card wf-kpi wf-accent-purple">
+            <div class="wf-kpi-icon"><i class="fa-solid fa-percent"></i></div>
+            <div class="wf-kpi-body">
+                <div class="wf-label">Tasa de reuso</div>
+                <div class="wf-value">{{ ((reuso / captacion_total * 100) if captacion_total else 0) | formato_entero_cl }}%</div>
+            </div>
+        </article>
+        <article class="wf-card wf-kpi wf-accent-blue">
+            <div class="wf-kpi-icon"><i class="fa-regular fa-droplet"></i></div>
+            <div class="wf-kpi-body">
+                <div class="wf-label">Huella azul directa</div>
+                <div class="wf-value">{{ huella_azul | formato_entero_cl }} m&sup3;</div>
+                <div class="wf-note">Captacion - retorno al mismo sistema</div>
+            </div>
+        </article>
+        <article class="wf-card wf-kpi wf-accent-green">
+            <div class="wf-kpi-icon"><i class="fa-solid fa-leaf"></i></div>
+            <div class="wf-kpi-body">
+                <div class="wf-label">Huella verde directa</div>
+                <div class="wf-value">No aplicable</div>
+            </div>
+        </article>
+        <article class="wf-card wf-kpi wf-accent-violet">
+            <div class="wf-kpi-icon"><i class="fa-solid fa-bolt"></i></div>
+            <div class="wf-kpi-body">
+                <div class="wf-label">Suministro energetico</div>
+                <div class="wf-value">{{ huella_suministro | formato_entero_cl }} m&sup3;</div>
+                <div class="wf-note">Electricidad y combustibles registrados</div>
+            </div>
+        </article>
+        <article class="wf-card wf-kpi wf-accent-blue">
+            <div class="wf-kpi-icon"><i class="fa-solid fa-water"></i></div>
+            <div class="wf-kpi-body">
+                <div class="wf-label">Huella hidrica total</div>
+                <div class="wf-value">{{ huella_total | formato_entero_cl }} m&sup3;</div>
+            </div>
+        </article>
+        <article class="wf-card wf-kpi wf-accent-orange">
+            <div class="wf-kpi-icon"><i class="fa-solid fa-gauge-high"></i></div>
+            <div class="wf-kpi-body">
+                <div class="wf-label">Intensidad hidrica operativa</div>
+                <div class="wf-value">{% if intensidad_hidrica is not none %}{{ intensidad_hidrica | formato_cl }}{% else %}No disponible{% endif %}</div>
+            </div>
+        </article>
+        <article class="wf-card wf-kpi wf-accent-blue">
+            <div class="wf-kpi-icon"><i class="fa-solid fa-gauge-high"></i></div>
+            <div class="wf-kpi-body">
+                <div class="wf-label">Intensidad hidrica total</div>
+                <div class="wf-value">{% if intensidad_hidrica_total is not none %}{{ intensidad_hidrica_total | formato_cl }}{% else %}No disponible{% endif %}</div>
+                <div class="wf-note">Azul + verde + suministro / unidad</div>
+            </div>
+        </article>
+        <article class="wf-card wf-kpi wf-accent-teal">
+            <div class="wf-kpi-icon"><i class="fa-solid fa-shield-halved"></i></div>
+            <div class="wf-kpi-body">
+                <div class="wf-label">Cobertura de datos</div>
+                <div class="wf-value">{{ cobertura_pct | formato_entero_cl }}%</div>
+            </div>
+        </article>
+    </section>
+
+    <section class="wf-chart-grid" aria-label="Graficos Water Footprint">
+        <article class="wf-card wf-panel wf-chart-trend">
+            <h3><i class="fa-solid fa-arrow-trend-up"></i> Tendencia mensual [m&sup3;]</h3>
+            <div class="wf-chart-box"><canvas id="chartTendencia"></canvas></div>
+        </article>
+        <article class="wf-card wf-panel wf-chart-source">
+            <h3>Captacion por fuente [m&sup3;]</h3>
+            <div class="wf-chart-box"><canvas id="chartFuente"></canvas></div>
+        </article>
+        <article class="wf-card wf-panel wf-chart-composition">
+            <h3>Composicion de huella hidrica [m&sup3;] <i class="fa-regular fa-circle-question wf-title-help"></i></h3>
+            <div class="wf-composition">
+                <div class="wf-chart-box wf-chart-box-donut"><canvas id="chartComposicion"></canvas></div>
+                <div class="wf-legend">
+                    <div><span class="wf-dot wf-dot-blue"></span>Huella azul directa<br><strong>{{ huella_azul | formato_entero_cl }} m&sup3;</strong></div>
+                    <div><span class="wf-dot wf-dot-green"></span>Huella verde directa<br><strong>{{ huella_verde | formato_entero_cl }} m&sup3;</strong> - No aplicable</div>
+                    <div><span class="wf-dot wf-dot-violet"></span>Suministro energetico<br><strong>{{ huella_suministro | formato_entero_cl }} m&sup3;</strong></div>
+                </div>
+            </div>
+        </article>
+        <article class="wf-card wf-panel wf-chart-supply">
+            <h3>Huella de suministro [m&sup3;]</h3>
+            <div class="wf-chart-box"><canvas id="chartSuministro"></canvas></div>
+        </article>
+    </section>
+
+    <section class="wf-bottom-grid">
+        <article class="wf-card wf-panel wf-coverage">
+            <div class="wf-coverage-chart">
+                <h3>Estado de cobertura</h3>
+                <div class="wf-chart-box wf-chart-box-small"><canvas id="chartCobertura"></canvas></div>
+            </div>
+            <div class="wf-legend wf-coverage-copy">
+                <div><span class="wf-dot wf-dot-blue"></span><strong>{{ periodos_con_datos }}</strong> meses con datos<br><span class="wf-note">Contiene captacion, retorno o suministro</span></div>
+                <div><span class="wf-dot wf-dot-teal"></span><strong>{{ periodos_inventario_completo }}</strong> meses con captacion y retorno<br><span class="wf-note">Contiene captacion y retorno al mismo sistema</span></div>
+            </div>
+            <i class="fa-regular fa-calendar-days wf-watermark-icon"></i>
+        </article>
+
+        <article class="wf-card wf-panel wf-history">
+            <div class="wf-history-icon"><i class="fa-solid fa-clock-rotate-left"></i></div>
+            <div class="wf-history-copy">
+                <h3>Acceso historico</h3>
+                <p class="wf-note">El historico de agua sigue disponible como submodulo secundario para evaluacion de calidad de efluentes y trazabilidad historica.</p>
+            </div>
+            <a class="wf-button" href="{{ url_for('agua_registro') }}">Ir al historico <i class="fa-solid fa-arrow-right"></i></a>
+        </article>
+    </section>
 </div>
 
 <script>
 const tendencia = {{ tendencia | tojson }};
 const fuentes = {{ por_fuente | tojson }};
-const porSede = {{ por_sede | tojson }};
-const cobertura = {{ cobertura | tojson }};
+const suministro = {{ suministro_por_fuente | tojson }};
+const huellaAzul = {{ huella_azul | float }};
+const huellaVerde = {{ huella_verde | float }};
+const huellaSuministro = {{ huella_suministro | float }};
+const periodosConDatos = {{ periodos_con_datos or 0 }};
+const periodosCompletos = {{ periodos_inventario_completo or 0 }};
 
-function makeChart(config) {
-    const el = document.getElementById(config.id);
-    if (!el || typeof Chart === 'undefined') return;
-    new Chart(el, config.chart);
+function formatMonth(label) {
+    const months = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+    const parts = String(label).split('-');
+    if (parts.length < 2) return label;
+    const idx = Math.max(0, Math.min(11, Number(parts[1]) - 1));
+    return `${months[idx]}-${String(parts[0]).slice(-2)}`;
 }
 
-makeChart({
-    id: 'chartTendencia',
-    chart: {
-        type: 'line',
-        data: {
-            labels: Object.keys(tendencia),
-            datasets: [
-                {label: 'Captación', data: Object.values(tendencia).map(v => v.captacion), borderColor:'#4AA0E6', backgroundColor:'rgba(74,160,230,0.1)', tension:0.35},
-                {label: 'Huella azul fisica', data: Object.values(tendencia).map(v => v.captacion - v.retorno), borderColor:'#10B981', backgroundColor:'rgba(16,185,129,0.1)', tension:0.35},
-                {label: 'Retorno mismo sistema', data: Object.values(tendencia).map(v => v.retorno), borderColor:'#38BDF8', backgroundColor:'rgba(56,189,248,0.1)', tension:0.35},
-                {label: 'Reúso', data: Object.values(tendencia).map(v => v.reuso), borderColor:'#F59E0B', backgroundColor:'rgba(245,158,11,0.1)', tension:0.35}
-            ]
-        },
-        options: {responsive:true, scales:{y:{beginAtZero:true}}}
-    }
+function chartOptions() {
+    return {
+        responsive: true,
+        maintainAspectRatio: false,
+        resizeDelay: 120,
+        plugins: { legend: { labels: { usePointStyle: true, boxWidth: 8, color: '#42526E' } } },
+        scales: {
+            x: { grid: { display: false }, ticks: { color: '#5F6F86', maxRotation: 0, autoSkip: true } },
+            y: { beginAtZero: true, grid: { color: '#E7EDF5' }, ticks: { color: '#5F6F86' } }
+        }
+    };
+}
+
+function makeChart(id, config) {
+    const el = document.getElementById(id);
+    if (!el || typeof Chart === 'undefined') return;
+    new Chart(el, config);
+}
+
+const trendLabels = Object.keys(tendencia);
+makeChart('chartTendencia', {
+    type: 'line',
+    data: {
+        labels: trendLabels.map(formatMonth),
+        datasets: [
+            {label: 'Captacion', data: trendLabels.map(k => tendencia[k].captacion || 0), borderColor:'#2487F3', backgroundColor:'#2487F3', tension:0.35, pointRadius:4},
+            {label: 'Huella azul directa', data: trendLabels.map(k => (tendencia[k].captacion || 0) - (tendencia[k].retorno || 0)), borderColor:'#17C7C0', backgroundColor:'#17C7C0', tension:0.35, pointRadius:4},
+            {label: 'Retorno mismo sistema', data: trendLabels.map(k => tendencia[k].retorno || 0), borderColor:'#22C55E', backgroundColor:'#22C55E', tension:0.35, pointRadius:4}
+        ]
+    },
+    options: chartOptions()
 });
-makeChart({id:'chartFuente', chart:{type:'bar', data:{labels:Object.keys(fuentes), datasets:[{data:Object.values(fuentes), backgroundColor:'#10B981'}]}, options:{responsive:true, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}}}}});
-makeChart({id:'chartSede', chart:{type:'bar', data:{labels:Object.keys(porSede), datasets:[{data:Object.values(porSede).map(v => v.captacion - v.retorno), backgroundColor:'#6366F1'}]}, options:{responsive:true, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}}}}});
-makeChart({id:'chartCobertura', chart:{type:'doughnut', data:{labels:['Meses con captación y retorno','Meses solo parciales'], datasets:[{data:[{{ periodos_inventario_completo }}, {{ periodos_con_datos - periodos_inventario_completo }}], backgroundColor:['#10B981','#E5E7EB']}]}, options:{responsive:true}}});
-{% if huella is not none %}
-const escasezLabels = cobertura.filter(c => c.huella_escasez !== null).map(c => c.sede.nombre_sede);
-const escasezValues = cobertura.filter(c => c.huella_escasez !== null).map(c => c.huella_escasez);
-makeChart({id:'chartEscasez', chart:{type:'bar', data:{labels:escasezLabels, datasets:[{data:escasezValues, backgroundColor:'#EF4444'}]}, options:{responsive:true, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}}}}});
-{% endif %}
+
+makeChart('chartFuente', {
+    type: 'bar',
+    data: { labels: Object.keys(fuentes), datasets: [{ data: Object.values(fuentes), backgroundColor:'#2487F3', borderRadius:5 }] },
+    options: {...chartOptions(), plugins:{legend:{display:false}}}
+});
+
+makeChart('chartComposicion', {
+    type: 'doughnut',
+    data: {
+        labels: ['Huella azul directa', 'Huella verde directa', 'Suministro energetico'],
+        datasets: [{ data: [huellaAzul, huellaVerde, huellaSuministro], backgroundColor:['#2487F3','#22C55E','#9B5CF6'], borderColor:'#fff', borderWidth:2 }]
+    },
+    options: {responsive:true, maintainAspectRatio:false, resizeDelay:120, plugins:{legend:{display:false}}, cutout:'62%'}
+});
+
+makeChart('chartSuministro', {
+    type: 'bar',
+    data: { labels: Object.keys(suministro), datasets: [{ data: Object.values(suministro), backgroundColor:'#9B5CF6', borderRadius:6 }] },
+    options: {...chartOptions(), plugins:{legend:{display:false}}}
+});
+
+makeChart('chartCobertura', {
+    type: 'doughnut',
+    data: {
+        labels: ['Meses completos', 'Meses parciales'],
+        datasets: [{ data: [periodosCompletos, Math.max(periodosConDatos - periodosCompletos, 0)], backgroundColor:['#2487F3','#17C7C0'], borderColor:'#fff', borderWidth:2 }]
+    },
+    options: {responsive:true, maintainAspectRatio:false, resizeDelay:120, plugins:{legend:{display:false}}, cutout:'62%'}
+});
 </script>
 {% endblock %}

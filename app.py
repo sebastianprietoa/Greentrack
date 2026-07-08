@@ -19,6 +19,7 @@ HuellaAguaError ,
 buscar_factor_escasez_mas_especifico ,
 calcular_captacion_total ,
 calcular_consumo_operativo_estimado ,
+calcular_intensidad_hidrica_total ,
 calcular_huella_escasez ,
 calcular_retornos_mismo_sistema ,
 calcular_retornos_totales ,
@@ -227,6 +228,196 @@ def guardar_medida_productiva (cursor ,empresa ,anio ,unidad ,valor ):
             fecha_actualizacion = EXCLUDED.fecha_actualizacion
     """,(empresa ,int (anio ),unidad ,float (valor ),datetime .now ().strftime ("%Y-%m-%d %H:%M")))
 
+def _normalizar_texto_suministro (valor ):
+    return (str (valor or '').strip ().lower ()
+    .replace ('Ã©','e').replace ('é','e')
+    .replace ('Ã³','o').replace ('ó','o')
+    .replace ('Ã­','i').replace ('í','i')
+    .replace ('Ã¡','a').replace ('á','a')
+    .replace ('Ãº','u').replace ('ú','u'))
+
+def _seed_factores_huella_suministro_agua (cursor ):
+    fuente ="Report29-WaterFootprintBioenergy.pdf"
+    referencia ="Gerbens-Leenes, Hoekstra & Van der Meer (2008), Value of Water Research Report Series No. 29, tablas 3 y 7"
+    version ="March 2008"
+    factores =[
+    ("combustible","crude_oil_proxy",1.058),
+    ("combustible","natural_gas",0.109),
+    ("combustible","coal",0.164),
+    ("electricidad","hydropower",22.300),
+    ("electricidad","wind",0.000),
+    ("electricidad","solar_thermal",0.265),
+    ("electricidad","nuclear",0.086),
+    ("electricidad","natural_gas",0.109),
+    ("electricidad","coal",0.164),
+    ]
+    for tipo ,categoria ,factor in factores :
+        cursor .execute ("""
+            INSERT INTO factores_huella_suministro_agua
+            (tipo_energia, categoria_factor, factor_m3_gj, fuente, referencia, version, activo)
+            VALUES (%s, %s, %s, %s, %s, %s, TRUE)
+            ON CONFLICT (tipo_energia, categoria_factor, version)
+            DO UPDATE SET factor_m3_gj = EXCLUDED.factor_m3_gj,
+                          fuente = EXCLUDED.fuente,
+                          referencia = EXCLUDED.referencia,
+                          activo = TRUE
+        """,(tipo ,categoria ,factor ,fuente ,referencia ,version ))
+
+def _categoria_suministro_desde_registro (fuente ,categoria ,origen_energia =None ,sistema =None ):
+    texto =" ".join ([
+    _normalizar_texto_suministro (fuente ),
+    _normalizar_texto_suministro (categoria ),
+    _normalizar_texto_suministro (origen_energia ),
+    _normalizar_texto_suministro (sistema ),
+    ])
+    if 'electricidad'in texto :
+        if 'hidro'in texto :
+            return 'electricidad','hydropower'
+        if 'eolic'in texto or 'wind'in texto :
+            return 'electricidad','wind'
+        if 'solar'in texto :
+            return 'electricidad','solar_thermal'
+        if 'nuclear'in texto or 'uranio'in texto :
+            return 'electricidad','nuclear'
+        if 'gas'in texto :
+            return 'electricidad','natural_gas'
+        if 'carbon'in texto or 'carbÃ³n'in texto :
+            return 'electricidad','coal'
+        return 'electricidad',None
+    if any (x in texto for x in ['combustion','combusti','combustible']):
+        if 'gas natural'in texto :
+            return 'combustible','natural_gas'
+        if 'carbon'in texto or 'carbÃ³n'in texto :
+            return 'combustible','coal'
+        return 'combustible','crude_oil_proxy'
+    return None ,None
+
+def _es_fuente_combustible_suministro (fuente ):
+    texto =_normalizar_texto_suministro (fuente )
+    return 'combusti'in texto or 'combustible'in texto
+
+def _clasificar_factor_catalogo (categoria ,unidad =None ,nombre_chile =None ):
+    texto =" ".join ([
+    _normalizar_texto_suministro (categoria ),
+    _normalizar_texto_suministro (nombre_chile ),
+    _normalizar_texto_suministro (unidad ),
+    ])
+    if any (kw in texto for kw in ('refrigerante','freon','freon','hfc','cfc','r-','r4')):
+        return 'refrigerantes'
+    if any (kw in texto for kw in ('residuo','residuos','waste','recicl','vertedero','compost','inciner','tratamiento','relleno sanitario')):
+        return 'residuos'
+    if any (kw in texto for kw in (
+        'diesel','diessel','bencina','gasolina','glp','gas licuado','gas lp','gas natural',
+        'gas natural comprimido','gas natural licuado','gnc','gnl','petroleo','petróleo',
+        'fuel oil','aceite','kerosene','querosene','parafina','nafta','gasoil','biodiesel',
+        'etanol','bioetanol','biogas','biogás','carbon','carbón'
+    )):
+        return 'combustibles'
+    return 'otros'
+
+def _energia_gj_desde_consumo (cantidad ,unidad ,categoria_factor ,categoria_consumo ):
+    try :
+        cantidad_dec =Decimal (str (cantidad or 0 ))
+    except Exception :
+        return None 
+    if cantidad_dec <0 :
+        return None 
+    unidad_norm =_normalizar_texto_suministro (unidad )
+    categoria_norm =_normalizar_texto_suministro (categoria_consumo )
+    if unidad_norm in ('gj','gigajoule','gigajoules'):
+        return cantidad_dec 
+    if unidad_norm in ('mj','megajoule','megajoules'):
+        return cantidad_dec *Decimal ('0.001')
+    if unidad_norm in ('kwh','kw h','kilowatt hour','kilowatt-hour'):
+        return cantidad_dec *Decimal ('0.0036')
+    if unidad_norm in ('mwh',):
+        return cantidad_dec *Decimal ('3.6')
+    if unidad_norm in ('l','lt','lts','litro','litros','liter','liters'):
+        if 'glp'in categoria_norm or 'licuado'in categoria_norm :
+            return cantidad_dec *Decimal ('0.0253')
+        if 'bencina'in categoria_norm or 'gasolina'in categoria_norm :
+            return cantidad_dec *Decimal ('0.0342')
+        if 'kerosene'in categoria_norm or 'parafina'in categoria_norm :
+            return cantidad_dec *Decimal ('0.0350')
+        return cantidad_dec *Decimal ('0.0386')
+    if unidad_norm in ('m3','mÂ³','m³','metro cubico','metros cubicos'):
+        if categoria_factor =='natural_gas'or 'gas natural'in categoria_norm :
+            return cantidad_dec *Decimal ('0.0380')
+    if unidad_norm in ('kg','kilogramo','kilogramos'):
+        if categoria_factor =='coal':
+            return cantidad_dec *Decimal ('0.0240')
+        if categoria_factor =='natural_gas':
+            return cantidad_dec *Decimal ('0.0500')
+        return cantidad_dec *Decimal ('0.0430')
+    return None 
+
+def calcular_huella_suministro_registro (cursor ,registro_id ):
+    cursor .execute ("""
+        SELECT id, fecha, empresa, fuente, categoria, unidad, cantidad, origen_energia, sistema
+        FROM registros
+        WHERE id = %s
+    """,(registro_id ,))
+    registro =cursor .fetchone ()
+    if not registro :
+        return None 
+    tipo_energia ,categoria_factor =_categoria_suministro_desde_registro (
+    registro [3 ],registro [4 ],registro [7 ]if len (registro )>7 else None ,registro [8 ]if len (registro )>8 else None 
+    )
+    energia_gj =None 
+    factor_id =None 
+    factor_m3_gj =None 
+    huella_m3 =None 
+    calidad ="sin_factor"
+    observaciones ="No hay factor de suministro hidrico aplicable para este consumo."
+    if tipo_energia and categoria_factor :
+        energia_gj =_energia_gj_desde_consumo (registro [6 ],registro [5 ],categoria_factor ,registro [4 ])
+        if energia_gj is not None :
+            cursor .execute ("""
+                SELECT id, factor_m3_gj
+                FROM factores_huella_suministro_agua
+                WHERE tipo_energia = %s AND categoria_factor = %s AND activo = TRUE
+                ORDER BY fecha_carga DESC, id DESC
+                LIMIT 1
+            """,(tipo_energia ,categoria_factor ))
+            factor =cursor .fetchone ()
+            if factor :
+                factor_id =factor [0 ]
+                factor_m3_gj =Decimal (str (factor [1 ]))
+                huella_m3 =energia_gj *factor_m3_gj 
+                calidad ="calculado_proxy"if categoria_factor =='crude_oil_proxy'else "calculado_bibliografico"
+                observaciones ="Factor bibliografico de suministro energetico. No corresponde a factor local ni m3-eq."
+        else :
+            observaciones ="Unidad de consumo sin conversion energetica configurada para huella de suministro."
+    cursor .execute ("""
+        INSERT INTO resultados_huella_suministro_agua
+        (registro_id, empresa, fecha, fuente_consumo, categoria_consumo, unidad_consumo,
+         cantidad_consumo, energia_gj, factor_id, factor_m3_gj, huella_suministro_m3,
+         calidad_resultado, observaciones, fecha_calculo)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())
+        ON CONFLICT (registro_id) DO UPDATE SET
+            empresa = EXCLUDED.empresa,
+            fecha = EXCLUDED.fecha,
+            fuente_consumo = EXCLUDED.fuente_consumo,
+            categoria_consumo = EXCLUDED.categoria_consumo,
+            unidad_consumo = EXCLUDED.unidad_consumo,
+            cantidad_consumo = EXCLUDED.cantidad_consumo,
+            energia_gj = EXCLUDED.energia_gj,
+            factor_id = EXCLUDED.factor_id,
+            factor_m3_gj = EXCLUDED.factor_m3_gj,
+            huella_suministro_m3 = EXCLUDED.huella_suministro_m3,
+            calidad_resultado = EXCLUDED.calidad_resultado,
+            observaciones = EXCLUDED.observaciones,
+            fecha_calculo = NOW()
+    """,(
+    registro [0 ],registro [2 ],registro [1 ],registro [3 ],registro [4 ],registro [5 ],
+    registro [6 ],energia_gj ,factor_id ,factor_m3_gj ,huella_m3 ,calidad ,observaciones 
+    ))
+    return {
+    "registro_id":registro [0 ],
+    "calidad":calidad ,
+    "huella_suministro_m3":float (huella_m3 )if huella_m3 is not None else None ,
+    }
+
 def init_db ():
     conn =get_db ()
     cursor =conn .cursor ()
@@ -359,6 +550,40 @@ def init_db ():
     """)
     cursor .execute ("ALTER TABLE IF EXISTS agua_flujos ALTER COLUMN sede_id DROP NOT NULL")
     cursor .execute ("ALTER TABLE IF EXISTS agua_flujos ADD COLUMN IF NOT EXISTS origen_hidrico TEXT")
+    cursor .execute ("""
+    CREATE TABLE IF NOT EXISTS factores_huella_suministro_agua (
+        id SERIAL PRIMARY KEY,
+        tipo_energia TEXT NOT NULL,
+        categoria_factor TEXT NOT NULL,
+        factor_m3_gj NUMERIC(18, 8) NOT NULL,
+        fuente TEXT NOT NULL,
+        referencia TEXT,
+        version TEXT,
+        activo BOOLEAN DEFAULT TRUE,
+        fecha_carga TIMESTAMP NOT NULL DEFAULT NOW(),
+        UNIQUE(tipo_energia, categoria_factor, version)
+    )
+    """)
+    cursor .execute ("""
+    CREATE TABLE IF NOT EXISTS resultados_huella_suministro_agua (
+        id SERIAL PRIMARY KEY,
+        registro_id INTEGER UNIQUE,
+        empresa TEXT NOT NULL,
+        fecha DATE,
+        fuente_consumo TEXT,
+        categoria_consumo TEXT,
+        unidad_consumo TEXT,
+        cantidad_consumo NUMERIC(18, 6),
+        energia_gj NUMERIC(18, 8),
+        factor_id INTEGER,
+        factor_m3_gj NUMERIC(18, 8),
+        huella_suministro_m3 NUMERIC(18, 8),
+        calidad_resultado TEXT,
+        observaciones TEXT,
+        fecha_calculo TIMESTAMP NOT NULL DEFAULT NOW()
+    )
+    """)
+    _seed_factores_huella_suministro_agua (cursor )
     cursor .execute ("""
     CREATE TABLE IF NOT EXISTS factores_escasez_agua (
         id SERIAL PRIMARY KEY,
@@ -593,20 +818,54 @@ def dashboard ():
     """,params_reg )
     ultimos =[dict (row )for row in cursor .fetchall ()]
 
-    # 5. TENDENCIA MENSUAL POR ALCANCE (solo registros â€” combustible_movil ya estÃ¡ incluido)
+    # 5. TENDENCIA MENSUAL POR ALCANCE
+    # Incluye registros manuales y combustible móvil, que vive en otra tabla.
+    params_tendencia =[empresa ]
+    if anio_seleccionado !='Todos':
+        params_tendencia .append (anio_seleccionado )
+        params_tendencia .append (empresa )
+        params_tendencia .append (anio_seleccionado )
+    else :
+        params_tendencia .append (empresa )
+
     cursor .execute (f"""
-        SELECT
-            SUBSTRING(fecha::text, 1, 7) as mes,
-            CASE
-                WHEN fuente IN ('CombustiÃ³n Estacionaria', 'CombustiÃ³n Fija', 'Combustible MÃ³vil', 'CombustiÃ³n MÃ³vil', 'Refrigerantes', 'Fugas de Refrigerantes') THEN 1
-                WHEN fuente = 'Electricidad' THEN 2
-                WHEN fuente = 'Residuos' THEN 3
-                ELSE 1
-            END as alcance,
-            SUM(emision) as total
-        FROM registros WHERE empresa = %s {filtro_fecha_reg }
-        GROUP BY 1, 2 ORDER BY 1
-    """,params_reg )
+        SELECT mes, alcance, SUM(total) as total
+        FROM (
+            SELECT
+                SUBSTRING(fecha::text, 1, 7) as mes,
+                CASE
+                    WHEN fuente IN (
+                        'CombustiÃ³n Estacionaria', 'CombustiÃ³n Fija', 'Combustible MÃ³vil', 'CombustiÃ³n MÃ³vil',
+                        'Combustión Estacionaria', 'Combustión Fija', 'Combustible Móvil', 'Combustión Móvil',
+                        'Refrigerantes', 'Fugas de Refrigerantes'
+                    ) THEN 1
+                    WHEN fuente = 'Electricidad' THEN 2
+                    WHEN fuente = 'Residuos' THEN 3
+                    ELSE 1
+                END as alcance,
+                COALESCE(emision, 0) as total
+            FROM registros
+            WHERE empresa = %s {filtro_fecha_reg }
+
+            UNION ALL
+
+            SELECT
+                SUBSTRING(cm.fecha_registro::text, 1, 7) as mes,
+                1 as alcance,
+                COALESCE(cm.cantidad, 0) * CASE LOWER(COALESCE(cm.combustible, ''))
+                    WHEN 'diesel' THEN 2.68
+                    WHEN 'bencina' THEN 2.31
+                    WHEN 'glp' THEN 1.61
+                    WHEN 'gas_natural' THEN 2.02
+                    WHEN 'electricidad' THEN 0.233
+                    ELSE 2.5
+                END as total
+            FROM combustible_movil cm
+            WHERE cm.empresa = %s {filtro_fecha_comb }
+        ) t
+        GROUP BY mes, alcance
+        ORDER BY mes
+    """,params_tendencia )
     tendencia_reg =cursor .fetchall ()
 
     from collections import defaultdict 
@@ -624,9 +883,9 @@ def dashboard ():
     alcance_a2 =round (sum (tendencia_a2 ),2 )
     alcance_a3 =round (sum (tendencia_a3 ),2 )
     alcances_data =[
-    {'nombre':'Alcance 1 â€“ Directo','total':alcance_a1 ,'color':'#EF4444'},
-    {'nombre':'Alcance 2 â€“ Electricidad','total':alcance_a2 ,'color':'#F59E0B'},
-    {'nombre':'Alcance 3 â€“ Residuos','total':alcance_a3 ,'color':'#10B981'},
+    {'nombre':'Alcance 1 - Directo','total':alcance_a1 ,'color':'#EF4444'},
+    {'nombre':'Alcance 2 - Electricidad','total':alcance_a2 ,'color':'#F59E0B'},
+    {'nombre':'Alcance 3 - Residuos','total':alcance_a3 ,'color':'#10B981'},
     ]
 
     cursor .execute ("""
@@ -664,6 +923,46 @@ def dashboard ():
         if intensidad_anio and intensidad_medida >0 :
             _ ,intensidad_emisiones =calcular_intensidad_emisiones (conn ,empresa ,intensidad_anio ,intensidad_medida )
 
+    agua_params =[empresa ]
+    agua_where =""
+    suministro_params =[empresa ]
+    suministro_where =""
+    if anio_seleccionado !='Todos':
+        agua_where =" AND SUBSTRING(periodo::text, 1, 4) = %s"
+        suministro_where =" AND SUBSTRING(fecha::text, 1, 4) = %s"
+        agua_params .append (anio_seleccionado )
+        suministro_params .append (anio_seleccionado )
+
+    cursor .execute (f"""
+        SELECT
+            COALESCE(SUM(CASE WHEN tipo_flujo = 'captacion' THEN volumen_m3 ELSE 0 END), 0) AS captacion,
+            COALESCE(SUM(CASE WHEN tipo_flujo = 'retorno' AND retorna_mismo_sistema_hidrico = TRUE THEN volumen_m3 ELSE 0 END), 0) AS retorno_mismo
+        FROM agua_flujos
+        WHERE empresa = %s {agua_where}
+    """,agua_params )
+    agua_row =cursor .fetchone ()
+    huella_azul_directa =max (0.0 ,float ((agua_row ['captacion']or 0 )-(agua_row ['retorno_mismo']or 0 )))if agua_row else 0.0
+    huella_verde_directa =0.0
+
+    cursor .execute (f"""
+        SELECT COALESCE(SUM(huella_suministro_m3), 0) AS total
+        FROM resultados_huella_suministro_agua
+        WHERE empresa = %s {suministro_where}
+          AND huella_suministro_m3 IS NOT NULL
+    """,suministro_params )
+    suministro_row =cursor .fetchone ()
+    huella_suministro_energetico =float (suministro_row ['total']or 0 )if suministro_row else 0.0
+    huella_hidrica_total =huella_azul_directa +huella_verde_directa +huella_suministro_energetico
+    intensidad_hidrica_total =None 
+    if intensidad_medida >0 :
+        intensidad_total_decimal =calcular_intensidad_hidrica_total (huella_hidrica_total ,intensidad_medida )
+        intensidad_hidrica_total =round (float (intensidad_total_decimal ),6 )if intensidad_total_decimal is not None else None 
+    huella_hidrica_tipos =[
+    {"tipo":"Huella azul directa","valor":round (huella_azul_directa ,6 ),"color":"#2487F3"},
+    {"tipo":"Huella verde directa","valor":round (huella_verde_directa ,6 ),"color":"#22C55E"},
+    {"tipo":"Suministro energetico","valor":round (huella_suministro_energetico ,6 ),"color":"#9B5CF6"},
+    ]
+
             # 6. VARIACIÃ“N INTERANUAL
     variacion_pct =None 
     anio_prev =None 
@@ -687,6 +986,10 @@ def dashboard ():
     tendencia_a2 =tendencia_a2 ,tendencia_a3 =tendencia_a3 ,
     alcances_data =alcances_data ,variacion_pct =variacion_pct ,anio_prev =anio_prev ,
     intensidad_emisiones =intensidad_emisiones ,intensidad_unidad =intensidad_unidad ,
+    huella_hidrica_total =huella_hidrica_total ,huella_azul_directa =huella_azul_directa ,
+    huella_verde_directa =huella_verde_directa ,huella_suministro_energetico =huella_suministro_energetico ,
+    huella_hidrica_tipos =huella_hidrica_tipos ,
+    intensidad_hidrica_total =intensidad_hidrica_total ,
     intensidad_anio =intensidad_anio )
 
     # ================= HISTORIAL COMPLETO =================
@@ -770,7 +1073,12 @@ def combustion_dashboard ():
     conn =get_db ()
     cursor =conn .cursor (cursor_factory =psycopg2 .extras .DictCursor )
 
-    fuentes_comb =('CombustiÃ³n Estacionaria','CombustiÃ³n Fija','CombustiÃ³n MÃ³vil','Combustible MÃ³vil')
+    fuentes_comb =(
+    'CombustiÃ³n Estacionaria','CombustiÃ³n Fija','CombustiÃ³n MÃ³vil','Combustible MÃ³vil',
+    'Combustión Estacionaria','Combustión Fija','Combustión Móvil','Combustible Móvil'
+    )
+    fuentes_fijas =('CombustiÃ³n Estacionaria','CombustiÃ³n Fija','Combustión Estacionaria','Combustión Fija')
+    fuentes_moviles =('CombustiÃ³n MÃ³vil','Combustible MÃ³vil','Combustión Móvil','Combustible Móvil')
 
     cursor .execute ("SELECT fecha, fuente, categoria, actividad, cantidad, unidad, emision FROM registros WHERE empresa = %s AND fuente IN %s ORDER BY fecha DESC LIMIT 10",(empresa ,fuentes_comb ))
     registros_comb =[dict (row )for row in cursor .fetchall ()]
@@ -792,8 +1100,8 @@ def combustion_dashboard ():
     tendencia_fija =[]
     tendencia_movil =[]
     for m in meses_comb :
-        fija =sum (float (r ['total']or 0 )for r in tendencia_comb_raw if r ['mes']==m and 'Fija'in r ['fuente'])
-        movil =sum (float (r ['total']or 0 )for r in tendencia_comb_raw if r ['mes']==m and 'Fija'not in r ['fuente'])
+        fija =sum (float (r ['total']or 0 )for r in tendencia_comb_raw if r ['mes']==m and r ['fuente'] in fuentes_fijas)
+        movil =sum (float (r ['total']or 0 )for r in tendencia_comb_raw if r ['mes']==m and r ['fuente'] in fuentes_moviles)
         tendencia_fija .append (round (fija ,2 ))
         tendencia_movil .append (round (movil ,2 ))
 
@@ -996,6 +1304,7 @@ def _agua_calcular_resumen (conn ,empresa ,periodo =None ):
     # Intensidad hÃ­drica usando la medida productiva del perÃ­odo visible si existe
     intensidad_hidrica =None 
     intensidad_escasez =None 
+    intensidad_hidrica_total =None 
     medida_actual =None 
     if periodo :
         try :
@@ -1022,6 +1331,8 @@ def _agua_calcular_resumen (conn ,empresa ,periodo =None ):
             medida_valor =0 
     if medida_valor >0 :
         intensidad_hidrica =round (float (consumo )/medida_valor ,6 )
+        intensidad_total_decimal =calcular_intensidad_hidrica_total (huella_hidrica_total ,medida_valor )
+        intensidad_hidrica_total =round (float (intensidad_total_decimal ),6 )if intensidad_total_decimal is not None else None 
         if huella is not None :
             intensidad_escasez =round (float (huella )/medida_valor ,6 )
 
@@ -1082,6 +1393,37 @@ def _agua_calcular_resumen (conn ,empresa ,periodo =None ):
         "reuso":float (row [3 ]or 0 ),
         }
 
+    suministro_params =[empresa ]
+    suministro_where =""
+    if periodo :
+        suministro_where =" AND SUBSTRING(fecha::text, 1, 7) = %s"
+        suministro_params .append (periodo )
+    cursor .execute (
+    f"""
+        SELECT COALESCE(SUM(huella_suministro_m3), 0) AS total
+        FROM resultados_huella_suministro_agua
+        WHERE empresa = %s{suministro_where}
+          AND huella_suministro_m3 IS NOT NULL
+        """,
+    tuple (suministro_params ),
+    )
+    huella_suministro_total =cursor .fetchone ()[0 ]or 0 
+
+    cursor .execute (
+    f"""
+        SELECT COALESCE(fuente_consumo, 'Sin fuente') AS fuente,
+               COALESCE(categoria_consumo, 'Sin categoria') AS categoria,
+               SUM(huella_suministro_m3) AS total
+        FROM resultados_huella_suministro_agua
+        WHERE empresa = %s{suministro_where}
+          AND huella_suministro_m3 IS NOT NULL
+        GROUP BY 1, 2
+        ORDER BY total DESC
+        """,
+    tuple (suministro_params ),
+    )
+    suministro_por_fuente ={f"{row [0 ]} - {row [1 ]}":float (row [2 ]or 0 )for row in cursor .fetchall ()}
+
         # Cobertura por sede para el dashboard
     cobertura =[]
     if sedes :
@@ -1141,9 +1483,12 @@ def _agua_calcular_resumen (conn ,empresa ,periodo =None ):
     "calidad":calidad ,
     "intensidad_hidrica":intensidad_hidrica ,
     "intensidad_escasez":intensidad_escasez ,
+    "intensidad_hidrica_total":intensidad_hidrica_total ,
     "tendencia":tendencia ,
     "por_fuente":por_fuente ,
     "por_sede":por_sede ,
+    "huella_suministro_total":float (huella_suministro_total or 0 ),
+    "suministro_por_fuente":suministro_por_fuente ,
     "cobertura":cobertura ,
     "factores":factores ,
     "total_sedes":total_sedes ,
@@ -1186,12 +1531,24 @@ def agua_dashboard ():
     empresa =session .get ('empresa')
     periodo =request .args .get ("periodo")
     conn =get_db ()
+    cursor =conn .cursor ()
+    cursor .execute (
+    """
+        SELECT DISTINCT to_char(periodo, 'YYYY-MM') AS periodo
+        FROM agua_flujos
+        WHERE empresa = %s
+        ORDER BY periodo DESC
+    """,
+    (empresa ,),
+    )
+    periodos_disponibles =[r [0 ]for r in cursor .fetchall ()]
     data =_agua_calcular_resumen (conn ,empresa ,periodo )
     conn .close ()
     return render_template (
     "agua_dashboard.html",
     empresa =empresa ,
     periodo =periodo ,
+    periodos_disponibles =periodos_disponibles ,
     menu_activo ="resumen",
     historia_url =url_for ("agua_reporte"),
     **data ,
@@ -1644,6 +2001,8 @@ def _resolver_datos_alcance1 (form ):
     unidad =form .get ('unidad')
     actividad ="Consumo general"
 
+    if categoria in (None ,''):
+        return None ,unidad ,actividad ,0.0
     if categoria =='Otros':
         categoria =form .get ('otro_combustible')
         factor =_parse_float_input (form .get ('otro_factor','0'))
@@ -1906,7 +2265,11 @@ def registro ():
                     cursor .execute ("""
                         INSERT INTO registros (fecha, empresa, area, alcance, fuente, categoria, actividad, unidad, cantidad, factor, emision)
                         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        RETURNING id
                     """,(fecha_lote ,empresa ,area ,alcance ,fuente ,categoria ,actividad ,unidad ,cantidad_lote ,factor ,emision_lote ))
+                    registro_id =cursor .fetchone ()[0 ]
+                    if _es_fuente_combustible_suministro (fuente ):
+                        calcular_huella_suministro_registro (cursor ,registro_id )
                 conn .commit ()
             except Exception as exc :
                 conn .rollback ()
@@ -1980,7 +2343,9 @@ def registro ():
                     cursor .execute ("""
                         INSERT INTO registros (fecha, empresa, area, alcance, fuente, categoria, actividad, unidad, cantidad, factor, emision, emision_ubicacion, origen_energia, tiene_irec, sistema)
                         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        RETURNING id
                     """,(fecha_lote ,empresa ,area ,alcance ,fuente ,categoria ,actividad ,unidad ,cantidad_lote ,factor ,emision ,emision_ubicacion ,origen ,tiene_irec ,sistema ))
+                    calcular_huella_suministro_registro (cursor ,cursor .fetchone ()[0 ])
                 conn .commit ()
             except Exception as exc :
                 conn .rollback ()
@@ -2026,12 +2391,18 @@ def registro ():
             cursor .execute ("""
                 INSERT INTO registros (fecha, empresa, area, alcance, fuente, categoria, actividad, unidad, cantidad, factor, emision, emision_ubicacion, origen_energia, tiene_irec, sistema)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING id
             """,(fecha ,empresa ,area ,alcance ,fuente ,categoria ,actividad ,unidad ,cantidad ,factor ,emision ,emision_ubicacion ,origen ,tiene_irec ,sistema ))
+            calcular_huella_suministro_registro (cursor ,cursor .fetchone ()[0 ])
         else :
             cursor .execute ("""
                 INSERT INTO registros (fecha, empresa, area, alcance, fuente, categoria, actividad, unidad, cantidad, factor, emision)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING id
             """,(fecha ,empresa ,area ,alcance ,fuente ,categoria ,actividad ,unidad ,cantidad ,factor ,emision ))
+            registro_id =cursor .fetchone ()[0 ]
+            if _es_fuente_combustible_suministro (fuente ):
+                calcular_huella_suministro_registro (cursor ,registro_id )
 
         conn .commit ()
         conn .close ()
@@ -2056,28 +2427,26 @@ def registro ():
             _seen_cu .add (_key )
             factores_db .append (_f )
 
-    nombres_principales =['DiÃ©sel','Gas Licuado PetrÃ³leo (GLP)']
-    datos_agrupados ={'principales':{},'combustibles':{},'refrigerantes':{},'otros':{}}
+    datos_agrupados ={'combustibles':{},'refrigerantes':{},'residuos':{},'otros':{}}
 
     for f in factores_db :
         cat =f ['categoria']
-        cat_lower =cat .lower ()
+        nombre_chile =(f .get ('nombre_chile')or '')
+        texto_cat =_normalizar_texto_suministro (f"{cat } {nombre_chile }")
 
-        if 'electricidad'in cat_lower or 'kwh'in f ['unidad'].lower ()or 'sen'in cat_lower :
+        if 'electricidad'in texto_cat or 'kwh'in _normalizar_texto_suministro (f .get ('unidad')or '')or 'sen'in texto_cat :
             continue 
 
-        grupo ='otros'
-        if cat in nombres_principales :
-            grupo ='principales'
-        elif 'glp'in cat_lower or 'gas'in cat_lower or 'diÃ©sel'in cat_lower or 'bencina'in cat_lower or 'aceite'in cat_lower or 'petrÃ³leo'in cat_lower :
-            grupo ='combustibles'
-        elif 'r4'in cat_lower or 'hfc'in cat_lower or 'cfc'in cat_lower :
-            grupo ='refrigerantes'
+        grupo =_clasificar_factor_catalogo (cat ,f .get ('unidad') ,nombre_chile )
 
         if cat not in datos_agrupados [grupo ]:
             datos_agrupados [grupo ][cat ]=[]
 
-        datos_agrupados [grupo ][cat ].append ({'unidad':f ['unidad'],'factor':f ['factor']})
+        try :
+            factor_val =float (f ['factor'])
+        except Exception :
+            factor_val =0.0
+        datos_agrupados [grupo ][cat ].append ({'unidad':f ['unidad'],'factor':factor_val })
 
     return render_template ("registro.html",datos_factores =datos_agrupados )
 
@@ -2540,6 +2909,47 @@ def get_admin_stats ():
     conn .close ()
     return total_emp ,total_reg ,total_em ,pendientes 
 
+def calcular_metricas_agua_admin (cursor ,empresas_filtro ):
+    empresas_base =[emp ['empresa']for emp in empresas_filtro if emp .get ('empresa')]
+    cursor .execute ("""
+        SELECT empresa, SUBSTRING(periodo::text, 1, 4) AS anio,
+               SUM(CASE WHEN tipo_flujo = 'captacion' THEN volumen_m3 ELSE 0 END) AS captacion,
+               SUM(CASE WHEN tipo_flujo = 'retorno' AND retorna_mismo_sistema_hidrico = TRUE THEN volumen_m3 ELSE 0 END) AS retorno_mismo
+        FROM agua_flujos
+        WHERE empresa IS NOT NULL AND periodo IS NOT NULL
+        GROUP BY empresa, anio
+    """)
+    agua_map ={}
+    for row in cursor .fetchall ():
+        emp ,anio_val =row ['empresa'],row ['anio']
+        if emp and anio_val :
+            azul =max (0.0 ,float ((row ['captacion']or 0 )-(row ['retorno_mismo']or 0 )))
+            agua_map .setdefault (emp ,{})[anio_val ]=agua_map .get (emp ,{}).get (anio_val ,0 )+azul
+
+    cursor .execute ("""
+        SELECT empresa, SUBSTRING(fecha::text, 1, 4) AS anio,
+               SUM(huella_suministro_m3) AS suministro
+        FROM resultados_huella_suministro_agua
+        WHERE empresa IS NOT NULL AND fecha IS NOT NULL AND huella_suministro_m3 IS NOT NULL
+        GROUP BY empresa, anio
+    """)
+    for row in cursor .fetchall ():
+        emp ,anio_val =row ['empresa'],row ['anio']
+        if emp and anio_val :
+            agua_map .setdefault (emp ,{})[anio_val ]=agua_map .get (emp ,{}).get (anio_val ,0 )+float (row ['suministro']or 0 )
+
+    all_agua_empresas =empresas_base or sorted (agua_map .keys ())
+    all_agua_anios =sorted ({a for d in agua_map .values ()for a in d .keys ()},reverse =True )
+    chart_agua_data ={"Todos":[round (sum (agua_map .get (e ,{}).values ()),2 )for e in all_agua_empresas ]}
+    for anio in all_agua_anios :
+        chart_agua_data [anio ]=[round (agua_map .get (e ,{}).get (anio ,0 ),2 )for e in all_agua_empresas ]
+    total_huella_hidrica_global =round (sum (chart_agua_data .get ("Todos",[])),2 )
+    top_huella_hidrica =sorted (
+    [{'empresa':e ,'total':round (sum (v .values ()),2 )}for e ,v in agua_map .items ()if round (sum (v .values ()),2 )>0 ],
+    key =lambda x :-x ['total']
+    )[:6 ]
+    return agua_map ,all_agua_empresas ,all_agua_anios ,chart_agua_data ,total_huella_hidrica_global ,top_huella_hidrica
+
 @app .route ("/admin/dashboard")
 def admin_dashboard ():
     if 'user_id'not in session or session .get ('es_admin')!=1 :return redirect ("/")
@@ -2574,6 +2984,8 @@ def admin_dashboard ():
     [{'empresa':e ,'total':round (sum (v .values ()),2 )}for e ,v in em_map .items ()],
     key =lambda x :-x ['total']
     )[:6 ]
+    agua_map ,all_agua_empresas ,all_agua_anios ,chart_agua_data ,total_huella_hidrica_global ,top_huella_hidrica =calcular_metricas_agua_admin (cursor ,empresas_filtro )
+
     medidas_empresas =obtener_medidas_empresas (conn )
     cursor .execute ("""
         SELECT empresa, anio, unidad, valor
@@ -2584,6 +2996,8 @@ def admin_dashboard ():
     intensidad_empresas_labels =[emp ['empresa']for emp in empresas_filtro ]
     intensidad_series ={}
     intensidad_latest ={}
+    intensidad_huella_series ={}
+    intensidad_huella_latest ={}
     for row in medidas_todas :
         emp =row ['empresa']
         anio =str (row ['anio'])
@@ -2591,22 +3005,43 @@ def admin_dashboard ():
         intensidad_series .setdefault (anio ,{})[emp ]=round (float (intensidad or 0 ),6 )
         if emp not in intensidad_latest :
             intensidad_latest [emp ]=round (float (intensidad or 0 ),6 )
+        try :
+            medida_valor =float (row .get ('valor')or 0 )
+        except Exception :
+            medida_valor =0 
+        huella_anual =float (agua_map .get (emp ,{}).get (anio ,0 )or 0 )
+        intensidad_huella =round (huella_anual /medida_valor ,6 )if medida_valor >0 else 0 
+        intensidad_huella_series .setdefault (anio ,{})[emp ]=intensidad_huella 
+        if emp not in intensidad_huella_latest :
+            intensidad_huella_latest [emp ]=intensidad_huella 
     intensidad_series ['Todos']=intensidad_latest 
+    intensidad_huella_series ['Todos']=intensidad_huella_latest 
     intensidad_empresas_values =[round (float (intensidad_latest .get (emp ['empresa'])or 0 ),6 )for emp in empresas_filtro ]
+    intensidad_huella_values =[round (float (intensidad_huella_latest .get (emp ['empresa'])or 0 ),6 )for emp in empresas_filtro ]
     intensidad_series_values ={
     key :[round (float ((serie .get (emp ['empresa']))or 0 ),6 )for emp in empresas_filtro ]
     for key ,serie in intensidad_series .items ()
     }
+    intensidad_huella_series_values ={
+    key :[round (float ((serie .get (emp ['empresa']))or 0 ),6 )for emp in empresas_filtro ]
+    for key ,serie in intensidad_huella_series .items ()
+    }
     intensidad_years =sorted ([k for k in intensidad_series .keys ()if k !='Todos'],reverse =True )
+    intensidad_huella_promedio =round (sum (v for v in intensidad_huella_values if v >0 )/len ([v for v in intensidad_huella_values if v >0 ]),6 )if any (v >0 for v in intensidad_huella_values )else 0 
     conn .close ()
 
     return render_template ("admin.html",
     total_empresas =t_emp ,total_registros =t_reg ,total_emisiones =t_em ,total_pendientes =t_pend ,
+    total_huella_hidrica_global =total_huella_hidrica_global ,intensidad_huella_promedio =intensidad_huella_promedio ,
     ultimas_empresas =ultimas ,empresas =empresas_filtro ,admin_section ="dashboard",
     chart_empresas =all_empresas ,chart_data =chart_data ,chart_anios =all_anios ,
     top_emisores =top_emisores ,medidas_empresas =medidas_empresas ,
+    chart_agua_empresas =all_agua_empresas ,chart_agua_data =chart_agua_data ,chart_agua_anios =all_agua_anios ,
+    top_huella_hidrica =top_huella_hidrica ,
     chart_intensidad_empresas =intensidad_empresas_labels ,chart_intensidad_values =intensidad_empresas_values ,
     chart_intensidad_series =intensidad_series_values ,chart_intensidad_years =intensidad_years ,
+    chart_intensidad_huella_values =intensidad_huella_values ,
+    chart_intensidad_huella_series =intensidad_huella_series_values ,
     sectores_empresa =SECTORES_EMPRESA ,unidades_productivas =UNIDADES_PRODUCTIVAS ,
     current_year =datetime .now ().year )
 
@@ -2628,10 +3063,19 @@ def admin_empresas ():
     cursor .execute ("SELECT DISTINCT fuente FROM registros WHERE fuente IS NOT NULL ORDER BY fuente")
     fuentes_export =[r [0 ]for r in cursor .fetchall ()]
     medidas_empresas =obtener_medidas_empresas (conn )
+    agua_map ,_agua_empresas ,_agua_anios ,_agua_data ,total_huella_hidrica_global ,_top_agua =calcular_metricas_agua_admin (cursor ,empresas )
+    intensidad_huella_vals =[]
+    for emp in empresas :
+        medida =medidas_empresas .get (emp ['empresa'])if medidas_empresas else None 
+        if medida and float (medida .get ('valor')or 0 )>0 :
+            huella_anual =float (agua_map .get (emp ['empresa'],{}).get (str (medida ['anio']),0 )or 0 )
+            intensidad_huella_vals .append (huella_anual /float (medida ['valor']))
+    intensidad_huella_promedio =round (sum (intensidad_huella_vals )/len (intensidad_huella_vals ),6 )if intensidad_huella_vals else 0 
     conn .close ()
 
     return render_template ("admin.html",empresas =empresas ,em_stats =em_stats ,admin_section ="empresas",
     total_empresas =t_emp ,total_registros =t_reg ,total_emisiones =t_em ,total_pendientes =t_pend ,
+    total_huella_hidrica_global =total_huella_hidrica_global ,intensidad_huella_promedio =intensidad_huella_promedio ,
     anios_export =anios_export ,fuentes_export =fuentes_export ,
     medidas_empresas =medidas_empresas ,sectores_empresa =SECTORES_EMPRESA ,unidades_productivas =UNIDADES_PRODUCTIVAS ,
     current_year =datetime .now ().year )
@@ -2658,7 +3102,8 @@ def admin_factores ():
     df =pd .read_sql_query ("SELECT * FROM factores ORDER BY anio DESC, categoria, unidad",conn )
     # pandas convierte NULL a float('nan') â€” convertir a None para que Jinja2 los trate como falsy
     factores_list =[
-    {k :(None if (isinstance (v ,float )and pd .isna (v ))else v )for k ,v in row .items ()}
+    {**{k :(None if (isinstance (v ,float )and pd .isna (v ))else v )for k ,v in row .items ()},
+    'clasificacion':_clasificar_factor_catalogo (row .get ('categoria'),row .get ('unidad'),row .get ('nombre_chile'))}
     for row in df .to_dict ('records')
     ]
     cur_elec =conn .cursor (cursor_factory =psycopg2 .extras .DictCursor )
@@ -3879,6 +4324,7 @@ def agua_retorno_reuso ():
     return render_template ("agua_retorno_reuso.html",sede_predeterminada =sede_predeterminada )
 
 
+@app .route ("/agua/registros")
 @app .route ("/agua/resultados")
 def agua_resultados ():
     if 'user_id'not in session :
@@ -3904,7 +4350,71 @@ def agua_resultados ():
     medida_valor =medida_row ["valor"]if medida_row else None 
     resultados =_agua_agrupar_resultados_reportes (data ["flujos"],data ["sedes"],data ["factores"],medida_valor =medida_valor ,vista =vista )
     conn .close ()
-    return render_template ("agua_resultados.html",empresa =empresa ,periodo =periodo ,resultados =resultados ,**data ,menu_activo ="resultados")
+    return render_template ("agua_resultados.html",empresa =empresa ,periodo =periodo ,resultados =resultados ,vista =vista ,**data ,menu_activo ="registros")
+
+@app .route ("/agua/registros/eliminar",methods =["POST"])
+def agua_eliminar_registros ():
+    if 'user_id'not in session :
+        return redirect ("/")
+    empresa =session .get ("empresa")
+    sede_id_raw =request .form .get ("sede_id")
+    periodo_grupo =request .form .get ("periodo")or ""
+    vista =request .form .get ("vista","mensual")
+    sede_id =int (sede_id_raw )if sede_id_raw not in (None ,"","None")else None 
+    if not periodo_grupo :
+        flash ("No se pudo identificar el periodo del registro de agua.","warning")
+        return redirect (url_for ("agua_resultados",vista =vista ))
+    conn =get_db ()
+    cursor =conn .cursor ()
+    try :
+        if vista =="anual":
+            cursor .execute (
+            """
+            DELETE FROM agua_flujos
+            WHERE empresa = %s
+              AND sede_id IS NOT DISTINCT FROM %s
+              AND SUBSTRING(periodo::text, 1, 4) = %s
+            """,
+            (empresa ,sede_id ,periodo_grupo [:4 ]),
+            )
+            eliminados =cursor .rowcount
+            cursor .execute (
+            """
+            DELETE FROM resultados_huella_agua
+            WHERE empresa = %s
+              AND sede_id IS NOT DISTINCT FROM %s
+              AND SUBSTRING(periodo::text, 1, 4) = %s
+            """,
+            (empresa ,sede_id ,periodo_grupo [:4 ]),
+            )
+        else :
+            cursor .execute (
+            """
+            DELETE FROM agua_flujos
+            WHERE empresa = %s
+              AND sede_id IS NOT DISTINCT FROM %s
+              AND to_char(periodo, 'YYYY-MM') = %s
+            """,
+            (empresa ,sede_id ,periodo_grupo [:7 ]),
+            )
+            eliminados =cursor .rowcount
+            cursor .execute (
+            """
+            DELETE FROM resultados_huella_agua
+            WHERE empresa = %s
+              AND sede_id IS NOT DISTINCT FROM %s
+              AND to_char(periodo, 'YYYY-MM') = %s
+            """,
+            (empresa ,sede_id ,periodo_grupo [:7 ]),
+            )
+        conn .commit ()
+        flash (f"Se eliminaron {eliminados } registro(s) de agua del periodo seleccionado.","success")
+    except Exception as exc :
+        conn .rollback ()
+        flash (f"No se pudieron eliminar los registros de agua: {exc }","error")
+    finally :
+        conn .close ()
+    return redirect (url_for ("agua_resultados",vista =vista ))
 
 
 @app .route ("/agua/metodologia")

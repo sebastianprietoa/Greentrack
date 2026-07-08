@@ -8,6 +8,7 @@ from services.huella_agua import (
     buscar_factor_escasez_mas_especifico,
     calcular_captacion_total,
     calcular_consumo_operativo_estimado,
+    calcular_intensidad_hidrica_total,
     calcular_huella_escasez,
     calcular_retornos_mismo_sistema,
     calcular_retornos_totales,
@@ -111,6 +112,10 @@ class HuellaAguaServiceTests(unittest.TestCase):
         huella = calcular_huella_escasez(Decimal("70"), factor)
         self.assertEqual(huella, Decimal("35.0"))
         self.assertEqual(clasificar_resultado_huella(Decimal("70"), factor), "Huella de escasez calculada")
+
+    def test_intensidad_hidrica_total(self):
+        intensidad = calcular_intensidad_hidrica_total(Decimal("686.61"), 100)
+        self.assertEqual(intensidad, Decimal("6.8661"))
 
     def test_validacion_datos_negativos(self):
         with self.assertRaises(HuellaAguaError):

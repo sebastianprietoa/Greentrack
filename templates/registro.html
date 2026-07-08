@@ -97,20 +97,20 @@
                 <select name="combustible" id="cat_a1" required style="width: 100%; padding: 10px; border: 1px solid #D1D5DB; border-radius: 6px; box-sizing: border-box;">
                     <option value="">Seleccione desde la base de datos...</option>
                     
-                    <optgroup label="⭐ PRINCIPALES">
-                        {% for cat in datos_factores.principales.keys() %}
-                            <option value="{{ cat }}">{{ cat }}</option>
-                        {% endfor %}
-                    </optgroup>
-                    
                     <optgroup label="⛽ COMBUSTIBLES">
                         {% for cat in datos_factores.combustibles.keys() %}
                             <option value="{{ cat }}">{{ cat }}</option>
                         {% endfor %}
                     </optgroup>
-                    
+
                     <optgroup label="❄️ REFRIGERANTES">
                         {% for cat in datos_factores.refrigerantes.keys() %}
+                            <option value="{{ cat }}">{{ cat }}</option>
+                        {% endfor %}
+                    </optgroup>
+
+                    <optgroup label="♻️ RESIDUOS">
+                        {% for cat in datos_factores.residuos.keys() %}
                             <option value="{{ cat }}">{{ cat }}</option>
                         {% endfor %}
                     </optgroup>
@@ -300,6 +300,22 @@
         <form action="/registro" method="POST">
             <input type="hidden" name="alcance_oculto" value="Agua">
             <input type="hidden" name="modo_registro" id="modo_registro_agua" value="individual">
+            <input type="hidden" name="tipo_flujo" id="tipo_flujo_agua" value="captacion">
+
+            <div style="margin-bottom:1.5rem;">
+                <label style="display:block; font-weight:700; color:#374151; margin-bottom:10px;">Tipo de flujo</label>
+                <div style="display:grid; grid-template-columns: repeat(3, minmax(150px, 1fr)); gap:1rem;">
+                    <button type="button" class="agua-flow-btn" data-flow="captacion" onclick="seleccionarTipoFlujoAgua('captacion')" style="background:#0E7490; color:white; border:2px solid #155E75; padding:16px 14px; border-radius:8px; font-weight:800; font-size:1.05rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
+                        <i class="fas fa-droplet"></i> Captacion
+                    </button>
+                    <button type="button" class="agua-flow-btn" data-flow="retorno" onclick="seleccionarTipoFlujoAgua('retorno')" style="background:#F3F4F6; color:#374151; border:2px solid #D1D5DB; padding:16px 14px; border-radius:8px; font-weight:800; font-size:1.05rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
+                        <i class="fas fa-arrows-rotate"></i> Retorno
+                    </button>
+                    <button type="button" class="agua-flow-btn" data-flow="reuso" onclick="seleccionarTipoFlujoAgua('reuso')" style="background:#F3F4F6; color:#374151; border:2px solid #D1D5DB; padding:16px 14px; border-radius:8px; font-weight:800; font-size:1.05rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
+                        <i class="fas fa-recycle"></i> Re&uacute;so interno
+                    </button>
+                </div>
+            </div>
 
             <div id="agua_batch_panel" style="display:none; background:#F9FAFB; padding:1.25rem; border-radius:10px; margin-bottom:1.5rem; border:1px solid #D1D5DB;">
                 <div style="display:grid; grid-template-columns: 1fr 1fr auto; gap:1rem; align-items:end; margin-bottom:1rem;">
@@ -829,7 +845,8 @@
     const btnSubmitAgua = document.querySelector('#form_agua button[type="submit"]');
     const periodoIndividualAgua = document.querySelector('#form_agua input[name="periodo"]');
     const volumenIndividualAgua = document.querySelector('#form_agua input[name="volumen_m3"]');
-    const tipoFlujoAgua = document.querySelector('#form_agua select[name="tipo_flujo"]');
+    const tipoFlujoAgua = document.getElementById('tipo_flujo_agua');
+    const tipoFlujoSelectAntiguoAgua = document.querySelector('#form_agua select[name="tipo_flujo"]');
     const fuenteAgua = document.querySelector('#form_agua select[name="fuente_agua"]');
     const origenHidricoAgua = document.querySelector('#form_agua input[name="origen_hidrico"]');
     const destinoAgua = document.querySelector('#form_agua input[name="destino_agua"]');
@@ -842,6 +859,35 @@
         document.querySelector('#form_agua [data-water-field="retorna"]') || (retornaMismoAgua ? retornaMismoAgua.parentElement : null),
         document.querySelector('#form_agua [data-water-field="tratamiento"]') || (tratamientoAgua ? tratamientoAgua.parentElement : null)
     ].filter(Boolean);
+    const botonesTipoFlujoAgua = Array.from(document.querySelectorAll('#form_agua .agua-flow-btn'));
+
+    if (tipoFlujoSelectAntiguoAgua) {
+        tipoFlujoSelectAntiguoAgua.disabled = true;
+        if (tipoFlujoSelectAntiguoAgua.parentElement) {
+            tipoFlujoSelectAntiguoAgua.parentElement.style.display = 'none';
+        }
+    }
+
+    function pintarBotonesTipoFlujoAgua(tipo) {
+        botonesTipoFlujoAgua.forEach(btn => {
+            const activo = btn.dataset.flow === tipo;
+            btn.style.background = activo ? '#0E7490' : '#F3F4F6';
+            btn.style.color = activo ? 'white' : '#374151';
+            btn.style.borderColor = activo ? '#155E75' : '#D1D5DB';
+            btn.style.boxShadow = activo ? '0 8px 18px rgba(14,116,144,0.25)' : 'none';
+        });
+    }
+
+    function seleccionarTipoFlujoAgua(tipo) {
+        if (!['captacion', 'retorno', 'reuso'].includes(tipo)) {
+            tipo = 'captacion';
+        }
+        if (tipoFlujoAgua) {
+            tipoFlujoAgua.value = tipo;
+        }
+        pintarBotonesTipoFlujoAgua(tipo);
+        actualizarCamposRetornoAgua();
+    }
 
     function limpiarTablaAgua(mensaje) {
         if (!batchBodyAgua) return;
@@ -951,8 +997,7 @@
     }
 
     aplicarEstadoModoAgua('individual');
-    if (tipoFlujoAgua) tipoFlujoAgua.addEventListener('change', actualizarCamposRetornoAgua);
-    actualizarCamposRetornoAgua();
+    seleccionarTipoFlujoAgua(tipoFlujoAgua ? tipoFlujoAgua.value : 'captacion');
 
     establecerModoA2('individual');
     const tabInicial = new URLSearchParams(window.location.search).get('tab');

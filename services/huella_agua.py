@@ -122,6 +122,19 @@ def calcular_consumo_operativo_estimado(
     )
 
 
+def calcular_intensidad_hidrica_total(huella_total_m3: Any, medida_productiva: Any) -> Optional[Decimal]:
+    huella_total = _ensure_non_negative(_to_decimal(huella_total_m3, "huella_total_m3"), "huella_total_m3")
+    if medida_productiva in (None, "", 0, "0"):
+        return None
+    try:
+        medida = Decimal(str(medida_productiva))
+    except (InvalidOperation, ValueError, TypeError):
+        return None
+    if medida <= 0:
+        return None
+    return huella_total / medida
+
+
 @dataclass(frozen=True)
 class FactorEscasez:
     id: Any
@@ -291,6 +304,7 @@ def consolidar_resultado_sede(
 
     intensidad = None
     intensidad_escasez = None
+    intensidad_total = None
     if medida_productiva not in (None, "", 0, "0"):
         try:
             medida = Decimal(str(medida_productiva))
