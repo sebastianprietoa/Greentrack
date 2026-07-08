@@ -1242,7 +1242,7 @@ def _agua_calcular_resumen (conn ,empresa ,periodo =None ):
         resultados_sede .append ({
         "sede_id":sede_id ,
         "sede":sede ,
-        "resultado":consolidar_resultado_sede (grupo ,sede ,factores ,periodo_elegido ,medida_productiva =None ),
+        "resultado":_agua_consolidar_grupo_seguro (grupo ,sede ,factores ,periodo_elegido ,medida_valor =None ),
         })
 
     captacion_total =sum (Decimal (str (r ["resultado"]["captacion_m3"]or 0 ))for r in resultados_sede )
@@ -1302,6 +1302,8 @@ def _agua_calcular_resumen (conn ,empresa ,periodo =None ):
     # No se usa directamente: evitamos confundir intensidad por suma anual.
 
     # Intensidad hÃ­drica usando la medida productiva del perÃ­odo visible si existe
+    # En esta vista la huella azul corresponde al consumo operativo; la huella total se completa tras sumar el suministro energÃ©tico.
+    huella_hidrica_total =float (consumo or 0 )
     intensidad_hidrica =None 
     intensidad_escasez =None 
     intensidad_hidrica_total =None 
@@ -1331,8 +1333,6 @@ def _agua_calcular_resumen (conn ,empresa ,periodo =None ):
             medida_valor =0 
     if medida_valor >0 :
         intensidad_hidrica =round (float (consumo )/medida_valor ,6 )
-        intensidad_total_decimal =calcular_intensidad_hidrica_total (huella_hidrica_total ,medida_valor )
-        intensidad_hidrica_total =round (float (intensidad_total_decimal ),6 )if intensidad_total_decimal is not None else None 
         if huella is not None :
             intensidad_escasez =round (float (huella )/medida_valor ,6 )
 
@@ -1424,6 +1424,11 @@ def _agua_calcular_resumen (conn ,empresa ,periodo =None ):
     )
     suministro_por_fuente ={f"{row [0 ]} - {row [1 ]}":float (row [2 ]or 0 )for row in cursor .fetchall ()}
 
+    huella_hidrica_total =float (consumo or 0 )+float (huella_suministro_total or 0 )
+    if medida_valor >0 :
+        intensidad_total_decimal =calcular_intensidad_hidrica_total (huella_hidrica_total ,medida_valor )
+        intensidad_hidrica_total =round (float (intensidad_total_decimal ),6 )if intensidad_total_decimal is not None else None 
+
         # Cobertura por sede para el dashboard
     cobertura =[]
     if sedes :
@@ -1479,6 +1484,7 @@ def _agua_calcular_resumen (conn ,empresa ,periodo =None ):
     "consumo":float (consumo or 0 ),
     "factor":factor ,
     "huella":float (huella or 0 )if huella is not None else None ,
+    "huella_hidrica_total":huella_hidrica_total ,
     "nivel":nivel ,
     "calidad":calidad ,
     "intensidad_hidrica":intensidad_hidrica ,
@@ -1498,6 +1504,33 @@ def _agua_calcular_resumen (conn ,empresa ,periodo =None ):
     }
 
 
+def _agua_consolidar_grupo_seguro (grupo ,sede ,factores ,periodo_sel ,medida_valor =None ):
+    try :
+        return consolidar_resultado_sede (grupo ,sede ,factores ,periodo_sel ,medida_valor )
+    except HuellaAguaError :
+        captacion =calcular_captacion_total (grupo )
+        retorno =calcular_retornos_totales (grupo )
+        retorno_mismo =calcular_retornos_mismo_sistema (grupo )
+        reuso =calcular_reuso_interno (grupo )
+        consumo =max (Decimal ("0"),captacion -retorno_mismo )
+        return {
+        "captacion_m3":captacion ,
+        "retorno_m3":retorno ,
+        "retorno_mismo_sistema_m3":retorno_mismo ,
+        "reuso_m3":reuso ,
+        "consumo_operativo_m3":consumo ,
+        "factor_escasez_aplicado":None ,
+        "huella_escasez_m3eq":None ,
+        "id_factor_escasez":None ,
+        "nivel_calculo":"Solo inventario físico disponible"if any (
+        Decimal (str (f .get ("volumen_m3")or 0 ))>0 for f in grupo
+        )else "Datos insuficientes" ,
+        "intensidad_hidrica":None ,
+        "intensidad_escasez":None ,
+        "factor":None ,
+        }
+
+
 def _agua_agrupar_resultados_reportes (flujos ,sedes ,factores ,medida_valor =None ,vista ="mensual"):
     sede_map ={s ["id"]:s for s in sedes }
     grupos ={}
@@ -1508,7 +1541,7 @@ def _agua_agrupar_resultados_reportes (flujos ,sedes ,factores ,medida_valor =No
     resultados =[]
     for (sede_id ,periodo_sel ),grupo in grupos .items ():
         sede =sede_map .get (sede_id ,{"id":sede_id ,"nombre_sede":"Empresa"if sede_id is None else f"Sede {sede_id }"})
-        resultado =consolidar_resultado_sede (grupo ,sede ,factores ,periodo_sel ,medida_valor )
+        resultado =_agua_consolidar_grupo_seguro (grupo ,sede ,factores ,periodo_sel ,medida_valor )
         resultados .append ({
         "sede_id":sede_id ,
         "nombre_sede":sede .get ("nombre_sede"),
@@ -5064,8 +5097,9 @@ def admin_tickets_responder (ticket_id ):
     return redirect ('/admin/tickets')
 
 
-    # Inicia la DB
-init_db ()
+    # Inicia la DB solo cuando se solicita explicitamente, para evitar bloquear el arranque en entornos con migraciones lentas.
+if os .getenv ("GREENTRACK_INIT_DB","0")=="1":
+    init_db ()
 
 if __name__ =="__main__":
     app .run (host ="0.0.0.0",port =5000 ,debug =True )
