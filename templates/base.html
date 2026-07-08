@@ -7,6 +7,55 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="{{ url_for('static', filename='vendor/chart.min.js') }}"></script>
+    <script>
+        if (window.Chart) {
+            Chart.register({
+                id: 'barValueLabels',
+                afterDatasetsDraw(chart) {
+                    if (chart.config.type !== 'bar' && !chart.data.datasets.some(ds => ds.type === 'bar')) return;
+                    const { ctx } = chart;
+                    const formatValue = value => {
+                        const num = Number(value || 0);
+                        if (!Number.isFinite(num) || num === 0) return '';
+                        if (Math.abs(num) >= 1000) {
+                            return new Intl.NumberFormat('es-CL', {
+                                notation: 'compact',
+                                maximumFractionDigits: 1
+                            }).format(num);
+                        }
+                        return new Intl.NumberFormat('es-CL', {
+                            maximumFractionDigits: 2
+                        }).format(num);
+                    };
+
+                    ctx.save();
+                    ctx.font = '600 10px "Avenir Next LT Pro", "Segoe UI", sans-serif';
+                    ctx.fillStyle = '#374151';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'bottom';
+
+                    chart.data.datasets.forEach((dataset, datasetIndex) => {
+                        if (dataset.hidden) return;
+                        const meta = chart.getDatasetMeta(datasetIndex);
+                        if (meta.hidden || meta.type !== 'bar') return;
+
+                        meta.data.forEach((bar, index) => {
+                            const raw = Array.isArray(dataset.data) ? dataset.data[index] : null;
+                            const value = typeof raw === 'object' && raw !== null ? raw.y : raw;
+                            const label = formatValue(value);
+                            if (!label) return;
+
+                            const pos = bar.tooltipPosition();
+                            const y = Math.max(pos.y - 4, chart.chartArea.top + 12);
+                            ctx.fillText(label, pos.x, y);
+                        });
+                    });
+
+                    ctx.restore();
+                }
+            });
+        }
+    </script>
     <style>
         *, *::before, *::after { box-sizing: border-box; }
 
@@ -348,6 +397,7 @@
                     <a href="{{ url_for('admin_dashboard') }}" class="menu-link"><i class="fas fa-tachometer-alt" style="color: #6E84C8;"></i> Dashboard</a>
                     <a href="{{ url_for('admin_empresas') }}" class="menu-link"><i class="fas fa-building" style="color: #4AA383;"></i> Empresas</a>
                     <a href="{{ url_for('admin_factores') }}" class="menu-link"><i class="fas fa-sliders-h" style="color: #D9AA2D;"></i> Factores</a>
+                    <a href="{{ url_for('admin_huella_hidrica') }}" class="menu-link"><i class="fas fa-water" style="color: #4AA0E6;"></i> Huella Hidrica</a>
                     <a href="{{ url_for('admin_exportar_todo') }}" class="menu-link"><i class="fas fa-file-export" style="color: #2C90A2;"></i> Exportar Data</a>
                 {% else %}
                     <div class="menu-category">Visualización</div>
@@ -355,7 +405,7 @@
                     <a href="{{ url_for('combustion_dashboard') }}" class="menu-link"><i class="fas fa-fire" style="color: #D96A63;"></i> Combustión</a>
                     <a href="{{ url_for('electricidad_dashboard') }}" class="menu-link"><i class="fas fa-bolt" style="color: #D9AA2D;"></i> Electricidad</a>
                     <a href="{{ url_for('refrigerantes_dashboard') }}" class="menu-link"><i class="fas fa-snowflake" style="color: #5FBCD3;"></i> Refrigerantes</a>
-                    <a href="{{ url_for('agua_dashboard') }}" class="menu-link"><i class="fas fa-tint" style="color: #4AA0E6;"></i> Agua</a>
+                    <a href="{{ url_for('agua_dashboard') }}" class="menu-link"><i class="fas fa-tint" style="color: #4AA0E6;"></i> Huella Hidrica</a>
                     <a href="{{ url_for('residuos_dashboard') }}" class="menu-link"><i class="fas fa-recycle" style="color: #4AA383;"></i> Residuos</a>
 
                     <div class="menu-category">Registro de Datos</div>

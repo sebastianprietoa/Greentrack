@@ -1,0 +1,227 @@
+{% extends "admin.html" %}
+{% block title %}Water Footprint - Admin{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 1.75rem;">
+    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 0.5rem;">
+        <div style="width: 46px; height: 46px; border-radius: 12px; background: linear-gradient(135deg, #4AA0E6, #60A5FA); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(74,160,230,0.25);">
+            <i class="fas fa-water" style="color: white; font-size: 1.15rem;"></i>
+        </div>
+        <div>
+            <h1 style="margin: 0; color: #111827; font-size: 1.45rem;">Water Footprint</h1>
+            <p style="margin: 2px 0 0 0; color: #6B7280; font-size: 0.9rem;">Configuración de sedes, ubicación y factores de escasez hídrica</p>
+        </div>
+    </div>
+    <p style="color: #6B7280; margin: 0; max-width: 820px;">Metodología Water Footprint para operaciones directas. La huella de escasez depende de la ubicación y del factor configurado; los resultados físicos se muestran en m³ y los caracterizados en m³-eq.</p>
+</div>
+
+<div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom: 1.5rem;">
+    <a href="{{ url_for('admin_huella_hidrica') }}" style="padding:10px 16px; border-radius:8px; text-decoration:none; font-weight:600; background:#4AA0E6; color:white;">Resumen</a>
+    <a href="#sedes" style="padding:10px 16px; border-radius:8px; text-decoration:none; font-weight:600; background:white; color:#374151; border:1px solid #E5E7EB;">Sedes</a>
+    <a href="#factores" style="padding:10px 16px; border-radius:8px; text-decoration:none; font-weight:600; background:white; color:#374151; border:1px solid #E5E7EB;">Factores</a>
+    <a href="#cobertura" style="padding:10px 16px; border-radius:8px; text-decoration:none; font-weight:600; background:white; color:#374151; border:1px solid #E5E7EB;">Cobertura</a>
+</div>
+
+<div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+    <div style="background:white; padding:1.25rem; border-radius:12px; border-top:4px solid #4AA0E6; box-shadow:0 2px 10px rgba(0,0,0,0.05);">
+        <div style="font-size:0.75rem; text-transform:uppercase; color:#9CA3AF; font-weight:700;">Sedes</div>
+        <div style="font-size:1.9rem; font-weight:700; color:#111827;">{{ sedes|length }}</div>
+    </div>
+    <div style="background:white; padding:1.25rem; border-radius:12px; border-top:4px solid #10B981; box-shadow:0 2px 10px rgba(0,0,0,0.05);">
+        <div style="font-size:0.75rem; text-transform:uppercase; color:#9CA3AF; font-weight:700;">Factores</div>
+        <div style="font-size:1.9rem; font-weight:700; color:#111827;">{{ factores|length }}</div>
+    </div>
+    <div style="background:white; padding:1.25rem; border-radius:12px; border-top:4px solid #F59E0B; box-shadow:0 2px 10px rgba(0,0,0,0.05);">
+        <div style="font-size:0.75rem; text-transform:uppercase; color:#9CA3AF; font-weight:700;">Coberturas</div>
+        <div style="font-size:1.9rem; font-weight:700; color:#111827;">{{ coberturas|length }}</div>
+    </div>
+</div>
+
+<div id="sedes" style="background:white; padding:1.5rem; border-radius:14px; box-shadow:0 4px 16px rgba(0,0,0,0.06); margin-bottom:1.5rem;">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; margin-bottom:1rem;">
+        <div>
+            <h2 style="margin:0; color:#111827;">Gestión de sedes</h2>
+            <p style="margin:4px 0 0 0; color:#6B7280;">Crea, edita, activa o desactiva instalaciones por empresa.</p>
+        </div>
+        <button onclick="document.getElementById('formSede').scrollIntoView({behavior:'smooth'})" style="background:#10B981; color:white; border:none; padding:10px 16px; border-radius:8px; font-weight:700; cursor:pointer;">Nueva sede</button>
+    </div>
+
+    <form id="formSede" action="{{ url_for('admin_huella_sedes') }}" method="POST" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:0.85rem; margin-bottom:1rem;">
+        <input type="hidden" name="sede_id" id="sede_id">
+        <input name="empresa" placeholder="Empresa" style="padding:10px; border:1px solid #D1D5DB; border-radius:8px;">
+        <input name="nombre_sede" placeholder="Nombre de sede" style="padding:10px; border:1px solid #D1D5DB; border-radius:8px;">
+        <input name="region" placeholder="Región" style="padding:10px; border:1px solid #D1D5DB; border-radius:8px;">
+        <input name="comuna" placeholder="Comuna" style="padding:10px; border:1px solid #D1D5DB; border-radius:8px;">
+        <input name="latitud" placeholder="Latitud" style="padding:10px; border:1px solid #D1D5DB; border-radius:8px;">
+        <input name="longitud" placeholder="Longitud" style="padding:10px; border:1px solid #D1D5DB; border-radius:8px;">
+        <input name="codigo_cuenca" placeholder="Código cuenca" style="padding:10px; border:1px solid #D1D5DB; border-radius:8px;">
+        <input name="nombre_cuenca" placeholder="Nombre cuenca" style="padding:10px; border:1px solid #D1D5DB; border-radius:8px;">
+        <input name="nivel_ubicacion" placeholder="Nivel ubicación" style="padding:10px; border:1px solid #D1D5DB; border-radius:8px;">
+        <button type="submit" style="background:#4AA0E6; color:white; border:none; border-radius:8px; font-weight:700; cursor:pointer; padding:10px 16px;">Guardar sede</button>
+    </form>
+
+    <div style="overflow-x:auto;">
+        <table style="width:100%; border-collapse:collapse;">
+            <thead>
+                <tr style="background:#F9FAFB;">
+                    <th style="text-align:left; padding:10px;">Empresa</th>
+                    <th style="text-align:left; padding:10px;">Sede</th>
+                    <th style="text-align:left; padding:10px;">Ubicación</th>
+                    <th style="text-align:left; padding:10px;">Estado</th>
+                    <th style="text-align:left; padding:10px;">Factor</th>
+                    <th style="text-align:left; padding:10px;">Activo</th>
+                    <th style="text-align:left; padding:10px;">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for sede in sedes %}
+                <tr style="border-bottom:1px solid #E5E7EB;">
+                    <td style="padding:10px;">{{ sede.empresa }}</td>
+                    <td style="padding:10px; font-weight:600;">{{ sede.nombre_sede }}</td>
+                    <td style="padding:10px;">{{ sede.region or '—' }} / {{ sede.comuna or '—' }}</td>
+                    <td style="padding:10px;">{{ sede.estado_ubicacion }}</td>
+                    <td style="padding:10px;">{% if sede.factor_disponible %}<span style="color:#059669; font-weight:700;">Disponible</span>{% else %}<span style="color:#B45309; font-weight:700;">No disponible</span>{% endif %}</td>
+                    <td style="padding:10px;">{% if sede.activo %}<span style="color:#059669;">Activa</span>{% else %}<span style="color:#6B7280;">Inactiva</span>{% endif %}</td>
+                    <td style="padding:10px; display:flex; gap:8px; flex-wrap:wrap;">
+                        <button type="button" onclick='cargarSede({{ sede|tojson }})' style="border:none; background:#EEF2FF; color:#4338CA; padding:7px 10px; border-radius:7px; cursor:pointer;">Editar</button>
+                        <form action="{{ url_for('admin_huella_toggle_sede', sede_id=sede.id) }}" method="POST" style="display:inline;">
+                            <button type="submit" style="border:none; background:#FEF3C7; color:#92400E; padding:7px 10px; border-radius:7px; cursor:pointer;">{% if sede.activo %}Desactivar{% else %}Activar{% endif %}</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div id="factores" style="background:white; padding:1.5rem; border-radius:14px; box-shadow:0 4px 16px rgba(0,0,0,0.06); margin-bottom:1.5rem;">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; margin-bottom:1rem;">
+        <div>
+            <h2 style="margin:0; color:#111827;">Gestión de factores</h2>
+            <p style="margin:4px 0 0 0; color:#6B7280;">Factores globales con metodología, versión, fuente y vigencia.</p>
+        </div>
+    </div>
+
+    <form action="{{ url_for('admin_huella_factores') }}" method="POST" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:0.85rem; margin-bottom:1rem;">
+        <input type="hidden" name="factor_id" id="factor_id">
+        <input name="metodo" placeholder="Método" style="padding:10px; border:1px solid #D1D5DB; border-radius:8px;">
+        <input name="version_metodo" placeholder="Versión" style="padding:10px; border:1px solid #D1D5DB; border-radius:8px;">
+        <input name="actividad" placeholder="Actividad" style="padding:10px; border:1px solid #D1D5DB; border-radius:8px;">
+        <input name="nivel_geografico" placeholder="Nivel geográfico" style="padding:10px; border:1px solid #D1D5DB; border-radius:8px;">
+        <input name="codigo_geografico" placeholder="Código geográfico" style="padding:10px; border:1px solid #D1D5DB; border-radius:8px;">
+        <input name="factor_m3eq_m3" placeholder="Factor m3-eq/m3" style="padding:10px; border:1px solid #D1D5DB; border-radius:8px;">
+        <input name="fuente" placeholder="Fuente" style="padding:10px; border:1px solid #D1D5DB; border-radius:8px;">
+        <input name="referencia" placeholder="Referencia" style="padding:10px; border:1px solid #D1D5DB; border-radius:8px;">
+        <input type="date" name="periodo_inicio" style="padding:10px; border:1px solid #D1D5DB; border-radius:8px;">
+        <input type="date" name="periodo_fin" style="padding:10px; border:1px solid #D1D5DB; border-radius:8px;">
+        <button type="submit" style="background:#10B981; color:white; border:none; border-radius:8px; font-weight:700; cursor:pointer; padding:10px 16px;">Guardar factor</button>
+    </form>
+
+    <form action="{{ url_for('admin_huella_preview_factores') }}" method="POST" enctype="multipart/form-data" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:1rem;">
+        <input type="file" name="archivo_factores" accept=".csv,.xlsx,.xls" style="padding:10px; border:1px solid #D1D5DB; border-radius:8px; background:white;">
+        <button type="submit" style="background:#4AA0E6; color:white; border:none; border-radius:8px; font-weight:700; cursor:pointer; padding:10px 16px;">Vista previa de carga masiva</button>
+    </form>
+
+    <div style="overflow-x:auto;">
+        <table style="width:100%; border-collapse:collapse;">
+            <thead>
+                <tr style="background:#F9FAFB;">
+                    <th style="text-align:left; padding:10px;">Método</th>
+                    <th style="text-align:left; padding:10px;">Versión</th>
+                    <th style="text-align:left; padding:10px;">Nivel</th>
+                    <th style="text-align:left; padding:10px;">Código</th>
+                    <th style="text-align:left; padding:10px;">Factor</th>
+                    <th style="text-align:left; padding:10px;">Vigencia</th>
+                    <th style="text-align:left; padding:10px;">Activo</th>
+                    <th style="text-align:left; padding:10px;">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for factor in factores %}
+                <tr style="border-bottom:1px solid #E5E7EB;">
+                    <td style="padding:10px;">{{ factor.metodo }}</td>
+                    <td style="padding:10px;">{{ factor.version_metodo }}</td>
+                    <td style="padding:10px;">{{ factor.nivel_geografico }}</td>
+                    <td style="padding:10px;">{{ factor.codigo_geografico }}</td>
+                    <td style="padding:10px; font-weight:700; color:#059669;">{{ factor.factor_m3eq_m3 }}</td>
+                    <td style="padding:10px;">{{ factor.periodo_inicio or '—' }} / {{ factor.periodo_fin or '—' }}</td>
+                    <td style="padding:10px;">{% if factor.activo %}Sí{% else %}No{% endif %}</td>
+                    <td style="padding:10px; display:flex; gap:8px; flex-wrap:wrap;">
+                        <button type="button" onclick='cargarFactor({{ factor|tojson }})' style="border:none; background:#EEF2FF; color:#4338CA; padding:7px 10px; border-radius:7px; cursor:pointer;">Editar</button>
+                        <form action="{{ url_for('admin_huella_toggle_factor', factor_id=factor.id) }}" method="POST" style="display:inline;">
+                            <button type="submit" style="border:none; background:#FEF3C7; color:#92400E; padding:7px 10px; border-radius:7px; cursor:pointer;">Cambiar estado</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div id="cobertura" style="background:white; padding:1.5rem; border-radius:14px; box-shadow:0 4px 16px rgba(0,0,0,0.06);">
+    <h2 style="margin:0 0 0.5rem 0; color:#111827;">Cobertura de datos</h2>
+    <p style="margin:0 0 1rem 0; color:#6B7280;">Período con datos, captación, retorno, reúso, ubicación configurada, factor disponible y estado calculable.</p>
+    <div style="overflow-x:auto;">
+        <table style="width:100%; border-collapse:collapse;">
+            <thead>
+                <tr style="background:#F9FAFB;">
+                    <th style="text-align:left; padding:10px;">Empresa</th>
+                    <th style="text-align:left; padding:10px;">Sede</th>
+                    <th style="text-align:left; padding:10px;">Período</th>
+                    <th style="text-align:left; padding:10px;">Captación</th>
+                    <th style="text-align:left; padding:10px;">Retorno</th>
+                    <th style="text-align:left; padding:10px;">Reúso</th>
+                    <th style="text-align:left; padding:10px;">Ubicación</th>
+                    <th style="text-align:left; padding:10px;">Factor</th>
+                    <th style="text-align:left; padding:10px;">Resultado</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in coberturas %}
+                <tr style="border-bottom:1px solid #E5E7EB;">
+                    <td style="padding:10px;">{{ row.empresa }}</td>
+                    <td style="padding:10px;">{{ row.nombre_sede }}</td>
+                    <td style="padding:10px;">{{ row.periodo }}</td>
+                    <td style="padding:10px;">{{ row.captacion_m3 or 0 }} m³</td>
+                    <td style="padding:10px;">{{ row.retorno_m3 or 0 }} m³</td>
+                    <td style="padding:10px;">{{ row.reuso_m3 or 0 }} m³</td>
+                    <td style="padding:10px;">{{ row.ubicacion_configurada }}</td>
+                    <td style="padding:10px;">{% if row.factor_disponible %}Disponible{% else %}Pendiente{% endif %}</td>
+                    <td style="padding:10px;">{{ row.resultado_calculable }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+function cargarSede(data) {
+    document.getElementById('sede_id').value = data.id || '';
+    document.querySelector('[name="empresa"]').value = data.empresa || '';
+    document.querySelector('[name="nombre_sede"]').value = data.nombre_sede || '';
+    document.querySelector('[name="region"]').value = data.region || '';
+    document.querySelector('[name="comuna"]').value = data.comuna || '';
+    document.querySelector('[name="latitud"]').value = data.latitud || '';
+    document.querySelector('[name="longitud"]').value = data.longitud || '';
+    document.querySelector('[name="codigo_cuenca"]').value = data.codigo_cuenca || '';
+    document.querySelector('[name="nombre_cuenca"]').value = data.nombre_cuenca || '';
+    document.querySelector('[name="nivel_ubicacion"]').value = data.nivel_ubicacion || '';
+}
+function cargarFactor(data) {
+    document.getElementById('factor_id').value = data.id || '';
+    document.querySelector('[name="metodo"]').value = data.metodo || '';
+    document.querySelector('[name="version_metodo"]').value = data.version_metodo || '';
+    document.querySelector('[name="actividad"]').value = data.actividad || '';
+    document.querySelector('[name="nivel_geografico"]').value = data.nivel_geografico || '';
+    document.querySelector('[name="codigo_geografico"]').value = data.codigo_geografico || '';
+    document.querySelector('[name="factor_m3eq_m3"]').value = data.factor_m3eq_m3 || '';
+    document.querySelector('[name="fuente"]').value = data.fuente || '';
+    document.querySelector('[name="referencia"]').value = data.referencia || '';
+    document.querySelector('[name="periodo_inicio"]').value = data.periodo_inicio || '';
+    document.querySelector('[name="periodo_fin"]').value = data.periodo_fin || '';
+}
+</script>
+{% endblock %}

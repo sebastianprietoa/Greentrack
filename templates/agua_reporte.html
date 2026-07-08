@@ -1,202 +1,32 @@
 {% extends "base.html" %}
 
-{% block title %}Reporte de Agua - GreenTrack{% endblock %}
+{% block title %}Reporte histórico de agua - GreenTrack{% endblock %}
 
 {% block content %}
 <div style="max-width: 1200px; margin: 0 auto;">
     <div style="margin-bottom: 2rem;">
         <a href="{{ url_for('agua_dashboard') }}" style="display: inline-flex; align-items: center; gap: 8px; color: #3B82F6; text-decoration: none; font-weight: 500;">
-            <i class="fas fa-arrow-left"></i> Volver al Dashboard
+            <i class="fas fa-arrow-left"></i> Volver a Water Footprint
         </a>
     </div>
-    
+
     <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
         <h1 style="margin-bottom: 0.5rem; color: #111827; display: flex; align-items: center; gap: 10px;">
-            <i class="fas fa-chart-bar" style="color: #3B82F6;"></i> Reporte de Emisiones al Agua
+            <i class="fas fa-chart-bar" style="color: #3B82F6;"></i> Reporte histórico de agua
         </h1>
-        <p style="color: #6B7280; margin-bottom: 2rem;">Resumen completo con costos en USD y CLP</p>
-        
-        <!-- RESUMEN EJECUTIVO -->
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
-            <div style="background: #F0F9FF; padding: 1.5rem; border-radius: 8px; border-left: 4px solid #3B82F6;">
-                <h3 style="margin-bottom: 0.5rem; color: #1E40AF;">Consumo Total Agua</h3>
-                <p style="font-size: 1.5rem; font-weight: 700; color: #111827; margin: 0;">
-                    {{ "%.0f"|format(total_consumo.agua_embotellada_litros or 0) }} L
-                </p>
-            </div>
-            
-            <div style="background: #FEF3C7; padding: 1.5rem; border-radius: 8px; border-left: 4px solid #D97706;">
-                <h3 style="margin-bottom: 0.5rem; color: #92400E;">Hielo Total</h3>
-                <p style="font-size: 1.5rem; font-weight: 700; color: #111827; margin: 0;">
-                    {{ "%.0f"|format((total_consumo.hielo_comprado_kg or 0) + (total_consumo.hielo_producido_kg or 0)) }} kg
-                </p>
-            </div>
-            
-            <div style="background: #D1FAE5; padding: 1.5rem; border-radius: 8px; border-left: 4px solid #10B981;">
-                <h3 style="margin-bottom: 0.5rem; color: #065F46;">Costos Totales</h3>
-                <p style="font-size: 1.5rem; font-weight: 700; color: #111827; margin: 0;">
-                    ${{ "%.2f"|format(total_costos_usd) }} USD
-                </p>
-                <p style="color: #6B7280; margin: 0;">${{ "%.0f"|format(total_costos_clp) }} CLP</p>
-            </div>
-        </div>
-        
-        <!-- DETALLE DE COSTOS -->
-        <div style="margin-bottom: 2rem;">
-            <h2 style="margin-bottom: 1.5rem; color: #111827; display: flex; align-items: center; gap: 10px;">
-                <i class="fas fa-dollar-sign"></i> Detalle de Costos
-            </h2>
-            
-            {% if df_costos %}
-            <div style="overflow-x: auto;">
-                <table style="width: 100%; border-collapse: collapse;">
-                    <thead>
-                        <tr style="background: #F9FAFB;">
-                            <th style="padding: 1rem; text-align: left; font-weight: 600; color: #374151;">Concepto</th>
-                            <th style="padding: 1rem; text-align: left; font-weight: 600; color: #374151;">Cantidad</th>
-                            <th style="padding: 1rem; text-align: left; font-weight: 600; color: #374151;">Unidad</th>
-                            <th style="padding: 1rem; text-align: left; font-weight: 600; color: #374151;">Costo USD</th>
-                            <th style="padding: 1rem; text-align: left; font-weight: 600; color: #374151;">Costo CLP</th>
-                            <th style="padding: 1rem; text-align: left; font-weight: 600; color: #374151;">Fecha</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for costo in df_costos %}
-                        <tr style="border-bottom: 1px solid #E5E7EB;">
-                            <td style="padding: 1rem; color: #374151;">{{ costo.concepto }}</td>
-                            <td style="padding: 1rem; color: #374151;">{{ "%.2f"|format(costo.cantidad) }}</td>
-                            <td style="padding: 1rem; color: #374151;">{{ costo.unidad }}</td>
-                            <td style="padding: 1rem; color: #10B981; font-weight: 600;">${{ "%.2f"|format(costo.costo_usd) }}</td>
-                            <td style="padding: 1rem; color: #3B82F6; font-weight: 600;">${{ "%.0f"|format(costo.costo_clp) }}</td>
-                            <td style="padding: 1rem; color: #374151;">{{ costo.fecha[:10] }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                    <tfoot>
-                        <tr style="background: #F9FAFB; font-weight: 600;">
-                            <td colspan="3" style="padding: 1rem; text-align: right; color: #374151;">TOTALES:</td>
-                            <td style="padding: 1rem; color: #10B981;">${{ "%.2f"|format(total_costos_usd) }}</td>
-                            <td style="padding: 1rem; color: #3B82F6;">${{ "%.0f"|format(total_costos_clp) }}</td>
-                            <td></td>
-                        </tr>
-                    </tfoot>
-                </table>
-            </div>
-            {% else %}
-            <div style="text-align: center; padding: 3rem; color: #6B7280; background: #F9FAFB; border-radius: 8px;">
-                <i class="fas fa-coins" style="font-size: 3rem; margin-bottom: 1rem; display: block; color: #9CA3AF;"></i>
-                <p>No hay registros de costos aún.</p>
-            </div>
-            {% endif %}
-        </div>
-        
-        <!-- DISTRIBUCIÓN POR CUENCA -->
-        <div>
-            <h2 style="margin-bottom: 1.5rem; color: #111827; display: flex; align-items: center; gap: 10px;">
-                <i class="fas fa-water"></i> Distribución por Cuenca Destino
-            </h2>
-            
-            {% if total_cuencas %}
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
-                {% for cuenca, cantidad in total_cuencas.items() %}
-                <div style="background: #E0F2FE; padding: 1rem; border-radius: 8px;">
-                    <h3 style="margin-bottom: 0.5rem; color: #1E40AF;">{{ cuenca }}</h3>
-                    <div style="display: flex; justify-content: space-between; align-items: baseline;">
-                        <span style="font-size: 1.5rem; font-weight: 700; color: #111827;">
-                            {{ "%.0f"|format(cantidad) }} m³
-                        </span>
-                        <span style="color: #6B7280;">
-                            {{ "%.1f"|format((cantidad / total_cuencas.values()|sum * 100) if total_cuencas.values()|sum > 0 else 0) }}%
-                        </span>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-            
-            <!-- GRÁFICO SIMULADO -->
-            <div style="margin-top: 2rem; padding: 1.5rem; background: #F9FAFB; border-radius: 8px;">
-                <h3 style="margin-bottom: 1rem; color: #374151;">Distribución Gráfica</h3>
-                <div style="display: flex; align-items: flex-end; gap: 10px; height: 200px; padding: 1rem 0;">
-                    {% for cuenca, cantidad in total_cuencas.items() %}
-                    {% set porcentaje = (cantidad / total_cuencas.values()|sum * 100) if total_cuencas.values()|sum > 0 else 0 %}
-                    <div style="flex: 1; display: flex; flex-direction: column; align-items: center;">
-                        <div style="width: 80%; background: #3B82F6; height: {{ porcentaje * 1.5 }}px; border-radius: 4px 4px 0 0;"></div>
-                        <div style="margin-top: 10px; font-size: 0.9rem; color: #374151; font-weight: 600;">{{ cuenca[:10] }}</div>
-                        <div style="font-size: 0.8rem; color: #6B7280;">{{ "%.0f"|format(porcentaje) }}%</div>
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-            {% else %}
-            <div style="text-align: center; padding: 2rem; color: #6B7280; background: #F9FAFB; border-radius: 8px;">
-                <p>No hay datos de cuencas registradas.</p>
-            </div>
-            {% endif %}
-        </div>
-        
-        <!-- BOTONES DE ACCIÓN -->
+        <p style="color: #6B7280; margin-bottom: 2rem;">Submódulo secundario con costos, cuencas y trazabilidad histórica.</p>
+
         <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 3rem; padding-top: 2rem; border-top: 1px solid #E5E7EB;">
-            <a href="{{ url_for('agua_registro') }}" 
+            <a href="{{ url_for('agua_registro') }}"
                style="background: #3B82F6; color: white; border: none; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 8px;">
-                <i class="fas fa-plus"></i> Nuevo Registro
+                <i class="fas fa-plus"></i> Abrir formulario histórico
             </a>
-            
-            <button onclick="window.print()" 
+            <button onclick="window.print()"
+                    type="button"
                     style="background: white; color: #374151; border: 2px solid #E5E7EB; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px;">
-                <i class="fas fa-print"></i> Imprimir Reporte
+                <i class="fas fa-print"></i> Imprimir reporte
             </button>
         </div>
     </div>
 </div>
-
-<script>
-    // Función para exportar a Excel
-    function exportarExcel() {
-        alert("Funcionalidad de exportación a Excel en desarrollo");
-        // En una versión futura, esto generaría un archivo Excel con todos los datos
-    }
-</script>
-
-<style>
-    @media (max-width: 768px) {
-        .stats-grid {
-            grid-template-columns: 1fr !important;
-        }
-        
-        table {
-            font-size: 0.9rem;
-        }
-        
-        th, td {
-            padding: 0.75rem 0.5rem !important;
-        }
-        
-        .action-buttons {
-            flex-direction: column !important;
-        }
-    }
-    
-    .print-only {
-        display: none;
-    }
-    
-    @media print {
-        .no-print {
-            display: none !important;
-        }
-        
-        .print-only {
-            display: block !important;
-        }
-        
-        body {
-            background: white !important;
-        }
-        
-        .container {
-            max-width: 100% !important;
-            padding: 0 !important;
-        }
-    }
-</style>
 {% endblock %}
