@@ -12,6 +12,7 @@
             Chart.register({
                 id: 'barValueLabels',
                 afterDatasetsDraw(chart) {
+                    if (chart.options.plugins?.barValueLabels?.display === false) return;
                     if (chart.config.type !== 'bar' && !chart.data.datasets.some(ds => ds.type === 'bar')) return;
                     const { ctx } = chart;
                     const formatValue = value => {

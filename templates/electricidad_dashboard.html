@@ -226,6 +226,7 @@ document.addEventListener("DOMContentLoaded", function() {
     const formatKg = val => new Intl.NumberFormat('es-CL', {minimumFractionDigits:2, maximumFractionDigits:2}).format(val);
     const datos = {{ tendencia_elec | tojson }};
     const labels = datos.map(d => d.mes);
+    const compactLabel = label => String(label || '').length > 14 ? String(label).slice(0, 13) + '...' : label;
     const kwh    = datos.map(d => parseFloat(d.kwh || 0).toFixed(2));
     const emM    = datos.map(d => parseFloat(d.emision_mercado || 0).toFixed(4));
     const emU    = datos.map(d => parseFloat(d.emision_ubicacion || 0).toFixed(4));
@@ -279,6 +280,7 @@ document.addEventListener("DOMContentLoaded", function() {
             maintainAspectRatio: false,
             interaction: { mode: 'index', intersect: false },
             plugins: {
+                barValueLabels: { display: false },
                 legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 12 } },
                 tooltip: {
                     callbacks: {
@@ -292,7 +294,17 @@ document.addEventListener("DOMContentLoaded", function() {
             scales: {
                 x: {
                     grid: { display: false },
-                    ticks: { maxRotation: 45, minRotation: 45, autoSkip: true, maxTicksLimit: 12, font: { size: 10 } }
+                    ticks: {
+                        maxRotation: 45,
+                        minRotation: 45,
+                        autoSkip: true,
+                        maxTicksLimit: 12,
+                        padding: 8,
+                        font: { size: 10 },
+                        callback: function(value) {
+                            return compactLabel(this.getLabelForValue(value));
+                        }
+                    }
                 },
                 yEmision: {
                     position: 'left',
