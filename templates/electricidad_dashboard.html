@@ -241,7 +241,9 @@ document.addEventListener("DOMContentLoaded", function() {
                     backgroundColor: '#6366F180',
                     borderColor: '#6366F1',
                     borderWidth: 1.5,
-                    borderRadius: 4,
+                    borderRadius: 3,
+                    barPercentage: 0.72,
+                    categoryPercentage: 0.7,
                     yAxisID: 'yEmision',
                     order: 1
                 },
@@ -251,7 +253,9 @@ document.addEventListener("DOMContentLoaded", function() {
                     backgroundColor: '#10B98160',
                     borderColor: '#10B981',
                     borderWidth: 1.5,
-                    borderRadius: 4,
+                    borderRadius: 3,
+                    barPercentage: 0.72,
+                    categoryPercentage: 0.7,
                     yAxisID: 'yEmision',
                     order: 2
                 },
@@ -262,7 +266,7 @@ document.addEventListener("DOMContentLoaded", function() {
                     borderColor: '#F59E0B',
                     backgroundColor: 'transparent',
                     borderWidth: 2,
-                    pointRadius: 4,
+                    pointRadius: 2.5,
                     pointBackgroundColor: '#F59E0B',
                     tension: 0.3,
                     yAxisID: 'yKwh',
@@ -286,7 +290,10 @@ document.addEventListener("DOMContentLoaded", function() {
                 }
             },
             scales: {
-                x: { grid: { display: false } },
+                x: {
+                    grid: { display: false },
+                    ticks: { maxRotation: 45, minRotation: 45, autoSkip: true, maxTicksLimit: 12, font: { size: 10 } }
+                },
                 yEmision: {
                     position: 'left',
                     beginAtZero: true,
