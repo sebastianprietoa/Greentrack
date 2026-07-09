@@ -127,11 +127,11 @@
                 <div style="display: grid; grid-template-columns: 140px 1.4fr 1fr; gap: 1rem; align-items: end;">
                     <div>
                         <label style="display: block; font-weight: 700; color: #374151; font-size: 0.8rem; margin-bottom: 6px;">Año</label>
-                        <select name="medida_anio" style="width: 100%; padding: 10px 12px; border: 1px solid #D1D5DB; border-radius: 8px; font-size: 0.95rem; background: white;">
-                            {% for y in anios_medidas %}
-                            <option value="{{ y }}" {% if y == anio_seleccionado %}selected{% endif %}>{{ y }}</option>
-                            {% endfor %}
-                        </select>
+                        <input type="number" name="medida_anio" id="medida_anio" min="1900" max="2100" step="1" required
+                               value="{{ anio_seleccionado }}"
+                               placeholder="Ej: 2026"
+                               style="width: 100%; padding: 10px 12px; border: 1px solid #D1D5DB; border-radius: 8px; font-size: 0.95rem; background: white; box-sizing: border-box;">
+                        <p style="margin: 6px 0 0 0; font-size: 0.78rem; color: #6B7280;">Puedes ingresar cualquier aÃ±o. Si ya existe, el sistema te pedirÃ¡ confirmaciÃ³n antes de reemplazarlo.</p>
                     </div>
                     <div>
                         <label style="display: block; font-weight: 700; color: #374151; font-size: 0.8rem; margin-bottom: 6px;">Unidad de medida</label>
@@ -290,6 +290,25 @@
             this.style.boxShadow = 'none';
         });
     });
+
+    const medidasHistorialAnios = new Set(({{ medidas_historial | map(attribute='anio') | list | tojson }}) .map(String));
+    const formConfiguracion = document.querySelector('form');
+    const inputMedidaAnio = document.getElementById('medida_anio');
+
+    if (formConfiguracion && inputMedidaAnio) {
+        formConfiguracion.addEventListener('submit', function(event) {
+            const anio = String(inputMedidaAnio.value || '').trim();
+            if (!anio) return;
+            if (medidasHistorialAnios.has(anio) && !this.dataset.confirmadoCambio) {
+                event.preventDefault();
+                const confirma = confirm(`Ya existe una medida productiva para ${anio}. Si continúas, se reemplazará el valor anterior.`);
+                if (confirma) {
+                    this.dataset.confirmadoCambio = '1';
+                    this.submit();
+                }
+            }
+        });
+    }
 
     const submitBtn = document.querySelector('button[type="submit"]');
     if (submitBtn) {

@@ -53,6 +53,24 @@
         <p style="margin: 2px 0 0 0; font-size: 0.75rem; color: #9CA3AF;">{{ total_emisiones | formato_cl }} kg CO₂e</p>
     </div>
 
+    <div style="background: white; padding: 1.25rem 1.5rem; border-radius: 12px; border-left: 5px solid #0EA5E9; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+            <i class="fas fa-water" style="color: #0EA5E9; font-size: 0.95rem;"></i>
+            <p style="margin: 0; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: #9CA3AF; letter-spacing: 0.05em;">Huella H&iacute;drica Global</p>
+        </div>
+        <div style="font-size: 1.6rem; font-weight: 700; color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ (total_huella_hidrica_global | default(0, true)) | formato_entero_cl }} m&sup3;</div>
+        <p style="margin: 2px 0 0 0; font-size: 0.75rem; color: #9CA3AF;">azul + verde + suministro</p>
+    </div>
+
+    <div style="background: white; padding: 1.25rem 1.5rem; border-radius: 12px; border-left: 5px solid #14B8A6; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+            <i class="fas fa-gauge-high" style="color: #14B8A6; font-size: 0.95rem;"></i>
+            <p style="margin: 0; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: #9CA3AF; letter-spacing: 0.05em;">Intensidad H&iacute;drica</p>
+        </div>
+        <div style="font-size: 1.6rem; font-weight: 700; color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ (intensidad_huella_promedio | default(0, true)) | formato_cl }}</div>
+        <p style="margin: 2px 0 0 0; font-size: 0.75rem; color: #9CA3AF;">m&sup3;/unidad promedio</p>
+    </div>
+
     <a href="/admin/pendientes" style="text-decoration: none;">
         <div style="background: white; padding: 1.25rem 1.5rem; border-radius: 12px; border-left: 5px solid {{ '#EF4444' if total_pendientes > 0 else '#E5E7EB' }}; box-shadow: 0 2px 8px rgba(0,0,0,0.06); cursor: pointer; transition: box-shadow 0.2s;" onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,0.1)'" onmouseout="this.style.boxShadow='0 2px 8px rgba(0,0,0,0.06)'">
             <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
@@ -296,7 +314,7 @@
 <!-- ===== SECCIÓN: DASHBOARD ===== -->
 {% if admin_section == "dashboard" %}
 
-{% if chart_empresas %}
+{% if chart_empresas or chart_agua_empresas %}
 <div style="display: grid; grid-template-columns: 1fr 320px; gap: 1.5rem; margin-bottom: 1.5rem; align-items: start;">
 
     <!-- Gráfico de barras -->
@@ -375,6 +393,83 @@
         </div>
         <p style="margin: 0.75rem 0 0 0; text-align: center; color: #6B7280; font-size: 0.85rem;">
             Unidad: kgCO2e/unidad. Si falta la medida productiva, la intensidad se muestra en 0.
+        </p>
+    </div>
+    {% endif %}
+
+    {% if chart_agua_empresas %}
+    <div style="grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(300px, 0.8fr); gap: 1.5rem; margin-top: 1.5rem; align-items: start;">
+        <div style="background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); padding: 1.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.2rem; flex-wrap: wrap; gap: 1rem;">
+                <h3 style="margin: 0; color: #374151; font-size: 1rem;">
+                    <i class="fas fa-water" style="color: #0EA5E9;"></i> Huella h&iacute;drica por empresa
+                </h3>
+                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                    <label style="font-size: 0.82rem; color: #6B7280; font-weight: 600;">A&ntilde;o:</label>
+                    <select id="anio_agua_chart" onchange="updateAguaChart(this.value)"
+                            style="padding: 5px 10px; border: 1px solid #D1D5DB; border-radius: 6px; font-size: 0.85rem; color: #374151;">
+                        {% for a in chart_agua_anios %}
+                        <option value="{{ a }}">{{ a }}</option>
+                        {% endfor %}
+                        <option value="Todos">Todos los a&ntilde;os</option>
+                    </select>
+                </div>
+            </div>
+            <div style="position: relative; height: 280px;">
+                <canvas id="chartAguaEmpresas" style="width: 100%; height: 100%; display: block;"></canvas>
+            </div>
+            <p id="chart_agua_no_data" style="display: none; text-align: center; color: #9CA3AF; padding: 2rem; margin: 0; font-size: 0.9rem;">
+                Sin datos de huella h&iacute;drica para el a&ntilde;o seleccionado.
+            </p>
+        </div>
+
+        {% if top_huella_hidrica %}
+        <div style="background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); padding: 1.5rem;">
+            <h3 style="margin: 0 0 1rem 0; color: #374151; font-size: 1rem; border-bottom: 1px solid #F3F4F6; padding-bottom: 0.75rem;">
+                <i class="fas fa-trophy" style="color: #0EA5E9;"></i> Top huella h&iacute;drica
+            </h3>
+            <div style="position: relative; height: 170px; margin-bottom: 1rem;">
+                <canvas id="donutTopAgua" style="width: 100%; height: 100%; display: block;"></canvas>
+            </div>
+            {% set total_top_agua = top_huella_hidrica | sum(attribute='total') %}
+            {% set colores_agua = ['#0EA5E9','#14B8A6','#22C55E','#9B5CF6','#F59E0B','#6366F1'] %}
+            {% for item in top_huella_hidrica %}
+            {% set pct = (item.total / total_top_agua * 100) if total_top_agua > 0 else 0 %}
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <div style="display: flex; align-items: center; gap: 6px; min-width: 0;">
+                    <span style="width: 8px; height: 8px; border-radius: 50%; background: {{ colores_agua[loop.index0 % 6] }}; flex-shrink: 0;"></span>
+                    <span style="font-size: 0.78rem; color: #374151; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ item.empresa }}</span>
+                </div>
+                <span style="font-size: 0.75rem; color: #9CA3AF; white-space: nowrap; margin-left: 6px;">{{ '%.0f' | format(pct) }}%</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% if chart_intensidad_empresas %}
+    <div style="grid-column: 1 / -1; background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); padding: 1.5rem; margin-top: 1.5rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.2rem; flex-wrap: wrap; gap: 1rem;">
+            <h3 style="margin: 0; color: #374151; font-size: 1rem;">
+                <i class="fas fa-gauge-high" style="color: #14B8A6;"></i> Intensidad de huella h&iacute;drica
+            </h3>
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <label style="font-size: 0.82rem; color: #6B7280; font-weight: 600;">A&ntilde;o:</label>
+                <select id="anio_intensidad_agua_chart" onchange="updateIntensidadAguaChart(this.value)"
+                        style="padding: 5px 10px; border: 1px solid #D1D5DB; border-radius: 6px; font-size: 0.85rem; color: #374151;">
+                    <option value="Todos">&Uacute;ltima medida</option>
+                    {% for a in chart_intensidad_years %}
+                    <option value="{{ a }}">{{ a }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        <div style="position: relative; height: 280px;">
+            <canvas id="chartIntensidadAgua" style="width: 100%; height: 100%; display: block;"></canvas>
+        </div>
+        <p style="margin: 0.75rem 0 0 0; text-align: center; color: #6B7280; font-size: 0.85rem;">
+            Unidad: m&sup3;/unidad. Si falta la medida productiva, la intensidad se muestra en 0.
         </p>
     </div>
     {% endif %}
@@ -488,6 +583,7 @@
                     <th style="padding: 10px 14px; text-align: left; color: #6B7280; font-size: 0.72rem; text-transform: uppercase; border-bottom: 2px solid #E5E7EB;">RUT</th>
                     <th style="padding: 10px 14px; text-align: left; color: #6B7280; font-size: 0.72rem; text-transform: uppercase; border-bottom: 2px solid #E5E7EB;">Contacto</th>
                     <th style="padding: 10px 14px; text-align: left; color: #6B7280; font-size: 0.72rem; text-transform: uppercase; border-bottom: 2px solid #E5E7EB;">Email</th>
+                    <th style="padding: 10px 14px; text-align: right; color: #6B7280; font-size: 0.72rem; text-transform: uppercase; border-bottom: 2px solid #E5E7EB;">Huella carbono</th>
                     <th style="padding: 10px 14px; text-align: center; color: #6B7280; font-size: 0.72rem; text-transform: uppercase; border-bottom: 2px solid #E5E7EB;">Actividad</th>
                     <th style="padding: 10px 14px; text-align: left; color: #6B7280; font-size: 0.72rem; text-transform: uppercase; border-bottom: 2px solid #E5E7EB;">Registro</th>
                     <th style="padding: 10px 14px; text-align: center; color: #6B7280; font-size: 0.72rem; text-transform: uppercase; border-bottom: 2px solid #E5E7EB;">Acciones</th>
@@ -509,6 +605,13 @@
                     <td style="padding: 10px 14px; color: #6B7280; font-size: 0.83rem;" class="empresa-rut">{{ emp.rut or '—' }}</td>
                     <td style="padding: 10px 14px; color: #374151;">{{ emp.contacto or '—' }}</td>
                     <td style="padding: 10px 14px; color: #3B82F6; font-size: 0.83rem;" class="empresa-email">{{ emp.email }}</td>
+                    <td style="padding: 10px 14px; text-align: right; color: #111827; font-weight: 700; white-space: nowrap;">
+                        {% if stats %}
+                            {{ stats.total | formato_cl }} <span style="color:#9CA3AF; font-size:0.72rem;">kg CO2e</span>
+                        {% else %}
+                            <span style="color:#9CA3AF;">0,00 <span style="font-size:0.72rem;">kg CO2e</span></span>
+                        {% endif %}
+                    </td>
                     <td style="padding: 10px 14px; text-align: center;">
                         {% if stats %}
                         <div>
@@ -720,6 +823,7 @@
                 <thead style="background: #F3F4F6;">
                     <tr>
                         <th style="padding: 10px 14px; text-align: left; color: #4B5563; font-size: 0.72rem; text-transform: uppercase; border-bottom: 2px solid #E5E7EB;">Nombre en Chile</th>
+                        <th style="padding: 10px 14px; text-align: left; color: #4B5563; font-size: 0.72rem; text-transform: uppercase; border-bottom: 2px solid #E5E7EB;">Clasificación</th>
                         <th style="padding: 10px 14px; text-align: left; color: #4B5563; font-size: 0.72rem; text-transform: uppercase; border-bottom: 2px solid #E5E7EB;">Categoría DEFRA</th>
                         <th style="padding: 10px 14px; text-align: left; color: #4B5563; font-size: 0.72rem; text-transform: uppercase; border-bottom: 2px solid #E5E7EB;">Tratamiento</th>
                         <th style="padding: 10px 14px; text-align: left; color: #4B5563; font-size: 0.72rem; text-transform: uppercase; border-bottom: 2px solid #E5E7EB;">Unidad</th>
@@ -732,6 +836,11 @@
                     {% for f in factores %}
                     <tr style="border-bottom: 1px solid #F3F4F6;" onmouseover="this.style.background='#FAFAFA'" onmouseout="this.style.background=''">
                         <td style="padding: 9px 14px; font-weight: 600; color: #111827;">{{ f.nombre_chile or '—' }}</td>
+                        <td style="padding: 9px 14px;">
+                            <span style="background: {% if f.clasificacion == 'combustibles' %}#EEF2FF{% elif f.clasificacion == 'refrigerantes' %}#F0FDFA{% elif f.clasificacion == 'residuos' %}#FFF7ED{% else %}#F3F4F6{% endif %}; color: {% if f.clasificacion == 'combustibles' %}#3730A3{% elif f.clasificacion == 'refrigerantes' %}#0F766E{% elif f.clasificacion == 'residuos' %}#9A3412{% else %}#6B7280{% endif %}; padding: 2px 8px; border-radius: 999px; font-size: 0.75rem; font-weight: 700;">
+                                {{ f.clasificacion|capitalize }}
+                            </span>
+                        </td>
                         <td style="padding: 9px 14px; color: #6B7280; font-size: 0.83rem;">{{ f.categoria }}</td>
                         <td style="padding: 9px 14px;">
                             {% if f.tratamiento %}
@@ -853,15 +962,22 @@ function diagnosticarExcel() {
 }
 
 {% if admin_section == "dashboard" %}
-{% if chart_empresas %}
+{% if chart_empresas or chart_agua_empresas %}
 const _chartData     = {{ chart_data | tojson }};
 const _chartEmpresas = {{ chart_empresas | tojson }};
 const _chartAnios    = {{ chart_anios | tojson }};
 const _chartIntEmp   = {{ chart_intensidad_empresas | default([]) | tojson }};
 const _chartIntVals  = {{ chart_intensidad_values | default([]) | tojson }};
 const _chartIntData  = {{ chart_intensidad_series | default({}) | tojson }};
+const _chartAguaData     = {{ chart_agua_data | default({}) | tojson }};
+const _chartAguaEmpresas = {{ chart_agua_empresas | default([]) | tojson }};
+const _chartAguaAnios    = {{ chart_agua_anios | default([]) | tojson }};
+const _chartIntAguaVals  = {{ chart_intensidad_huella_values | default([]) | tojson }};
+const _chartIntAguaData  = {{ chart_intensidad_huella_series | default({}) | tojson }};
 const COLORS = ['#6366F1','#10B981','#F59E0B','#EF4444','#3B82F6','#8B5CF6','#14B8A6','#F97316','#EC4899','#84CC16'];
+const WATER_COLORS = ['#0EA5E9','#14B8A6','#22C55E','#9B5CF6','#F59E0B','#6366F1','#3B82F6','#84CC16'];
 let _myChart = null;
+let _waterChart = null;
 
 function updateChart(anio) {
     const values  = _chartData[anio] || [];
@@ -911,6 +1027,54 @@ if (document.getElementById('anio_chart')) {
     document.getElementById('anio_chart').value = _initAnio;
     updateChart(_initAnio);
 }
+
+function updateAguaChart(anio) {
+    const values = _chartAguaData[anio] || [];
+    const hasData = values.some(v => v > 0);
+    const noData = document.getElementById('chart_agua_no_data');
+    const canvas = document.getElementById('chartAguaEmpresas');
+    if (noData) noData.style.display = hasData ? 'none' : 'block';
+    if (canvas) canvas.style.display = hasData ? 'block' : 'none';
+    if (!hasData || !canvas) return;
+    if (_waterChart) _waterChart.destroy();
+    _waterChart = new Chart(canvas.getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: _chartAguaEmpresas,
+            datasets: [{
+                label: 'Huella hídrica (m³)',
+                data: values,
+                backgroundColor: _chartAguaEmpresas.map((_, i) => WATER_COLORS[i % WATER_COLORS.length] + 'BB'),
+                borderColor: _chartAguaEmpresas.map((_, i) => WATER_COLORS[i % WATER_COLORS.length]),
+                borderWidth: 1.5,
+                borderRadius: 5
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: c => ' ' + new Intl.NumberFormat('es-CL', {maximumFractionDigits:0}).format(c.parsed.y) + ' m³'
+                    }
+                }
+            },
+            scales: {
+                y: { beginAtZero: true, grid: { color: '#E5E7EB' },
+                     ticks: { callback: v => v >= 1000 ? (v/1000).toFixed(1)+'k' : v } },
+                x: { grid: { display: false }, ticks: { maxRotation: 35, font: { size: 11 } } }
+            }
+        }
+    });
+}
+
+const _initAguaAnio = _chartAguaAnios.length > 0 ? _chartAguaAnios[0] : 'Todos';
+if (document.getElementById('anio_agua_chart')) {
+    document.getElementById('anio_agua_chart').value = _initAguaAnio;
+    updateAguaChart(_initAguaAnio);
+}
 {% endif %}
 
 {% if top_emisores %}
@@ -940,6 +1104,38 @@ new Chart(document.getElementById('donutTop'), {
         }
     }
 });
+{% endif %}
+
+{% if top_huella_hidrica %}
+const topAguaData = {{ top_huella_hidrica | tojson }};
+const donutTopAgua = document.getElementById('donutTopAgua');
+if (donutTopAgua) {
+    new Chart(donutTopAgua, {
+        type: 'doughnut',
+        data: {
+            labels: topAguaData.map(t => t.empresa),
+            datasets: [{
+                data: topAguaData.map(t => t.total),
+                backgroundColor: WATER_COLORS.slice(0, topAguaData.length).map(c => c + 'CC'),
+                borderColor: WATER_COLORS.slice(0, topAguaData.length),
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '58%',
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: ctx => ' ' + new Intl.NumberFormat('es-CL', {maximumFractionDigits:0}).format(ctx.parsed) + ' m³'
+                    }
+                }
+            }
+        }
+    });
+}
 {% endif %}
 
 {% if chart_intensidad_empresas %}
@@ -998,6 +1194,58 @@ const selector = document.getElementById('anio_intensidad_chart');
 if (selector) {
     selector.value = 'Todos';
     window.updateIntensidadChart(selector.value);
+}
+
+let chartIntensidadAgua = null;
+const _intensityWaterCanvas = document.getElementById('chartIntensidadAgua');
+if (_intensityWaterCanvas) {
+    chartIntensidadAgua = new Chart(_intensityWaterCanvas, {
+        type: 'bar',
+        data: {
+            labels: _intensityLabels,
+            datasets: [{
+                label: 'm³/unidad',
+                data: _chartIntAguaVals || [],
+                backgroundColor: _intensityLabels.map((_, i) => WATER_COLORS[i % WATER_COLORS.length] + 'BB'),
+                borderColor: _intensityLabels.map((_, i) => WATER_COLORS[i % WATER_COLORS.length]),
+                borderWidth: 1.5,
+                borderRadius: 5
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: c => ' ' + new Intl.NumberFormat('es-CL', {minimumFractionDigits: 6, maximumFractionDigits: 6}).format(c.parsed.y) + ' m³/unidad'
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: { color: '#E5E7EB' },
+                    ticks: { callback: v => new Intl.NumberFormat('es-CL', {minimumFractionDigits: 3, maximumFractionDigits: 3}).format(v) }
+                },
+                x: { grid: { display: false }, ticks: { maxRotation: 35, font: { size: 11 } } }
+            }
+        }
+    });
+}
+
+window.updateIntensidadAguaChart = function(anio) {
+    if (!chartIntensidadAgua) return;
+    const series = _chartIntAguaData[anio] || _chartIntAguaData['Todos'] || _chartIntAguaVals || [];
+    chartIntensidadAgua.data.datasets[0].data = series;
+    chartIntensidadAgua.update();
+};
+
+const selectorAgua = document.getElementById('anio_intensidad_agua_chart');
+if (selectorAgua) {
+    selectorAgua.value = 'Todos';
+    window.updateIntensidadAguaChart(selectorAgua.value);
 }
 {% endif %}
 

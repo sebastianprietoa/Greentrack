@@ -118,6 +118,28 @@
             {% endif %}
         </p>
     </div>
+
+    <div class="stat-card" style="background: white; padding: 1.25rem 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); border-left: 5px solid #0EA5E9;">
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+            <i class="fas fa-water" style="color: #0EA5E9; font-size: 1rem;"></i>
+            <p style="margin: 0; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; color: #9CA3AF; letter-spacing: 0.05em;">Huella H&iacute;drica Total</p>
+        </div>
+        <div style="font-size: 1.45rem; font-weight: 700; color: #111827; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+            {{ (huella_hidrica_total or 0) | formato_entero_cl }} m&sup3;
+        </div>
+        <p style="color: #6B7280; margin: 4px 0 0 0; font-size: 0.78rem;">Azul + verde + suministro</p>
+    </div>
+
+    <div class="stat-card" style="background: white; padding: 1.25rem 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); border-left: 5px solid #14B8A6;">
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+            <i class="fas fa-gauge-high" style="color: #14B8A6; font-size: 1rem;"></i>
+            <p style="margin: 0; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; color: #9CA3AF; letter-spacing: 0.05em;">Intensidad H&iacute;drica Total</p>
+        </div>
+        <div style="font-size: 1.45rem; font-weight: 700; color: #111827; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+            {% if intensidad_hidrica_total is not none %}{{ intensidad_hidrica_total | formato_cl }}{% else %}No disponible{% endif %}
+        </div>
+        <p style="color: #6B7280; margin: 4px 0 0 0; font-size: 0.78rem;">m&sup3;/unidad total</p>
+    </div>
 </div>
 
 <!-- Acciones rápidas -->
@@ -186,6 +208,32 @@
 
 </div>
 {% endif %}
+
+<!-- Huella hidrica por tipo -->
+<div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); margin-bottom: 2rem;">
+    <h3 style="margin: 0 0 1rem 0; color: #374151; font-size: 1rem; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #F3F4F6; padding-bottom: 0.75rem;">
+        <i class="fas fa-water" style="color: #0EA5E9;"></i> Huella h&iacute;drica por tipo
+    </h3>
+    <div class="water-footprint-grid" style="display: grid; grid-template-columns: minmax(260px, 0.8fr) minmax(280px, 1fr); gap: 1.5rem; align-items: center;">
+        <div class="water-footprint-chart-box" style="position: relative; height: 280px;">
+            <canvas id="chartHuellaHidrica"></canvas>
+        </div>
+        <div>
+            {% for item in huella_hidrica_tipos %}
+            {% set pct_agua = (item.valor / huella_hidrica_total * 100) if huella_hidrica_total > 0 else 0 %}
+            <div style="margin-bottom: 1rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 4px;">
+                    <span style="font-size: 0.85rem; font-weight: 700; color: #374151;"><span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:{{ item.color }}; margin-right:6px;"></span>{{ item.tipo }}</span>
+                    <span style="font-size: 0.8rem; color: #6B7280;">{{ item.valor | formato_entero_cl }} m&sup3; &middot; {{ "%.1f"|format(pct_agua) }}%</span>
+                </div>
+                <div style="background: #F3F4F6; border-radius: 999px; height: 9px; overflow: hidden;">
+                    <div style="background: {{ item.color }}; width: {{ "%.1f"|format(pct_agua) }}%; height: 100%; border-radius: 999px;"></div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
 
 <!-- Distribución por categoría con barras de progreso -->
 {% if categorias_data %}
@@ -369,6 +417,10 @@ function formatKg(val) {
     return new Intl.NumberFormat('es-CL', {minimumFractionDigits: 2, maximumFractionDigits: 2}).format(val) + ' kg CO₂e';
 }
 
+function formatM3(val) {
+    return new Intl.NumberFormat('es-CL', {maximumFractionDigits: 0}).format(val) + ' m\u00B3';
+}
+
 // Hover en action-cards
 document.querySelectorAll('.action-card').forEach(card => {
     card.addEventListener('mouseenter', function() {
@@ -388,6 +440,40 @@ document.querySelectorAll('.stat-card').forEach(card => {
     card.addEventListener('mouseleave', () => { card.style.transform = ''; card.style.boxShadow = ''; });
 });
 
+// Grafico de huella hidrica por tipo
+(function() {
+    const labels = {{ huella_hidrica_tipos | map(attribute='tipo') | list | tojson }};
+    const data = {{ huella_hidrica_tipos | map(attribute='valor') | list | tojson }};
+    const colors = {{ huella_hidrica_tipos | map(attribute='color') | list | tojson }};
+    const total = data.reduce((a, b) => a + Number(b || 0), 0);
+    const canvas = document.getElementById('chartHuellaHidrica');
+    if (!canvas) return;
+
+    new Chart(canvas, {
+        type: 'doughnut',
+        data: {
+            labels: labels,
+            datasets: [{ data: data, backgroundColor: colors, borderWidth: 2, borderColor: '#fff' }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '62%',
+            plugins: {
+                legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 12 } },
+                tooltip: {
+                    callbacks: {
+                        label: ctx => {
+                            const pct = total > 0 ? (ctx.parsed / total * 100).toFixed(1) : 0;
+                            return ' ' + ctx.label + ': ' + formatM3(ctx.parsed) + ' (' + pct + '%)';
+                        }
+                    }
+                }
+            }
+        }
+    });
+})();
+
 // Gráfico de tendencia mensual (stacked line por Alcance)
 {% if tendencia_labels %}
 (function() {
@@ -402,30 +488,33 @@ document.querySelectorAll('.stat-card').forEach(card => {
             labels: labels,
             datasets: [
                 {
-                    label: 'Alcance 1 – Directo',
+                    label: 'Alcance 1 - Directo',
                     data: a1,
                     backgroundColor: '#EF444480',
                     borderColor: '#EF4444',
                     borderWidth: 1.5,
                     borderRadius: 4,
+                    minBarLength: 3,
                     stack: 'alcances'
                 },
                 {
-                    label: 'Alcance 2 – Electricidad',
+                    label: 'Alcance 2 - Electricidad',
                     data: a2,
                     backgroundColor: '#F59E0B80',
                     borderColor: '#F59E0B',
                     borderWidth: 1.5,
                     borderRadius: 4,
+                    minBarLength: 3,
                     stack: 'alcances'
                 },
                 {
-                    label: 'Alcance 3 – Residuos',
+                    label: 'Alcance 3 - Residuos',
                     data: a3,
                     backgroundColor: '#10B98180',
                     borderColor: '#10B981',
                     borderWidth: 1.5,
                     borderRadius: 4,
+                    minBarLength: 3,
                     stack: 'alcances'
                 }
             ]
@@ -719,9 +808,25 @@ document.querySelectorAll('.stat-card').forEach(card => {
         margin-bottom: 2rem !important;
     }
 
+    .water-footprint-grid {
+        min-height: 300px;
+    }
+
+    .water-footprint-chart-box {
+        min-height: 280px;
+        width: 100%;
+    }
+
+    .water-footprint-chart-box canvas {
+        display: block;
+        width: 100% !important;
+        height: 100% !important;
+    }
+
     @media (max-width: 768px) {
         .stats-grid { grid-template-columns: 1fr 1fr !important; }
         .quick-actions { grid-template-columns: 1fr 1fr !important; }
+        .water-footprint-grid { grid-template-columns: 1fr !important; }
         .dashboard-header { padding: 1.5rem !important; }
         .dashboard-header h1 { font-size: 1.4rem !important; }
     }
