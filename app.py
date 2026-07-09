@@ -418,6 +418,55 @@ def calcular_huella_suministro_registro (cursor ,registro_id ):
     "huella_suministro_m3":float (huella_m3 )if huella_m3 is not None else None ,
     }
 
+def recalcular_huella_suministro_historica (conn ,empresa =None ):
+    cursor =conn .cursor ()
+    params =[]
+    filtros =[
+    """
+        (
+            LOWER(COALESCE(r.alcance, '')) = 'alcance 2'
+            OR LOWER(COALESCE(r.fuente, '')) LIKE %s
+            OR LOWER(COALESCE(r.fuente, '')) LIKE %s
+            OR LOWER(COALESCE(r.fuente, '')) LIKE %s
+        )
+    """
+    ]
+    params .extend (["%electricidad%","%combusti%","%combustible%"])
+    if empresa :
+        filtros .append ("r.empresa = %s")
+        params .append (empresa )
+
+    cursor .execute (
+    f"""
+        SELECT r.id
+        FROM registros r
+        LEFT JOIN resultados_huella_suministro_agua rs ON rs.registro_id = r.id
+        WHERE rs.registro_id IS NULL
+          AND {" AND ".join (filtros )}
+        ORDER BY r.fecha ASC, r.id ASC
+    """,
+    params ,
+    )
+    registros_pendientes =[row [0 ]for row in cursor .fetchall ()]
+
+    procesados =0
+    omitidos =0
+    for registro_id in registros_pendientes :
+        try :
+            cursor .execute ("SAVEPOINT sp_huella_suministro_historica")
+            calcular_huella_suministro_registro (cursor ,registro_id )
+            cursor .execute ("RELEASE SAVEPOINT sp_huella_suministro_historica")
+            procesados +=1
+        except Exception :
+            cursor .execute ("ROLLBACK TO SAVEPOINT sp_huella_suministro_historica")
+            omitidos +=1
+    conn .commit ()
+    return {
+    "pendientes":len (registros_pendientes ),
+    "procesados":procesados ,
+    "omitidos":omitidos ,
+    }
+
 def init_db ():
     conn =get_db ()
     cursor =conn .cursor ()
@@ -2095,7 +2144,26 @@ observaciones ,
     )
 
 
-def _calcular_factores_electricos (cursor ,sistema ,anio_reg ,mes_reg ,origen ,tiene_irec ):
+def _empresa_tiene_mezcla_electrica (cursor ,empresa ):
+    cursor .execute (
+    """
+        SELECT
+            COUNT (DISTINCT CASE
+                WHEN origen_energia = 'Convencional' THEN 'Convencional'
+                WHEN origen_energia = 'ERNC' THEN 'ERNC'
+                ELSE NULL
+            END) AS total_origenes
+        FROM registros
+        WHERE empresa = %s
+          AND fuente = 'Electricidad'
+    """,
+    (empresa ,)
+    )
+    res =cursor .fetchone ()
+    return int (res [0 ]or 0 )>=2 
+
+
+def _calcular_factores_electricos (cursor ,empresa ,sistema ,anio_reg ,mes_reg ,origen ,tiene_irec ):
     cursor .execute (
     "SELECT factor_emision_avg FROM factores_electricos WHERE sistema = %s AND anio = %s AND mes = %s",
     (sistema ,anio_reg ,mes_reg )
@@ -2109,9 +2177,11 @@ def _calcular_factores_electricos (cursor ,sistema ,anio_reg ,mes_reg ,origen ,t
         res_ub =cursor .fetchone ()
     factor_ubicacion =float (res_ub [0 ])if res_ub and res_ub [0 ]is not None else 0.0 
 
+    mezcla_electrica =_empresa_tiene_mezcla_electrica (cursor ,empresa )
+
     if origen =='ERNC'and tiene_irec =='Si':
         factor_mercado =0.0 
-    else :
+    elif mezcla_electrica :
         cursor .execute (
         "SELECT factor_emision_avg FROM factores_electricos WHERE LOWER(sistema) = 'residual' AND anio = %s AND mes = %s",
         (anio_reg ,mes_reg )
@@ -2129,6 +2199,8 @@ def _calcular_factores_electricos (cursor ,sistema ,anio_reg ,mes_reg ,origen ,t
             )
             res_merc =cursor .fetchone ()
         factor_mercado =float (res_merc [0 ])if res_merc and res_merc [0 ]is not None else 0.0 
+    else :
+        factor_mercado =factor_ubicacion 
 
     return factor_ubicacion ,factor_mercado 
 
@@ -2370,7 +2442,7 @@ def registro ():
                     fecha_lote =f"{mes }-01"
                     fecha_dt =datetime .strptime (fecha_lote ,"%Y-%m-%d")
                     anio_reg ,mes_reg =fecha_dt .year ,fecha_dt .month 
-                    factor_ubicacion ,factor =_calcular_factores_electricos (cursor ,sistema ,anio_reg ,mes_reg ,origen ,tiene_irec )
+                    factor_ubicacion ,factor =_calcular_factores_electricos (cursor ,empresa ,sistema ,anio_reg ,mes_reg ,origen ,tiene_irec )
                     emision_ubicacion =round (cantidad_lote *factor_ubicacion ,4 )
                     emision =round (cantidad_lote *factor ,4 )
                     cursor .execute ("""
@@ -2402,7 +2474,7 @@ def registro ():
             fecha_dt =datetime .strptime (fecha ,"%Y-%m-%d")
             anio_reg ,mes_reg =fecha_dt .year ,fecha_dt .month 
 
-            factor_ubicacion ,factor =_calcular_factores_electricos (cursor ,sistema ,anio_reg ,mes_reg ,origen ,tiene_irec )
+            factor_ubicacion ,factor =_calcular_factores_electricos (cursor ,empresa ,sistema ,anio_reg ,mes_reg ,origen ,tiene_irec )
             emision_ubicacion =round (cantidad *factor_ubicacion ,4 )
 
             emision =round (cantidad *factor ,4 )
