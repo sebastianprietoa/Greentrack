@@ -268,7 +268,9 @@
 
         .brand-footer {
             margin-top: auto;
-            padding: 1rem 1.25rem 1.25rem;
+            padding: 1.1rem 1.5rem 1.25rem;
+            background: #efefe6;
+            border-top: 4px solid #332333;
         }
 
         .brand-footer-inner {
@@ -276,29 +278,36 @@
             margin: 0 auto;
             width: 100%;
             display: grid;
-            grid-template-columns: minmax(190px, 1.8fr) minmax(150px, 1.3fr) minmax(160px, 1.4fr) minmax(150px, 1.3fr) minmax(130px, 1.1fr);
-            gap: 0.9rem;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 1rem;
             align-items: center;
-            background: rgba(255,255,255,0.7);
-            border: 1px solid rgba(213,227,227,0.9);
-            border-radius: 18px;
-            padding: 0.95rem 1rem;
-            box-shadow: 0 2px 0 rgba(34, 115, 138, 0.12);
+            background: transparent;
+            padding: 0.25rem 0;
         }
 
         .brand-footer-logo {
             display: flex;
             align-items: center;
             justify-content: center;
-            min-height: 72px;
-            padding: 0.15rem 0.35rem;
+            min-height: 96px;
+            padding: 0.2rem 0.35rem;
+            flex-direction: column;
+            gap: 0.35rem;
         }
 
         .brand-footer-logo img {
             max-width: 100%;
-            max-height: 74px;
+            max-height: 82px;
             object-fit: contain;
             display: block;
+        }
+
+        .brand-footer-caption {
+            color: #4b454c;
+            font-size: 0.72rem;
+            line-height: 1.1;
+            text-align: center;
+            white-space: nowrap;
         }
 
         .brand-footer-placeholder {
@@ -464,19 +473,18 @@
             <footer class="brand-footer">
                 <div class="brand-footer-inner">
                     <div class="brand-footer-logo">
-                        <img src="{{ url_for('static', filename='brand/logo_corfo_color.png') }}" alt="CORFO" style="max-height: 72px;">
+                        <div class="brand-footer-caption">Proyecto apoyado por</div>
+                        <img src="{{ url_for('static', filename='brand/logo_corfo_antofagasta.png') }}" alt="CORFO Región de Antofagasta">
                     </div>
                     <div class="brand-footer-logo">
-                        <img src="{{ url_for('static', filename='brand/logo_puerto_varas_negro.png') }}" alt="Programa Desarrollo Productivo Sostenible" style="max-height: 72px;">
+                        <img src="{{ url_for('static', filename='brand/logo_greenticket_marca.png') }}" alt="GreenTicket">
                     </div>
                     <div class="brand-footer-logo">
-                        <img src="{{ url_for('static', filename='brand/logo_sernatur.png') }}" alt="SERNATUR Los Lagos" style="max-height: 72px;">
+                        <img src="{{ url_for('static', filename='brand/logo_corporacion_san_pedro.jpg') }}" alt="Corporación de Turismo San Pedro de Atacama">
                     </div>
                     <div class="brand-footer-logo">
-                        <img src="{{ url_for('static', filename='brand/logo_greenticket_blanco.png') }}" alt="PuertoVaras.org" style="max-height: 72px;">
-                    </div>
-                    <div class="brand-footer-logo">
-                        <img src="{{ url_for('static', filename='brand/logo_greenticket_marca.png') }}" alt="GreenTicket" style="max-height: 72px;">
+                        <div class="brand-footer-caption">Proyecto facilitado por</div>
+                        <img src="{{ url_for('static', filename='brand/logo_puribeter.png') }}" alt="Reserva Elemental Puribeter">
                     </div>
                 </div>
             </footer>
