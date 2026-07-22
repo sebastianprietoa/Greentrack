@@ -64,9 +64,9 @@
             margin: 0;
             padding: 0;
             background:
-                radial-gradient(circle at 12% 18%, rgba(32, 133, 152, 0.08) 0, rgba(32, 133, 152, 0.08) 1px, transparent 1px),
-                radial-gradient(circle at 78% 62%, rgba(32, 133, 152, 0.06) 0, rgba(32, 133, 152, 0.06) 1px, transparent 1px),
-                linear-gradient(180deg, #F7FAF9 0%, #F1F6F4 100%);
+                radial-gradient(circle at 12% 18%, rgba(233, 30, 143, 0.09) 0, rgba(233, 30, 143, 0.09) 1px, transparent 1px),
+                radial-gradient(circle at 78% 62%, rgba(20, 167, 211, 0.08) 0, rgba(20, 167, 211, 0.08) 1px, transparent 1px),
+                linear-gradient(180deg, #F7EFE3 0%, #F3E7D7 100%);
             background-size: 28px 28px, 34px 34px, auto;
             font-family: "Avenir Next LT Pro", "Segoe UI", system-ui, sans-serif;
             color: var(--dark);
@@ -84,7 +84,9 @@
 
         .sidebar {
             width: 260px;
-            background: linear-gradient(180deg, #0D4F66 0%, #0B3F52 100%);
+            background:
+                radial-gradient(circle at top right, rgba(233,30,143,0.12), transparent 30%),
+                linear-gradient(180deg, #34213A 0%, #2D1F33 100%);
             border-right: 1px solid rgba(255,255,255,0.08);
             display: flex;
             flex-direction: column;
@@ -104,6 +106,7 @@
             align-items: center;
             justify-content: center;
             border-bottom: 1px solid rgba(255,255,255,0.08);
+            gap: 0.5rem;
         }
 
         .sidebar-brand {
@@ -112,14 +115,15 @@
             gap: 0.75rem;
             color: #fff;
             text-decoration: none;
-            transform: translateX(-8px);
+            transform: none;
+            width: 100%;
         }
 
         .sidebar-brand img {
             display: block;
             width: auto;
-            height: 122px;
-            max-width: 220px;
+            height: 110px;
+            max-width: 210px;
         }
 
         .sidebar-menu {
@@ -134,7 +138,7 @@
         .menu-category {
             font-size: 0.68rem;
             font-weight: 700;
-            color: rgba(244, 251, 250, 0.72);
+            color: rgba(255, 244, 250, 0.72);
             text-transform: uppercase;
             letter-spacing: 0.05em;
             margin-top: 0.85rem;
@@ -149,7 +153,7 @@
             align-items: center;
             gap: 11px;
             padding: 0.56rem 0.72rem;
-            color: rgba(244, 251, 250, 0.88);
+            color: rgba(255, 247, 251, 0.88);
             text-decoration: none;
             border-radius: 12px;
             font-weight: 500;
@@ -159,8 +163,9 @@
         }
 
         .menu-link:hover {
-            background: rgba(255,255,255,0.14);
+            background: rgba(255,255,255,0.12);
             color: #fff;
+            transform: translateX(2px);
         }
 
         .menu-link i {
@@ -173,11 +178,12 @@
         .sidebar-footer {
             padding: 0.85rem 0.85rem 1rem;
             border-top: 1px solid rgba(255,255,255,0.08);
+            background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.04));
         }
 
         .user-badge {
-            background: rgba(255,255,255,0.16);
-            color: #F4FBFA;
+            background: rgba(255,255,255,0.08);
+            color: #FFF5FB;
             padding: 0.6rem 0.75rem;
             border-radius: 12px;
             font-weight: 600;
@@ -191,9 +197,9 @@
         }
 
         .admin-badge {
-            background: rgba(200, 169, 106, 0.12);
-            color: #F4D8A6;
-            border-color: rgba(200, 169, 106, 0.2);
+            background: rgba(233,30,143,0.12);
+            color: #F6B3D6;
+            border-color: rgba(233,30,143,0.20);
         }
 
         .logout-btn {
@@ -203,8 +209,8 @@
             gap: 8px;
             width: 100%;
             padding: 0.62rem 0.75rem;
-            background: rgba(255,255,255,0.12);
-            color: #F1F5F9;
+            background: rgba(255,255,255,0.08);
+            color: #F7EEF3;
             text-decoration: none;
             border-radius: 12px;
             font-weight: 600;
@@ -213,7 +219,7 @@
         }
 
         .logout-btn:hover {
-            background: rgba(255,255,255,0.2);
+            background: rgba(255,255,255,0.12);
             color: #fff;
         }
 
@@ -228,10 +234,10 @@
 
         .mobile-header {
             display: none;
-            background: rgba(255,255,255,0.94);
-            backdrop-filter: blur(10px);
+            background: rgba(255,249,241,0.94);
+            backdrop-filter: blur(12px);
             padding: 1rem 1.5rem;
-            box-shadow: 0 2px 20px rgba(18,49,43,0.08);
+            box-shadow: 0 2px 20px rgba(45,31,51,0.08);
             align-items: center;
             justify-content: space-between;
             position: sticky;
@@ -243,7 +249,7 @@
             background: none;
             border: none;
             font-size: 1.4rem;
-            color: #12312B;
+            color: #2B2930;
             cursor: pointer;
             padding: 0;
         }
@@ -260,7 +266,7 @@
         .content-area {
             flex: 1;
             padding: 2rem 2rem 1rem;
-            max-width: 1240px;
+            max-width: 1360px;
             margin: 0 auto;
             width: 100%;
             box-sizing: border-box;
@@ -274,14 +280,13 @@
         }
 
         .brand-footer-inner {
-            max-width: 1240px;
+            max-width: 1360px;
             margin: 0 auto;
             width: 100%;
             display: grid;
             grid-template-columns: repeat(4, minmax(0, 1fr));
             gap: 1rem;
             align-items: center;
-            background: transparent;
             padding: 0.25rem 0;
         }
 
@@ -290,7 +295,7 @@
             align-items: center;
             justify-content: center;
             min-height: 96px;
-            padding: 0.2rem 0.35rem;
+            padding: 0.15rem 0.35rem;
             flex-direction: column;
             gap: 0.35rem;
         }
@@ -305,7 +310,8 @@
         .brand-footer-caption {
             color: #4b454c;
             font-size: 0.72rem;
-            line-height: 1.1;
+            font-weight: 600;
+            line-height: 1.2;
             text-align: center;
             white-space: nowrap;
         }
@@ -336,9 +342,9 @@
             box-shadow: 0 1px 2px rgba(0,0,0,0.05);
         }
 
-        .alert-success { background: #E8F7EF; color: #116149; border-left: 4px solid #2C90A2; }
+        .alert-success { background: #ECF6EE; color: #2F6A44; border-left: 4px solid #7CA982; }
         .alert-error { background: #FCE8E7; color: #8D2F2B; border-left: 4px solid #D96A63; }
-        .alert-info { background: #E8F1FB; color: #274B7A; border-left: 4px solid #1D6F8A; }
+        .alert-info { background: #F4F0FB; color: #5A4C67; border-left: 4px solid #E91E8F; }
 
         .sidebar-overlay {
             display: none;
@@ -473,7 +479,7 @@
             <footer class="brand-footer">
                 <div class="brand-footer-inner">
                     <div class="brand-footer-logo">
-                        <div class="brand-footer-caption">Proyecto apoyado por</div>
+                        <span class="brand-footer-caption">Proyecto apoyado por</span>
                         <img src="{{ url_for('static', filename='brand/logo_corfo_antofagasta.png') }}" alt="CORFO Región de Antofagasta">
                     </div>
                     <div class="brand-footer-logo">
@@ -483,7 +489,7 @@
                         <img src="{{ url_for('static', filename='brand/logo_corporacion_san_pedro.jpg') }}" alt="Corporación de Turismo San Pedro de Atacama">
                     </div>
                     <div class="brand-footer-logo">
-                        <div class="brand-footer-caption">Proyecto facilitado por</div>
+                        <span class="brand-footer-caption">Proyecto facilitado por</span>
                         <img src="{{ url_for('static', filename='brand/logo_puribeter.png') }}" alt="Reserva Elemental Puribeter">
                     </div>
                 </div>

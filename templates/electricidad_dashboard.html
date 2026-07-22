@@ -2,6 +2,43 @@
 {% block title %}Dashboard Electricidad - GreenTrack{% endblock %}
 
 {% block content %}
+<style>
+    .electricidad-page {
+        font-family: "Avenir Next LT Pro", "Segoe UI", sans-serif;
+    }
+    .electricidad-page > .page-header,
+    .electricidad-page > div:first-child {
+        background:
+            radial-gradient(circle at top right, rgba(255,255,255,0.12), transparent 35%),
+            linear-gradient(135deg, #156E7A 0%, #0F4C59 55%, #183B52 100%) !important;
+        color: #fff !important;
+        padding: 1.5rem 1.6rem !important;
+        border-radius: 18px !important;
+        box-shadow: 0 18px 40px rgba(16,44,53,0.14) !important;
+        border: 1px solid rgba(255,255,255,0.08) !important;
+    }
+    .electricidad-page > div:first-child h1,
+    .electricidad-page > div:first-child p { color: #fff !important; }
+    .electricidad-page > div:first-child a {
+        background: linear-gradient(135deg, #C9A24A 0%, #D9AA2D 100%) !important;
+        color: #102C35 !important;
+        border-radius: 999px !important;
+        box-shadow: 0 12px 24px rgba(201,162,74,0.24) !important;
+    }
+    .electricidad-page > div:nth-of-type(2) > div,
+    .electricidad-page > div:nth-of-type(3) > div,
+    .electricidad-page > div:nth-of-type(4) {
+        background: rgba(255,255,255,0.94) !important;
+        border: 1px solid #D8E3E0 !important;
+        border-radius: 18px !important;
+        box-shadow: 0 14px 30px rgba(16,44,53,0.10) !important;
+        backdrop-filter: blur(8px);
+    }
+    .electricidad-page table { background: rgba(255,255,255,0.96) !important; }
+    .electricidad-page th { color: #5F7380 !important; }
+    .electricidad-page td { color: #374151 !important; }
+</style>
+<div class="electricidad-page">
 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
     <div>
         <h1 style="color: #111827; margin: 0;"><i class="fas fa-bolt" style="color: #F59E0B;"></i> Electricidad (Alcance 2)</h1>
@@ -326,4 +363,5 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 </script>
 {% endif %}
+</div>
 {% endblock %}

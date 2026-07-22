@@ -2,6 +2,96 @@
 {% block title %}Dashboard - GreenTrack{% endblock %}
 
 {% block content %}
+<style>
+    .dashboard-visual {
+        --card-bg: rgba(255, 249, 241, 0.95);
+        --card-border: rgba(88, 60, 95, 0.12);
+        --card-shadow: 0 18px 40px rgba(45, 31, 51, 0.08);
+    }
+    .dashboard-visual .dashboard-header {
+        background:
+            radial-gradient(circle at top right, rgba(255,255,255,0.16), transparent 30%),
+            linear-gradient(135deg, rgba(45,31,51,0.96), rgba(58,40,65,0.94)) !important;
+        color: #fff !important;
+        padding: 1.5rem 1.6rem !important;
+        border-radius: 24px !important;
+        box-shadow: var(--card-shadow) !important;
+        border: 1px solid rgba(255,255,255,0.08) !important;
+        margin-bottom: 1.25rem !important;
+    }
+    .dashboard-visual .dashboard-header h1,
+    .dashboard-visual .dashboard-header p,
+    .dashboard-visual .dashboard-header label {
+        color: #fff !important;
+    }
+    .dashboard-visual .dashboard-header select {
+        background: rgba(255,255,255,0.95) !important;
+        color: #2B2930 !important;
+        border-radius: 999px !important;
+        border: 1px solid rgba(255,255,255,0.18) !important;
+    }
+    .dashboard-visual .dashboard-hero {
+        margin-bottom: 1.25rem;
+        padding: 1.6rem 1.8rem;
+        border-radius: 28px;
+        background:
+            radial-gradient(circle at top right, rgba(255,255,255,0.16), transparent 30%),
+            linear-gradient(135deg, rgba(45,31,51,0.96), rgba(58,40,65,0.96));
+        color: #fff;
+        box-shadow: 0 22px 48px rgba(45,31,51,0.16);
+    }
+    .dashboard-visual .dashboard-hero .eyebrow {
+        text-transform: uppercase;
+        letter-spacing: 0.18em;
+        font-size: 0.72rem;
+        color: rgba(255,255,255,0.72);
+        font-weight: 800;
+    }
+    .dashboard-visual .dashboard-hero .title {
+        font-size: clamp(1.6rem, 2vw, 2.2rem);
+        color: #fff !important;
+        font-weight: 800;
+    }
+    .dashboard-visual .dashboard-hero .subtitle { color: rgba(255,255,255,0.8) !important; }
+    .dashboard-visual .stat-card,
+    .dashboard-visual .action-card,
+    .dashboard-visual .panel-shell,
+    .dashboard-visual div[style*="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.07);"],
+    .dashboard-visual div[style*="background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); overflow: hidden; margin-bottom: 2rem;"] {
+        background: var(--card-bg) !important;
+        border: 1px solid var(--card-border) !important;
+        border-radius: 24px !important;
+        box-shadow: var(--card-shadow) !important;
+        backdrop-filter: blur(10px);
+    }
+    .dashboard-visual .action-card:hover {
+        transform: translateY(-3px) !important;
+        box-shadow: 0 22px 42px rgba(45,31,51,0.12) !important;
+        border-color: rgba(233,30,143,0.24) !important;
+    }
+    .dashboard-visual .action-card:last-child {
+        background: linear-gradient(135deg, #E91E8F 0%, #7B3FF2 100%) !important;
+        color: #fff !important;
+        border-color: transparent !important;
+    }
+    .dashboard-visual .stats-grid,
+    .dashboard-visual .quick-actions {
+        gap: 1rem !important;
+    }
+    .dashboard-visual .quick-actions > a[href="{{ url_for('registro') }}"] i { color: #14A7D3 !important; }
+    .dashboard-visual .quick-actions > a[href="{{ url_for('mis_datos') }}"] i { color: #7CA982 !important; }
+    .dashboard-visual .quick-actions > a[href="{{ url_for('exportar') }}"] i { color: #F07A3F !important; }
+    .dashboard-visual .quick-actions > a[href="{{ url_for('configuracion') }}"] i { color: #E91E8F !important; }
+    @media (max-width: 768px) {
+        .dashboard-visual .stats-grid,
+        .dashboard-visual .quick-actions { grid-template-columns: 1fr 1fr !important; }
+    }
+    @media (max-width: 520px) {
+        .dashboard-visual .stats-grid,
+        .dashboard-visual .quick-actions { grid-template-columns: 1fr !important; }
+    }
+</style>
+<div class="dashboard-visual">
 <div class="dashboard-header" style="background: linear-gradient(135deg, #10B981, #3B82F6); color: white; padding: 2rem; border-radius: 12px; margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
     <div>
         <h1 style="margin: 0;"><i class="fas fa-tachometer-alt"></i> Dashboard</h1>
@@ -627,29 +717,32 @@ document.querySelectorAll('.stat-card').forEach(card => {
     }
 
     .dashboard-header {
-        background: linear-gradient(135deg, #2C90A2, #1D6F8A) !important;
+        background:
+            radial-gradient(circle at top right, rgba(255,255,255,0.12), transparent 35%),
+            linear-gradient(135deg, #156E7A 0%, #0F4C59 58%, #183B52 100%) !important;
         color: #fff !important;
         padding: 1.75rem !important;
-        border-radius: 0 !important;
-        box-shadow: none !important;
-        font-family: Arial, sans-serif !important;
+        border-radius: 18px !important;
+        box-shadow: 0 18px 40px rgba(16, 44, 53, 0.18) !important;
+        font-family: "Avenir Next LT Pro", "Segoe UI", sans-serif !important;
         margin-top: 0 !important;
+        border: 1px solid rgba(255,255,255,0.08) !important;
     }
 
     .dashboard-header h1,
     .dashboard-header p,
     .dashboard-header label {
         color: #fff !important;
-        font-family: Arial, sans-serif !important;
+        font-family: "Avenir Next LT Pro", "Segoe UI", sans-serif !important;
     }
 
     .dashboard-header select {
-        background: #fff !important;
-        color: #111827 !important;
+        background: rgba(255,255,255,0.95) !important;
+        color: #102C35 !important;
         border-radius: 10px !important;
-        border: 1px solid rgba(255,255,255,0.15) !important;
+        border: 1px solid rgba(255,255,255,0.18) !important;
         box-shadow: none !important;
-        font-family: Arial, sans-serif !important;
+        font-family: "Avenir Next LT Pro", "Segoe UI", sans-serif !important;
     }
 
     .stats-grid {
@@ -659,20 +752,21 @@ document.querySelectorAll('.stat-card').forEach(card => {
     }
 
     .stat-card {
-        background: #fff !important;
-        border: 1px solid #D5E3E3 !important;
-        border-radius: 16px !important;
-        box-shadow: 0 2px 0 rgba(34, 115, 138, 0.22) !important;
+        background: rgba(255,255,255,0.92) !important;
+        border: 1px solid #D8E3E0 !important;
+        border-radius: 18px !important;
+        box-shadow: 0 14px 30px rgba(16,44,53,0.10) !important;
         padding: 1.25rem 1.35rem !important;
-        font-family: Arial, sans-serif !important;
+        font-family: "Avenir Next LT Pro", "Segoe UI", sans-serif !important;
         border-top: 6px solid transparent !important;
+        backdrop-filter: blur(8px);
     }
 
     .stat-card > div:first-child p {
-        color: #6B7280 !important;
+        color: #5F7380 !important;
         font-weight: 800 !important;
         letter-spacing: 0.05em !important;
-        font-family: Arial, sans-serif !important;
+        font-family: "Avenir Next LT Pro", "Segoe UI", sans-serif !important;
     }
 
     .stat-card .fa-leaf { color: #2C90A2 !important; }
@@ -688,12 +782,12 @@ document.querySelectorAll('.stat-card').forEach(card => {
     .stat-card:nth-child(5) { border-top-color: #6E84C8 !important; }
 
     .stat-card > div:nth-child(2) {
-        color: #12312B !important;
+        color: #102C35 !important;
         font-weight: 800 !important;
     }
 
     .stat-card p[style*="font-size: 0.78rem"] {
-        color: #6B7280 !important;
+        color: #5F7380 !important;
     }
 
     .quick-actions {
@@ -703,34 +797,34 @@ document.querySelectorAll('.stat-card').forEach(card => {
     }
 
     .action-card {
-        background: #fff !important;
-        border: 1px solid #D5E3E3 !important;
-        border-radius: 16px !important;
+        background: rgba(255,255,255,0.92) !important;
+        border: 1px solid #D8E3E0 !important;
+        border-radius: 18px !important;
         padding: 1.25rem !important;
         text-decoration: none !important;
         color: #374151 !important;
-        box-shadow: 0 2px 0 rgba(34, 115, 138, 0.18) !important;
+        box-shadow: 0 14px 30px rgba(16,44,53,0.10) !important;
         transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease !important;
-        font-family: Arial, sans-serif !important;
+        font-family: "Avenir Next LT Pro", "Segoe UI", sans-serif !important;
     }
 
     .action-card:hover {
         transform: translateY(-3px) !important;
-        box-shadow: 0 14px 34px rgba(18,49,43,0.12) !important;
-        border-color: rgba(14,124,102,0.3) !important;
+        box-shadow: 0 18px 38px rgba(16,44,53,0.14) !important;
+        border-color: rgba(21,110,122,0.28) !important;
     }
 
     .action-card h3 {
-        color: #12312B !important;
+        color: #102C35 !important;
         font-weight: 700 !important;
     }
 
     .action-card p {
-        color: #6B7280 !important;
+        color: #5F7380 !important;
     }
 
     .action-card:last-child {
-        background: #156C89 !important;
+        background: linear-gradient(135deg, #156E7A 0%, #0F4C59 100%) !important;
         color: #fff !important;
         border-color: transparent !important;
     }
@@ -757,25 +851,25 @@ document.querySelectorAll('.stat-card').forEach(card => {
     .panel-shell,
     .panel-shell-wide,
     div[style*="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.07);"] {
-        background: #fff !important;
-        border: 1px solid #D5E3E3 !important;
-        border-radius: 16px !important;
-        box-shadow: 0 2px 0 rgba(34, 115, 138, 0.18) !important;
-        font-family: Arial, sans-serif !important;
+        background: rgba(255,255,255,0.94) !important;
+        border: 1px solid #D8E3E0 !important;
+        border-radius: 18px !important;
+        box-shadow: 0 14px 30px rgba(16,44,53,0.10) !important;
+        font-family: "Avenir Next LT Pro", "Segoe UI", sans-serif !important;
     }
 
     h3[style*="display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #F3F4F6;"] {
         border-bottom-color: #E6ECE8 !important;
-        color: #12312B !important;
+        color: #102C35 !important;
     }
 
     h3[style*="display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #F3F4F6;"] i {
-        color: #2C90A2 !important;
+        color: #156E7A !important;
     }
 
     table[style*="border-collapse: collapse"] thead tr,
     thead tr[style*="background: #F9FAFB;"] {
-        background: #F8FAF9 !important;
+        background: #F4F8F6 !important;
     }
 
     table[style*="border-collapse: collapse"] th,
@@ -784,12 +878,12 @@ document.querySelectorAll('.stat-card').forEach(card => {
     }
 
     a[style*="background: #10B981; color: white;"] {
-        background: #156C89 !important;
+        background: linear-gradient(135deg, #156E7A 0%, #0F4C59 100%) !important;
         border-radius: 999px !important;
     }
 
     a[style*="color: #3B82F6; text-decoration: none; font-weight: 500; font-size: 0.88rem;"] {
-        color: #156C89 !important;
+        color: #156E7A !important;
         font-weight: 700 !important;
     }
 
@@ -806,6 +900,13 @@ document.querySelectorAll('.stat-card').forEach(card => {
     .quick-actions + div,
     .quick-actions + div + div {
         margin-bottom: 2rem !important;
+    }
+
+    body {
+        background:
+            radial-gradient(circle at top left, rgba(21,110,122,0.08), transparent 25%),
+            radial-gradient(circle at 85% 10%, rgba(201,162,74,0.10), transparent 22%),
+            linear-gradient(180deg, #F7FAF9 0%, #EEF4F1 100%) !important;
     }
 
     .water-footprint-grid {
@@ -834,4 +935,5 @@ document.querySelectorAll('.stat-card').forEach(card => {
         .stats-grid, .quick-actions { grid-template-columns: 1fr !important; }
     }
 </style>
+ </div>
 {% endblock %}
