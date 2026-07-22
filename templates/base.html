@@ -274,7 +274,7 @@
 
         .brand-footer {
             margin-top: auto;
-            padding: 1.1rem 1.5rem 1.25rem;
+            padding: 1rem 1.5rem 1.2rem;
             background: #efefe6;
             border-top: 4px solid #332333;
         }
@@ -285,7 +285,7 @@
             width: 100%;
             display: grid;
             grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: 1rem;
+            gap: 1.25rem;
             align-items: center;
             padding: 0.25rem 0;
         }
@@ -294,22 +294,26 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            min-height: 96px;
-            padding: 0.15rem 0.35rem;
+            min-height: 108px;
+            padding: 0.65rem 0.8rem;
             flex-direction: column;
             gap: 0.35rem;
+            border: 1px solid rgba(51,35,51,0.1);
+            border-radius: 14px;
+            background: rgba(255,255,255,0.68);
+            box-shadow: 0 5px 16px rgba(51,35,51,0.07);
         }
 
         .brand-footer-logo img {
-            max-width: 100%;
-            max-height: 82px;
+            max-width: 92%;
+            max-height: 76px;
             object-fit: contain;
             display: block;
         }
 
         .brand-footer-caption {
             color: #4b454c;
-            font-size: 0.72rem;
+            font-size: 0.7rem;
             font-weight: 600;
             line-height: 1.2;
             text-align: center;
@@ -479,7 +483,6 @@
             <footer class="brand-footer">
                 <div class="brand-footer-inner">
                     <div class="brand-footer-logo">
-                        <span class="brand-footer-caption">Proyecto apoyado por</span>
                         <img src="{{ url_for('static', filename='brand/logo_corfo_antofagasta.png') }}" alt="CORFO Región de Antofagasta">
                     </div>
                     <div class="brand-footer-logo">
