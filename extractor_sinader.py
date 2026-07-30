@@ -3,9 +3,10 @@ import unicodedata
 import logging
 import os
 import glob
-import importlib
+import importlib.util
 import json
 from pathlib import Path
+from functools import lru_cache
 from typing import List, Dict, Optional, Tuple
 from difflib import SequenceMatcher
 
@@ -48,17 +49,32 @@ MASTER_RESIDUOS: Dict[str, List[str]] = {
     "02 01 99": ["Residuos no especificados en otra categoría"],
     "02 02 04": ["Lodos del tratamiento in situ de efluentes"],
     "10 01 01": ["Cenizas del hogar, escorias y polvo de caldera (excepto el polvo de caldera especificado en el código 10 01 04)"],
+    "16 12 02": ["Mezcla de residuos provenientes de actividades de acuicultura"],
+    "16 12 03": ["Mezcla de residuos provenientes de actividades de pesca"],
     "15 01 01": ["Envases de papel y cartón"],
     "15 01 02": ["Envases de plástico"],
     "15 01 04": ["Envases metálicos"],
     "19 08 05": ["Lodos del tratamiento de aguas residuales urbanas"],
+    "20 01 01": ["Papel y cartón"],
+    "20 01 02": ["Vidrio"],
+    "20 01 25": ["Aceites y grasas comestibles"],
+    "20 01 39": ["PlÃ¡sticos"],
+    "20 01 38": ["Madera distinta de la especificada en el código 20 01 37"],
+    "20 01 40": ["Metales"],
     "20 01 99": ["Otras fracciones no especificadas en otra categoría"],
+    "20 03 01": ["Mezclas de residuos municipales"],
+    "21 01 01": ["Residuos orgánicos (ejemplo como vísceras, escamas, carne, espinas, entre otros)"],
+    "21 01 02": ["Lodos de lavado y limpieza (incluye residuos líquidos orgánicos, sangre entre otros; e inorgánicos)."],
+    "21 01 03": ["Materiales inadecuados para el consumo o la elaboración (ejemplo como merma)"],
+    "21 04 01": ["Residuos orgánicos de actividades de acuicultura (fouling, incrustaciones biológicas, mortalidad y vísceras)"],
+    "21 04 02": ["Residuos de boyas y flotadores (incluye poliestireno expandido)"],
+    "21 04 03": ["Residuos de redes y cabos"],
     "21 04 04": ["Residuos de plásticos (HDPE, PEE, PETE, PVC) excepto planzas, boyas, flotadores, redes y cabos."],
+    "21 04 05": ["Residuos de planzas"],
 }
-
-DEFAULT_CATALOG_PATH = Path("assets/sinader_codigos.xlsx")
+DEFAULT_CATALOG_PATH = Path("assets/sinader_codigos_group21.xlsx")
 PREFERRED_CATALOG_SHEETS = ("LER_completo_842",)
-TREATMENT_CATALOG_SHEET = "Tratamiento_SINADER"
+TREATMENT_CATALOG_SHEET = "Tratamientos_SINADER"
 DEFAULT_TREATMENT_DEFRA_MAP = {
     "reutilizacion": "Re-use",
     "reciclaje": "Open-loop",
@@ -141,45 +157,113 @@ STRONG_TREATMENT_CATALOG = [
     "Aplicación a suelo",
     "Monorelleno",
     "Compostaje",
+    "Preparación para reutilización",
+    "Valorización",
     "Pretratamiento",
     "Residuos voluminosos",
 ]
 KNOWN_SINADER_CODES = {
     "15 01 01", "15 01 02", "15 01 04", "20 01 99", "19 08 05", "10 01 01", "21 04 04", "02 02 04",
     "02 01 99", "02 01 02", "02 02 02", "02 02 03", "20 01 39", "15 01 06", "21 07 09", "21 07 01",
+    "16 12 02", "16 12 03", "20 01 01", "20 01 02", "20 01 25", "20 01 38", "20 01 40", "20 03 01",
+    "21 01 01", "21 01 02", "21 01 03", "21 04 01", "21 04 02", "21 04 03", "21 04 05",
 }
 V2_FIN_TABLA_PATTERNS = [
     "La integridad y veracidad de la información",
     "DECLARACIÓN MENSUAL DE RESIDUOS NO PELIGROSOS",
     "Documento generado electrónicamente",
 ]
-TRATAMIENTOS_CONOCIDOS_V2 = sorted([
-    "Reciclaje de papel, cartón y productos de papel",
-    "Residuos municipales asimilables a domiciliarios",
-    "Sitio de Escombros de la Construcción",
-    "Recepción de Lodos en PTAS",
-    "Degradación Anaeróbica",
-    "Reciclaje de plásticos",
-    "Reciclaje de metales",
-    "Disposición final",
-    "Relleno sanitario",
-    "Pretratamiento",
-    "Monorelleno",
-    "Compostaje",
-], key=len, reverse=True)
+TRATAMIENTOS_CONOCIDOS_V2 = sorted(
+    list(dict.fromkeys(STRONG_TREATMENT_CATALOG)),
+    key=len,
+    reverse=True,
+)
 MAPA_RESIDUOS_SINADER_V2 = {
     "02 01 99": "Residuos no especificados en otra categoría",
     "02 02 04": "Lodos del tratamiento in situ de efluentes",
     "10 01 01": "Cenizas del hogar, escorias y polvo de caldera (excepto el polvo de caldera especificado en el código 10 01 04)",
+    "16 12 02": "Mezcla de residuos provenientes de actividades de acuicultura",
+    "16 12 03": "Mezcla de residuos provenientes de actividades de pesca",
     "15 01 01": "Envases de papel y cartón",
     "15 01 02": "Envases de plástico",
     "15 01 04": "Envases metálicos",
     "15 01 06": "Envases mezclados",
     "19 08 05": "Lodos del tratamiento de aguas residuales urbanas",
+    "20 01 01": "Papel y cartón",
+    "20 01 02": "Vidrio",
+    "20 01 25": "Aceites y grasas comestibles",
+    "20 01 39": "PlÃ¡sticos",
+    "20 01 38": "Madera distinta de la especificada en el código 20 01 37",
+    "20 01 40": "Metales",
     "20 01 99": "Otras fracciones no especificadas en otra categoría",
+    "20 03 01": "Mezclas de residuos municipales",
+    "21 01 01": "Residuos orgánicos (ejemplo como vísceras, escamas, carne, espinas, entre otros)",
+    "21 01 02": "Lodos de lavado y limpieza (incluye residuos líquidos orgánicos, sangre entre otros; e inorgánicos).",
+    "21 01 03": "Materiales inadecuados para el consumo o la elaboración (ejemplo como merma)",
+    "21 04 01": "Residuos orgánicos de actividades de acuicultura (fouling, incrustaciones biológicas, mortalidad y vísceras)",
+    "21 04 02": "Residuos de boyas y flotadores (incluye poliestireno expandido)",
+    "21 04 03": "Residuos de redes y cabos",
     "21 04 04": "Residuos de plásticos (HDPE, PEE, PETE, PVC) excepto planzas, boyas, flotadores, redes y cabos",
+    "21 04 05": "Residuos de planzas",
     "21 07 01": "Residuos orgánicos (ejemplo como conchas, algas, carne, entre otros; incluye mortalidad)",
     "21 07 09": "Lodos orgánicos (ejemplo fecas y alimento no consumido)",
+}
+
+SINADER_GRUPO_21_DEFRA_MAP = {
+    "21 01 01": "Organic: food and drink waste",
+    "21 01 02": "Commercial and industrial waste",
+    "21 01 03": "Organic: food and drink waste",
+    "21 02 01": "Organic: food and drink waste",
+    "21 02 02": "Commercial and industrial waste",
+    "21 02 03": "Organic: food and drink waste",
+    "21 03 01": "Organic: food and drink waste",
+    "21 03 02": "Commercial and industrial waste",
+    "21 03 03": "Organic: food and drink waste",
+    "21 04 01": "Organic: food and drink waste",
+    "21 04 02": "Plastics: PS (incl. forming)",
+    "21 04 03": "Plastics: average plastics",
+    "21 04 04": "Plastics: average plastics",
+    "21 04 05": "Plastics: average plastics",
+    "21 04 06": "Metal: scrap metal",
+    "21 04 07": "Organic: food and drink waste",
+    "21 04 08": "Organic: food and drink waste",
+    "21 05 01": "Organic: food and drink waste",
+    "21 05 02": "Plastics: PS (incl. forming)",
+    "21 05 03": "Plastics: average plastics",
+    "21 05 04": "Plastics: average plastics",
+    "21 05 05": "Metal: scrap metal",
+    "21 05 06": "Organic: food and drink waste",
+    "21 06 01": "Organic: food and drink waste",
+    "21 06 02": "Plastics: PS (incl. forming)",
+    "21 06 03": "Plastics: average plastics",
+    "21 06 04": "Plastics: average plastics",
+    "21 06 05": "Metal: scrap metal",
+    "21 07 01": "Organic: food and drink waste",
+    "21 07 02": "Plastics: PS (incl. forming)",
+    "21 07 03": "Plastics: average plastics",
+    "21 07 04": "Plastics: average plastics",
+    "21 07 05": "Plastics: average plastics",
+    "21 07 06": "Metal: scrap metal",
+    "21 07 07": "Glass",
+    "21 07 08": "Commercial and industrial waste",
+    "21 07 09": "Organic: food and drink waste",
+    "21 07 10": "Organic: food and drink waste",
+    "21 08 01": "Organic: food and drink waste",
+    "21 08 02": "Plastics: PS (incl. forming)",
+    "21 08 03": "Plastics: average plastics",
+    "21 08 04": "Metal: scrap metal",
+    "21 09 01": "Organic: food and drink waste",
+    "21 09 02": "Commercial and industrial waste",
+    "21 09 03": "Organic: food and drink waste",
+    "21 10 01": "Organic: food and drink waste",
+    "21 10 02": "Commercial and industrial waste",
+    "21 10 03": "Organic: food and drink waste",
+    "21 11 01": "Organic: food and drink waste",
+    "21 11 02": "Commercial and industrial waste",
+    "21 11 03": "Organic: food and drink waste",
+    "21 12 01": "Organic: food and drink waste",
+    "21 12 02": "Commercial and industrial waste",
+    "21 12 03": "Organic: food and drink waste",
 }
 
 V2_REGEX_CODIGO_INICIO = re.compile(r"^\s*(\d{2}\s\d{2}\s\d{2})\s*\|")
@@ -321,32 +405,41 @@ def sinader_has_no_movements(full_text: str) -> bool:
 def extract_sinader_metadata(full_text: str, filename: str) -> Dict[str, str]:
     kv = extract_key_value_lines(full_text)
 
+    def clean_metadata_value(value: str) -> str:
+        cleaned = re.sub(r"^_+\s*", "", _clean_cell(value))
+        return _clean_cell(re.sub(r"\s*_+$", "", cleaned))
+
+    def search_metadata(pattern: str) -> str:
+        match = re.search(pattern, full_text or "", flags=re.IGNORECASE | re.MULTILINE)
+        return clean_metadata_value(match.group(1)) if match else ""
+
     def get_any(*keys: str) -> str:
         for k in keys:
             kn = _norm(k)
             if kn in kv:
-                return kv[kn]
+                return clean_metadata_value(kv[kn])
         for kk, vv in kv.items():
             for k in keys:
                 if _norm(k) in kk:
-                    return vv
+                    return clean_metadata_value(vv)
         return ""
 
     meta = {
         "FuentePDF": Path(filename).name,
-        "Folio": get_any("Folio"),
+        "Folio": get_any("Folio") or search_metadata(r"N[°ºo]?\s*FOLIO\s*:\s*_*(\d+)"),
         "Establecimiento": get_any("Establecimiento"),
         "Razón social": get_any("Razón social", "Razon social"),
         "RUT Titular": get_any("RUT Titular", "Rut titular", "RUT"),
         "Realizado por": get_any("Realizado por"),
-        "Tipo": get_any("Tipo"),
-        "Estado": get_any("Estado"),
+        "Tipo": search_metadata(r"TIPO\s+DE\s+DECLARACI[ÓO]N\s*:\s*(.*?)(?=\s+ESTADO\s*:|$)") or get_any("Tipo"),
+        "Estado": search_metadata(r"ESTADO\s*:\s*([^\r\n]+)") or get_any("Estado"),
         "Código identificador": get_any("Código identificador", "Codigo identificador"),
-        "Región": get_any("Región", "Region"),
-        "Comuna": get_any("Comuna"),
+        "Región": search_metadata(r"REGI[ÓO]N\s*:\s*([^\r\n]+)") or get_any("Región", "Region"),
+        "Comuna": search_metadata(r"COMUNA\s*:\s*([^\r\n]+)") or get_any("Comuna"),
     }
     meta["Periodo declarado"] = (
         extract_period_from_text(full_text)
+        or search_metadata(r"PER[IÍ]ODO\s+DECLARADO\s*:\s*(.*?)(?=\s+COMUNA\s*:|$)")
         or get_any("Periodo declarado", "Periodo")
         or parse_period_from_filename(filename)
         or ""
@@ -639,6 +732,7 @@ def _parse_reconstructed_row_block(
         qty,
         known_treatments,
         desc,
+        code,
     )
     if not treatment_from_tail and trt:
         treatment_source = "sanitize_fallback"
@@ -758,6 +852,10 @@ def normalizar_fila_original(fila: str) -> str:
 def encontrar_tratamiento_en_texto(texto: str) -> Optional[str]:
     texto_norm = re.sub(r"\s+", " ", texto).strip().lower()
     texto_folded = _norm(texto_norm)
+    if re.search(r"preparacion\s+para\s+(?:la\s+)?reutilizacion", texto_folded):
+        return "Preparación para reutilización"
+    if re.search(r"pretratamiento\s+(?:de\s+)?vidrio\b", texto_folded):
+        return "Pretratamiento vidrio"
     for t in TRATAMIENTOS_CONOCIDOS_V2:
         if _norm(t) in texto_folded:
             return t
@@ -771,7 +869,10 @@ def encontrar_tratamiento_en_texto(texto: str) -> Optional[str]:
         return "Monorelleno"
     if "compostaje" in texto_norm:
         return "Compostaje"
-    if "pretratamiento" in texto_norm:
+    if "pretratamiento" in texto_folded:
+        specific_pretratamiento = _infer_specific_pretratamiento("Pretratamiento", texto, TRATAMIENTOS_CONOCIDOS_V2)
+        if _norm(specific_pretratamiento) not in {"", "pretratamiento"}:
+            return specific_pretratamiento
         return "Pretratamiento"
     if "relleno sanitario" in texto_norm:
         return "Relleno sanitario"
@@ -792,6 +893,57 @@ def inferir_tratamiento_por_codigo(codigo: str, fila_completa: str = "", resto_p
     fila_norm = re.sub(r"\s+", " ", fila_completa).strip().lower()
     resto_norm = re.sub(r"\s+", " ", resto_post_cantidad).strip().lower()
     combinado = f"{fila_norm} {resto_norm}"
+    combinado_norm = _norm(combinado)
+    if codigo in {"02 02 02", "02 02 03"}:
+        if (
+            "reciclaje" in combinado_norm
+            and ("hidrobiolog" in combinado_norm or "consumo animal" in combinado_norm)
+        ):
+            return "Reciclaje de residuos hidrobiológicos para consumo animal"
+    if codigo == "21 04 01":
+        if (
+            "reciclaje" in combinado_norm
+            or "hidrobiolog" in combinado_norm
+            or "consumo animal" in combinado_norm
+            or "pesquera" in combinado_norm
+        ):
+            return "Reciclaje de residuos hidrobiológicos para consumo animal"
+    if codigo == "20 01 01":
+        if (
+            ("papel" in combinado_norm and "carton" in combinado_norm)
+            or "productos de papel" in combinado_norm
+        ):
+            return "Pretratamiento de papel, cartón y productos de papel"
+    if codigo == "20 01 25":
+        if (
+            "aceite" in combinado_norm
+            or "grasas comestibles" in combinado_norm
+            or "rendering chile" in combinado_norm
+        ):
+            return "Pretratamiento de aceites y grasas comestibles"
+    if codigo == "21 04 02":
+        if (
+            "reciclaje" in combinado_norm
+            and (
+                "boyas" in combinado_norm
+                or "flotadores" in combinado_norm
+                or "poliestireno" in combinado_norm
+                or "greenspot" in combinado_norm
+                or "aysen recircular" in combinado_norm
+            )
+        ):
+            return "Reciclaje de plásticos"
+    if codigo == "21 04 05":
+        if (
+            "preparacion para la" in combinado_norm
+            or ("preparacion para" in combinado_norm and "reutilizacion" in combinado_norm)
+        ):
+            return "Preparación para reutilización"
+    if codigo in {"20 01 39", "21 04 04"}:
+        if "preparacion para" in combinado_norm and "reutilizacion" in combinado_norm:
+            return "Preparación para reutilización"
+        if "valorizacion" in combinado_norm:
+            return "Valorización"
     if codigo == "15 01 02":
         if (
             "reciclaje de plásticos" in combinado
@@ -1011,6 +1163,39 @@ def parse_sinader_rows_from_text(full_text: str) -> List[Dict[str, str]]:
         key = (r.get("Código principal", ""), _norm(r.get("Descripción Residuo", "")), _clean_cell(r.get("Cantidad (Kg)", "")))
         uniq.setdefault(key, r)
     return list(uniq.values())
+
+
+def _merge_v2_rows_with_text_fallback(
+    primary_rows: List[Dict[str, str]],
+    fallback_rows: List[Dict[str, str]],
+) -> List[Dict[str, str]]:
+    def row_key(row: Dict[str, str]) -> Tuple[str, str]:
+        code = _normalize_code(row.get("Código principal", ""))
+        quantity = _to_float_kg(row.get("Cantidad (Kg)", ""))
+        quantity_key = "" if quantity is None else f"{quantity:.6f}"
+        return code, quantity_key
+
+    fallback_by_key = {
+        row_key(row): row
+        for row in fallback_rows
+        if all(row_key(row))
+    }
+    merged_rows: List[Dict[str, str]] = []
+    for source_row in primary_rows:
+        row = dict(source_row)
+        fallback = fallback_by_key.get(row_key(row))
+        if fallback:
+            enriched = False
+            for field in ("Destino", "Transportista", "Patente"):
+                if not _clean_cell(row.get(field, "")) and _clean_cell(fallback.get(field, "")):
+                    row[field] = _clean_cell(fallback.get(field, ""))
+                    enriched = True
+            if enriched:
+                row["Destino_confiable"] = fallback.get("Destino_confiable", row.get("Destino_confiable", "NO"))
+                strategy = _clean_cell(row.get("Row_strategy", "")) or "v2_text"
+                row["Row_strategy"] = f"{strategy}+text_logistics_fallback"
+        merged_rows.append(row)
+    return merged_rows
 
 
 def render_pdf_page_to_image(doc, page_index: int, dpi: int = 220, pdfplumber_page=None):
@@ -1287,6 +1472,7 @@ def parse_sinader_table_from_cells(cell_rows, known_treatments: Optional[List[st
             qty,
             known_treatments,
             desc,
+            code,
         )
         treatment_catalog = {_norm(x) for x in (STRONG_TREATMENT_CATALOG + (known_treatments or []))}
         destination_catalog = {_norm(x) for x in KNOWN_DESTINATIONS}
@@ -1561,6 +1747,14 @@ def extract_global_treatment_from_text(full_text: str, known_treatments: Optiona
             term_norm = _norm(term)
             if term_norm and term_norm in text_norm:
                 return term
+    specific_pretratamiento = _infer_specific_pretratamiento(
+        "Pretratamiento",
+        text,
+        known_treatments or TRATAMIENTOS_CONOCIDOS_V2,
+        require_pretratamiento_keyword=True,
+    )
+    if _norm(specific_pretratamiento) not in {"", "pretratamiento"}:
+        return specific_pretratamiento
     patterns = [
         r"(?:tipo\s*tratamiento|tratamiento)\s*[:\-]?\s*(reutilizaci[oó]n|reciclaje|combusti[oó]n|vertedero|anaerobic digestion)",
         r"(?:tipo\s*tratamiento|tratamiento)\s*[:\-]?\s*([A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s]{4,60})",
@@ -1580,6 +1774,7 @@ def _sanitize_treatment_and_logistics(
     cantidad: str = "",
     known_treatments: Optional[List[str]] = None,
     descripcion: str = "",
+    codigo: str = "",
 ) -> Tuple[str, str, str, str]:
     def _extract_treatment_phrase(text: str) -> str:
         if not text:
@@ -1635,6 +1830,7 @@ def _sanitize_treatment_and_logistics(
             r"aplicaci[oó]n\s+a\s+suelo",
             r"monorelleno",
             r"compostaje",
+            r"preparaci[oó]n\s+para\s+(?:la\s+)?reutilizaci[oó]n",
             r"pretratamiento",
             r"residuos\s+voluminosos",
             r"reutilizaci[oó]n",
@@ -1653,6 +1849,12 @@ def _sanitize_treatment_and_logistics(
     trp = _clean_cell(transportista)
     pat = _clean_cell(patente)
     raw_combined = f"{trt} {dst}".strip()
+    code_norm = _normalize_code(codigo)
+    context_norm = _norm(" ".join(x for x in [trt, dst, descripcion, raw_combined] if _clean_cell(x)))
+    if code_norm in {"02 02 02", "02 02 03"} and any(
+        token in context_norm for token in {"hidrobiolog", "consumo animal", "pesquera", "subproductos hidrobiolog"}
+    ):
+        trt = "Reciclaje de residuos hidrobiológicos para consumo animal"
 
     if trt or dst:
         def _is_placeholder_destination(value: str) -> bool:
@@ -1793,9 +1995,18 @@ def _sanitize_treatment_and_logistics(
             if candidate_dst and _is_placeholder_destination(dst):
                 dst = candidate_dst
 
+        trt = _infer_specific_pretratamiento(trt, " ".join([raw_combined, dst, descripcion]), known_treatments)
+
         if dst:
             dst = re.sub(r"\d+\|", " ", dst)
             dst = _clean_destination_noise(_clean_cell(re.sub(r"\s+", " ", dst)))
+
+        if dst and known_treatments:
+            dst_norm = _norm(dst)
+            trt_norm = _norm(trt)
+            known_treatment_norms = {_norm(x) for x in known_treatments if _clean_cell(x)}
+            if dst_norm and (dst_norm == trt_norm or dst_norm in known_treatment_norms or dst_norm == "reutilizacion"):
+                dst = ""
 
     return trt, dst, trp, pat
 
@@ -1870,7 +2081,8 @@ def extract_sinader_from_pdf(pdf_path: str) -> Tuple[List[Dict[str, str]], Dict[
         return (score, strong_rows, len(rows))
 
     if rows_from_v2_text:
-        method, detail_rows = "v2_text_primary", rows_from_v2_text
+        method = "v2_text_primary"
+        detail_rows = _merge_v2_rows_with_text_fallback(rows_from_v2_text, rows_from_text)
     else:
         base_candidates = [("tables", rows_from_tables), ("text", rows_from_text)]
         method, detail_rows = max(base_candidates, key=lambda x: _score_rows(x[1]))
@@ -1928,6 +2140,7 @@ def extract_sinader_from_pdf(pdf_path: str) -> Tuple[List[Dict[str, str]], Dict[
             r.get("Cantidad (Kg)", ""),
             known_treatments,
             r.get("Descripción Residuo", ""),
+            r.get("Código principal", ""),
         )
         out_rows.append({
             "N.": str(i),
@@ -1946,6 +2159,7 @@ def extract_sinader_from_pdf(pdf_path: str) -> Tuple[List[Dict[str, str]], Dict[
             "Parsing_OK": r.get("Parsing_OK", "NO"),
             "Tratamiento_confiable": r.get("Tratamiento_confiable", "NO"),
             "Destino_confiable": r.get("Destino_confiable", "NO"),
+            "Row_strategy": r.get("Row_strategy", method),
         })
     return out_rows, meta
 
@@ -1987,12 +2201,13 @@ def choose_canonical_description(extracted_desc: str, codigo: str, catalog: Dict
     return extracted_desc
 
 
-def _build_catalog_from_dataframe(df: pd.DataFrame) -> Dict[str, List[str]]:
+def _build_catalog_from_dataframe(df: pd.DataFrame, require_declarable: bool = True) -> Dict[str, List[str]]:
     if df.empty:
         return {}
     normalized_cols = {_norm(c): c for c in df.columns}
     code_col = None
     desc_col = None
+    level_col = None
     code_candidates = [
         "codigo principal",
         "código principal",
@@ -2006,15 +2221,21 @@ def _build_catalog_from_dataframe(df: pd.DataFrame) -> Dict[str, List[str]]:
         "código ler",
     ]
     desc_candidates = [
+        "entry official name (en)",
+        "entry official name",
+        "nombre oficial / descripción (en)",
+        "nombre ler oficial",
         "descripcion residuo",
         "descripción residuo",
         "descripcion",
         "descripción",
         "residuo",
-        "entry official name (en)",
-        "entry official name",
         "capitulo oficial sinader (es)",
         "subchapter official name (en)",
+        "chapter official name (en)",
+    ]
+    level_candidates = [
+        "nivel",
     ]
     declarable_col = None
     declarable_candidates = [
@@ -2023,23 +2244,35 @@ def _build_catalog_from_dataframe(df: pd.DataFrame) -> Dict[str, List[str]]:
         "declarable en sinader",
     ]
     for candidate in code_candidates:
-        if candidate in normalized_cols:
-            code_col = normalized_cols[candidate]
+        candidate_norm = _norm(candidate)
+        if candidate_norm in normalized_cols:
+            code_col = normalized_cols[candidate_norm]
             break
     for candidate in desc_candidates:
-        if candidate in normalized_cols:
-            desc_col = normalized_cols[candidate]
+        candidate_norm = _norm(candidate)
+        if candidate_norm in normalized_cols:
+            desc_col = normalized_cols[candidate_norm]
+            break
+    for candidate in level_candidates:
+        candidate_norm = _norm(candidate)
+        if candidate_norm in normalized_cols:
+            level_col = normalized_cols[candidate_norm]
             break
     for candidate in declarable_candidates:
-        if candidate in normalized_cols:
-            declarable_col = normalized_cols[candidate]
+        candidate_norm = _norm(candidate)
+        if candidate_norm in normalized_cols:
+            declarable_col = normalized_cols[candidate_norm]
             break
     if not code_col or not desc_col:
         return {}
     catalog: Dict[str, List[str]] = {}
-    required_cols = [code_col, desc_col] + ([declarable_col] if declarable_col else [])
+    required_cols = [code_col, desc_col] + ([level_col] if level_col else []) + ([declarable_col] if declarable_col else [])
     for _, row in df[required_cols].dropna(subset=[code_col, desc_col]).iterrows():
-        if declarable_col:
+        if level_col:
+            level_value = _norm(_clean_cell(row.get(level_col, "")))
+            if level_value and level_value not in {"entry", "entrada"}:
+                continue
+        if declarable_col and require_declarable:
             declarable_value = _norm(_clean_cell(row.get(declarable_col, "")))
             if declarable_value and declarable_value not in {"si", "sí", "s", "yes", "true"}:
                 continue
@@ -2053,6 +2286,15 @@ def _build_catalog_from_dataframe(df: pd.DataFrame) -> Dict[str, List[str]]:
     return catalog
 
 
+def _read_sinader_catalog_sheet(path: Path, sheet_name: str) -> pd.DataFrame:
+    if sheet_name in {"LER_Hierarquia_995", "LER_Completo_842", "Capitulos_SINADER", "Tratamientos_SINADER"}:
+        return pd.read_excel(path, sheet_name=sheet_name, header=2)
+    if sheet_name == "LER_Referencia":
+        return pd.read_excel(path, sheet_name=sheet_name, header=1)
+    return pd.read_excel(path, sheet_name=sheet_name)
+
+
+@lru_cache(maxsize=8)
 def load_residuo_catalog(catalog_path: Optional[str] = None) -> Dict[str, List[str]]:
     configured_path = (catalog_path or os.getenv("SINADER_CATALOG_PATH", "")).strip()
     candidate_paths = [Path(configured_path)] if configured_path else []
@@ -2062,14 +2304,26 @@ def load_residuo_catalog(catalog_path: Optional[str] = None) -> Dict[str, List[s
             continue
         try:
             excel_file = pd.ExcelFile(path)
-            sheet_candidates = [s for s in PREFERRED_CATALOG_SHEETS if s in excel_file.sheet_names]
-            sheet_candidates.extend([s for s in excel_file.sheet_names if s not in sheet_candidates])
+            preferred_sheets = [s for s in ("LER_Hierarquia_995", "LER_Completo_842", "LER_Referencia") if s in excel_file.sheet_names]
+            sheet_candidates = preferred_sheets + [s for s in excel_file.sheet_names if s not in preferred_sheets]
+            merged_catalog: Dict[str, List[str]] = {}
             for sheet_name in sheet_candidates:
-                df = pd.read_excel(path, sheet_name=sheet_name)
-                catalog = _build_catalog_from_dataframe(df)
+                df = _read_sinader_catalog_sheet(path, sheet_name)
+                catalog = _build_catalog_from_dataframe(df, require_declarable=False)
                 if catalog:
-                    logger.info("Catálogo SINADER cargado desde %s (hoja=%s, códigos=%s)", path, sheet_name, len(catalog))
-                    return catalog
+                    for code, descriptions in catalog.items():
+                        bucket = merged_catalog.setdefault(code, [])
+                        for description in descriptions:
+                            if description not in bucket:
+                                bucket.append(description)
+            if merged_catalog:
+                logger.info(
+                    "Catálogo SINADER cargado desde %s (hojas=%s, códigos=%s)",
+                    path,
+                    ",".join(preferred_sheets) if preferred_sheets else "sin_preferidas",
+                    len(merged_catalog),
+                )
+                return merged_catalog
             logger.warning("Catálogo SINADER en %s no tiene columnas válidas de código/descripcion", path)
         except Exception as exc:
             logger.warning("No se pudo cargar catálogo SINADER en %s: %s", path, exc)
@@ -2119,6 +2373,7 @@ def _build_treatment_defra_map_from_dataframe(df: pd.DataFrame) -> Dict[str, str
     return mapping
 
 
+@lru_cache(maxsize=8)
 def load_treatment_defra_map(catalog_path: Optional[str] = None) -> Dict[str, str]:
     configured_path = (catalog_path or os.getenv("SINADER_CATALOG_PATH", "")).strip()
     candidate_paths = [Path(configured_path)] if configured_path else []
@@ -2140,6 +2395,7 @@ def load_treatment_defra_map(catalog_path: Optional[str] = None) -> Dict[str, st
     return dict(DEFAULT_TREATMENT_DEFRA_MAP)
 
 
+@lru_cache(maxsize=8)
 def load_treatment_level3_terms(catalog_path: Optional[str] = None) -> List[str]:
     configured_path = (catalog_path or os.getenv("SINADER_CATALOG_PATH", "")).strip()
     candidate_paths = [Path(configured_path)] if configured_path else []
@@ -2151,20 +2407,29 @@ def load_treatment_level3_terms(catalog_path: Optional[str] = None) -> List[str]
             excel_file = pd.ExcelFile(path)
             if TREATMENT_CATALOG_SHEET not in excel_file.sheet_names:
                 continue
-            df = pd.read_excel(path, sheet_name=TREATMENT_CATALOG_SHEET)
+            df = pd.read_excel(path, sheet_name=TREATMENT_CATALOG_SHEET, header=2)
             normalized_cols = {_norm(c): c for c in df.columns}
+            level2_col = None
             level3_col = None
-            for candidate in ["nivel 3", "nivel3", "level 3", "tratamiento", "treatment"]:
+            for candidate in ["nivel 2", "nivel2", "level 2", "tratamiento", "treatment"]:
+                if candidate in normalized_cols:
+                    level2_col = normalized_cols[candidate]
+                    break
+            for candidate in ["nivel 3", "nivel3", "level 3"]:
                 if candidate in normalized_cols:
                     level3_col = normalized_cols[candidate]
                     break
-            if not level3_col:
+            if not level2_col and not level3_col:
                 continue
             values = []
-            for value in df[level3_col].dropna().tolist():
-                text = _clean_cell(value)
-                if text:
-                    values.append(text)
+            for col in [level2_col, level3_col]:
+                if not col:
+                    continue
+                for value in df[col].dropna().tolist():
+                    text = _clean_cell(value)
+                    if text:
+                        values.append(text)
+            values.extend(STRONG_TREATMENT_CATALOG)
             unique_values = sorted(set(values), key=lambda x: len(x), reverse=True)
             if unique_values:
                 logger.info("Tratamientos Nivel 3 cargados desde %s (hoja=%s, filas=%s)", path, TREATMENT_CATALOG_SHEET, len(unique_values))
@@ -2193,6 +2458,14 @@ def choose_canonical_treatment(extracted_treatment: str, known_treatments: List[
     a = _normalize_for_match(raw)
     if not a:
         return raw
+    for term in known_treatments:
+        if _normalize_for_match(term) == a:
+            return term
+    # Sólo hacemos inferencia fuerte para variantes de "pretratamiento".
+    # En el resto de los casos conservamos el texto literal del PDF para no
+    # degradar tratamientos específicos a términos genéricos parecidos.
+    if "pretratamiento" not in a:
+        return raw
     best_term = raw
     best_score = 0.0
     for term in known_treatments:
@@ -2204,6 +2477,100 @@ def choose_canonical_treatment(extracted_treatment: str, known_treatments: List[
             best_score = score
             best_term = term
     return best_term if best_score >= threshold else raw
+
+
+PRETREATMENT_SIGNAL_STOPWORDS = {
+    "pretratamiento",
+    "de",
+    "del",
+    "la",
+    "el",
+    "los",
+    "las",
+    "y",
+    "o",
+    "u",
+    "que",
+    "no",
+    "con",
+    "sin",
+    "para",
+    "por",
+    "al",
+    "a",
+    "en",
+    "que",
+    "contiene",
+    "contienen",
+    "sustancias",
+    "peligrosas",
+    "fuera",
+    "uso",
+    "residuo",
+    "residuos",
+}
+
+
+def _pretratamiento_signal_tokens(term: str) -> List[str]:
+    tokens: List[str] = []
+    for token in _normalize_for_match(term).split():
+        if token in PRETREATMENT_SIGNAL_STOPWORDS or len(token) < 4:
+            continue
+        if token not in tokens:
+            tokens.append(token)
+    return tokens
+
+
+def _infer_specific_pretratamiento(
+    current_treatment: str,
+    context_text: str,
+    known_treatments: Optional[List[str]] = None,
+    require_pretratamiento_keyword: bool = False,
+) -> str:
+    raw = _clean_cell(current_treatment)
+    raw_norm = _normalize_for_match(raw)
+    if raw_norm and raw_norm not in {"pretratamiento", "pretratamiento de"}:
+        return raw
+
+    context = _clean_cell(context_text)
+    if not context:
+        return raw
+    context_norm = _normalize_for_match(context)
+    if require_pretratamiento_keyword and "pretratamiento" not in context_norm:
+        return raw
+
+    treatment_catalog = list(dict.fromkeys((known_treatments or []) + STRONG_TREATMENT_CATALOG))
+    context_tokens = set(context_norm.split())
+    best_term = ""
+    best_score = (0, 0.0, 0)
+    second_score = (0, 0.0, 0)
+
+    for term in sorted(treatment_catalog, key=lambda x: len(x), reverse=True):
+        term_norm = _normalize_for_match(term)
+        if not term_norm or not term_norm.startswith("pretratamiento"):
+            continue
+        if term_norm == "pretratamiento":
+            continue
+        if term_norm in context_norm:
+            return term
+
+        signal_tokens = _pretratamiento_signal_tokens(term)
+        if not signal_tokens:
+            continue
+        matched_tokens = {token for token in signal_tokens if token in context_tokens}
+        if not matched_tokens:
+            continue
+        score = (len(matched_tokens), len(matched_tokens) / len(signal_tokens), len(signal_tokens))
+        if score > best_score:
+            second_score = best_score
+            best_score = score
+            best_term = term
+        elif score > second_score:
+            second_score = score
+
+    if best_term and (best_score[0] >= 2 or (best_score[0] == 1 and second_score[0] == 0)):
+        return best_term
+    return raw
 
 
 def load_treatment_alias_map(training_files: Optional[List[str]] = None) -> Dict[str, str]:
@@ -2269,6 +2636,9 @@ def defra_classification(desc_residuo: str, sin_movimientos: str = "", codigo_pr
         return "NA"
     def has_any(*terms: str) -> bool:
         return any(_norm(term) in ctx for term in terms)
+    mapped_group_21 = SINADER_GRUPO_21_DEFRA_MAP.get(cod)
+    if mapped_group_21:
+        return mapped_group_21
     if cod == "15 01 01":
         return "Paper and board: mixed"
     if cod == "15 01 04":
@@ -2327,6 +2697,26 @@ def defra_classification(desc_residuo: str, sin_movimientos: str = "", codigo_pr
         return "Household residual waste" if has_any("relleno sanitario", "residuo domiciliario", "residual") else "Commercial and industrial waste"
     if cod == "10 01 01":
         return "Commercial and industrial waste"
+    if cod == "21 04 01":
+        return "Organic: food and drink waste"
+    if cod in {"16 12 02", "16 12 03"}:
+        return "Commercial and industrial waste"
+    if cod == "20 03 01":
+        return "Household residual waste"
+    if cod == "20 01 01":
+        return "Paper and board: mixed"
+    if cod == "20 01 02":
+        return "Glass"
+    if cod == "20 01 25":
+        return "Organic: food and drink waste"
+    if cod == "20 01 38":
+        return "Wood"
+    if cod == "21 04 02":
+        if has_any("poliestireno", "boyas", "flotadores", "greenspot", "aysen recircular"):
+            return "Plastics: PS (incl. forming)"
+        return "Plastics: average plastics"
+    if cod in {"21 04 03", "21 04 05"}:
+        return "Plastics: average plastics"
     if has_any("envases de papel y carton", "envases de papel y cartón"):
         return "Paper and board: mixed"
     if has_any("papel") and not has_any("carton", "cartón", "board"):
@@ -2505,6 +2895,9 @@ def clasificar_defra_residuo(codigo_residuo: str, residuo_oficial: str) -> Optio
     codigo = _normalize_code(codigo_residuo)
     residuo_norm = _norm(residuo_oficial)
     # Reglas determinísticas por código SINADER observado en corpus.
+    mapped_group_21 = SINADER_GRUPO_21_DEFRA_MAP.get(codigo)
+    if mapped_group_21:
+        return mapped_group_21
     if codigo == "15 01 01":
         return "Paper and board: mixed"
     if codigo == "15 01 02":
@@ -2518,14 +2911,43 @@ def clasificar_defra_residuo(codigo_residuo: str, residuo_oficial: str) -> Optio
     if codigo in {"19 08 05", "02 02 04"}:
         # Lodos de PTAS/efluentes: flujo industrial para este proyecto.
         return "Commercial and industrial waste"
+    if codigo in {"02 01 09", "02 02 03", "02 02 99"}:
+        # Equivalencias explícitas del workbook DEFRA para entradas LER del grupo 02.
+        return "Commercial and industrial waste"
     if codigo in {"21 07 01", "21 07 09"}:
         return "Organic: food and drink waste"
     if codigo == "20 01 99":
         return "Commercial and industrial waste"
     if codigo == "10 01 01":
         return "Commercial and industrial waste"
+    if codigo == "21 04 01":
+        return "Organic: food and drink waste"
+    if codigo in {"16 12 02", "16 12 03"}:
+        return "Commercial and industrial waste"
+    if codigo == "20 03 01":
+        return "Household residual waste"
+    if codigo == "20 01 01":
+        return "Paper and board: mixed"
+    if codigo == "20 01 02":
+        return "Glass"
+    if codigo == "20 01 25":
+        return "Organic: food and drink waste"
+    if codigo == "20 01 38":
+        return "Wood"
+    if codigo == "20 01 39":
+        return "Plastics: average plastics"
+    if codigo == "20 01 40":
+        return "Metals"
+    if codigo == "21 04 02":
+        if "poliestireno" in residuo_norm or "boyas" in residuo_norm or "flotadores" in residuo_norm:
+            return "Plastics: PS (incl. forming)"
+        return "Plastics: average plastics"
+    if codigo in {"21 04 03", "21 04 05"}:
+        return "Plastics: average plastics"
     if codigo == "21 04 04":
         return "Plastics: average plastics"
+    if codigo in {"21 01 01", "21 01 02", "21 01 03"}:
+        return "Organic: food and drink waste"
     if codigo == "02 01 99":
         return "Organic: mixed food and garden waste"
     # Fallback determinístico por residuo oficial (sin fuzzy aleatorio).
@@ -2559,12 +2981,19 @@ def clasificar_defra_tratamiento(tratamiento: str) -> Optional[str]:
         return "Anaerobic digestion"
     if "relleno sanitario" in txt or "disposicion final" in txt or "monorelleno" in txt:
         return "Landfill"
+    if "vertedero" in txt:
+        return "Landfill"
     if "residuos municipales asimilables a domiciliarios" in txt or "sitio de escombros de la construccion" in txt:
         return "Landfill"
+    if "reutilizacion" in txt:
+        return "Re-use"
     if "reciclaje" in txt:
         return "Open-loop"
     if "pretratamiento" in txt:
         # Regla documentada: pretratamiento se aproxima a flujo previo de reciclaje.
+        return "Open-loop"
+    if "residuos municipales" in txt:
+        # El catálogo SINADER lo define como pretratamiento en centro de acopio.
         return "Open-loop"
     return None
 
@@ -2632,6 +3061,20 @@ def process_folder(input_folder: str, output_excel: str) -> pd.DataFrame:
     if "Tratamiento" in df.columns and known_treatments:
         if "Tratamiento Original" not in df.columns:
             df["Tratamiento Original"] = df["Tratamiento"]
+        def _resolve_row_specific_pretratamiento(row: pd.Series) -> str:
+            context = " ".join(
+                _clean_cell(part)
+                for part in [
+                    row.get("Tratamiento", ""),
+                    row.get("Descripción Residuo", ""),
+                    row.get("Residuo extraído", ""),
+                    row.get("Texto fila original", ""),
+                ]
+                if _clean_cell(part)
+            )
+            return _infer_specific_pretratamiento(row.get("Tratamiento", ""), context, known_treatments)
+
+        df["Tratamiento"] = df.apply(_resolve_row_specific_pretratamiento, axis=1)
         df["Tratamiento"] = df["Tratamiento"].apply(
             lambda x: treatment_alias_map.get(_norm(_clean_cell(x)), choose_canonical_treatment(x, known_treatments))
         )
@@ -2711,9 +3154,15 @@ def process_folder(input_folder: str, output_excel: str) -> pd.DataFrame:
             {"SI": True, "TRUE": True, "YES": True, "NO": False, "FALSE": False}
         ),
         "Código principal": df.get("Código principal", pd.Series(dtype=str)).fillna(""),
-        "Residuo extraído": df.get("Descripción Residuo", pd.Series(dtype=str)).fillna(""),
+        "Residuo extraído": df.get(
+            "Descripción Residuo Original",
+            df.get("Descripción Residuo", pd.Series(dtype=str)),
+        ).fillna(""),
         "Cantidad (Kg)": df.get("Cantidad (Kg)", pd.Series(dtype=float)).astype("float64"),
         "Tratamiento": df.get("Tratamiento", pd.Series(dtype=str)).fillna(""),
+        "Destino": df.get("Destino", pd.Series(dtype=str)).fillna(""),
+        "Transportista": df.get("Transportista", pd.Series(dtype=str)).fillna(""),
+        "Patente": df.get("Patente", pd.Series(dtype=str)).fillna(""),
         "metodo_usado": df.get("Row_strategy", pd.Series(dtype=str)).fillna(""),
         "requiere_revision": (
             (df.get("Parsing_OK", pd.Series(dtype=str)).fillna("NO").astype(str).str.upper() != "SI")
@@ -2739,14 +3188,27 @@ def process_folder(input_folder: str, output_excel: str) -> pd.DataFrame:
                 return t
         return txt
     df_v2["Tratamiento"] = df_v2["Tratamiento"].apply(_normalizar_tratamiento_v2)
-    df_v2["Residuo oficial"] = df_v2["Código principal"].map(lambda x: MAPA_RESIDUOS_SINADER_V2.get(_normalize_code(x), ""))
+    residuo_catalog = load_residuo_catalog()
+    known_residue_codes = set(residuo_catalog.keys()) | set(MAPA_RESIDUOS_SINADER_V2.keys())
+
+    def _resolve_residuo_oficial(code: str) -> str:
+        normalized_code = _normalize_code(code)
+        if not normalized_code:
+            return ""
+        if normalized_code in residuo_catalog and residuo_catalog[normalized_code]:
+            return residuo_catalog[normalized_code][0]
+        if normalized_code in MAPA_RESIDUOS_SINADER_V2:
+            return MAPA_RESIDUOS_SINADER_V2[normalized_code]
+        return ""
+
+    df_v2["Residuo oficial"] = df_v2["Código principal"].map(_resolve_residuo_oficial)
     df_v2["Residuo oficial"] = df_v2["Residuo oficial"].where(
         df_v2["Residuo oficial"].astype(str).str.strip() != "",
         df_v2["Residuo extraído"],
     )
     df_v2["codigo_sin_mapa_residuo"] = (
         df_v2["Código principal"].astype(str).str.strip() != ""
-    ) & (~df_v2["Código principal"].astype(str).map(lambda x: _normalize_code(x) in MAPA_RESIDUOS_SINADER_V2))
+    ) & (~df_v2["Código principal"].astype(str).map(lambda x: _normalize_code(x) in known_residue_codes))
     # Año/Mes desde Periodo declarado; fallback al nombre del archivo.
     anio_mes = [
         derivar_ano_mes(periodo_declarado=r.get("Periodo declarado", ""), fuente_pdf=r.get("FuentePDF", ""))
@@ -2779,6 +3241,7 @@ def process_folder(input_folder: str, output_excel: str) -> pd.DataFrame:
     df_v2["sin_movimientos"] = df_v2["sin_movimientos"].where(df_v2["sin_movimientos"].notna(), False)
     export_cols = [
         "Año", "Mes", "Código principal", "Residuo oficial", "Cantidad (Kg)", "Tratamiento",
+        "Destino", "Transportista", "Patente",
         "DEFRA_Residuo", "DEFRA_Residuo_ES", "DEFRA_Tratamiento", "DEFRA_Tratamiento_ES",
         "FuentePDF", "Folio", "Establecimiento", "fila_original", "metodo_usado",
         "requiere_revision", "observacion",
@@ -2903,11 +3366,12 @@ def _selfcheck_reconstruction_samples() -> Dict[str, bool]:
 # API PARA APP.PY
 # =========================
 def extract_sinader_data(pdf_path: str) -> "pd.DataFrame":
-    """Función principal llamada por app.py. Devuelve DataFrame con columnas estándar."""
+    """Extrae un certificado SINADER usando las columnas esperadas por GreenTrack."""
     try:
         detail_rows, meta = extract_sinader_from_pdf(pdf_path)
         if not detail_rows:
             return pd.DataFrame()
+
         df = pd.DataFrame(detail_rows)
         if "Cantidad (Kg)" in df.columns:
             df["Cantidad (Kg)"] = df["Cantidad (Kg)"].apply(_to_float_kg)
@@ -2919,6 +3383,6 @@ def extract_sinader_data(pdf_path: str) -> "pd.DataFrame":
         df["Periodo"] = meta.get("Periodo declarado", "")
         df["Establecimiento"] = meta.get("Establecimiento", "")
         return df
-    except Exception as e:
-        logger.error(f"Error procesando SINADER: {str(e)}")
+    except Exception as exc:
+        logger.error("Error procesando SINADER: %s", exc)
         return pd.DataFrame()
