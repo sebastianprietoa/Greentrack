@@ -59,7 +59,12 @@ DEMO_EMAIL = os.getenv("DEMO_USER_EMAIL", "demo@greenticket.cl")
 
 
 def current_role():
-    return session.get("rol") or (ROLE_ADMIN if session.get("es_admin") == 1 else ROLE_COMPANY)
+    # ``es_admin`` es el indicador histórico y autoritativo para administradores.
+    # Algunas cuentas antiguas conservan un valor de ``rol`` desactualizado, por
+    # lo que ese campo no debe quitarles acceso a la gestión de empresas.
+    if session.get("es_admin") == 1:
+        return ROLE_ADMIN
+    return session.get("rol") or ROLE_COMPANY
 
 
 def is_admin():
@@ -67,7 +72,7 @@ def is_admin():
 
 
 def can_manage_companies():
-    return bool(session.get("user_id")) and current_role() in (ROLE_ADMIN, ROLE_MANAGER)
+    return "user_id" in session and current_role() in (ROLE_ADMIN, ROLE_MANAGER)
 
 @app .context_processor 
 def inject_pendientes_count ():

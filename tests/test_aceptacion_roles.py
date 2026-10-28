@@ -110,6 +110,35 @@ def test_login_web_api_and_global_api_permissions(acceptance_pg,role):
         with client.session_transaction() as session: assert 'user_id' not in session
 
 
+def test_legacy_admin_role_cannot_remove_admin_permissions(acceptance_pg):
+    connection,password=acceptance_pg
+    cursor=connection.cursor()
+    cursor.execute("UPDATE usuarios SET rol='empresa' WHERE email='audit_admin@example.invalid'")
+    connection.commit()
+    with database(connection):
+        client=client_for()
+        response=client.post('/',data={'email':'audit_admin@example.invalid','password':password})
+        assert response.location=='/admin/dashboard'
+        with client.session_transaction() as session:
+            assert session['es_admin']==1
+            assert session['rol']=='admin'
+        assert client.get('/admin/empresas').status_code==200
+        assert client.post('/admin/crear_empresa',data={}).location=='/admin/empresas'
+        api=client.post('/api/login',json={'email':'audit_admin@example.invalid','password':password})
+        assert api.status_code==200
+        assert api.json['user']['rol']=='admin'
+
+
+def test_admin_with_zero_id_can_manage_companies(acceptance_pg):
+    connection,_=acceptance_pg
+    with database(connection):
+        client=client_for()
+        with client.session_transaction() as session:
+            session.update(user_id=0,empresa='ADMIN',es_admin=1,rol='admin')
+        assert client.get('/admin/empresas').status_code==200
+        assert client.post('/admin/crear_empresa',data={}).location=='/admin/empresas'
+
+
 @pytest.mark.parametrize('role',['admin','gestor_empresa'])
 def test_allowed_company_management_and_administration_pages(acceptance_pg,role):
     connection,_=acceptance_pg

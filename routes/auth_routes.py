@@ -30,7 +30,7 @@ def inicio():
             session["user_id"] = user[0]
             session["empresa"] = user[1]
             session["es_admin"] = user[3]
-            session["rol"] = user[4] or ("admin" if user[3] == 1 else "empresa")
+            session["rol"] = "admin" if user[3] == 1 else (user[4] or "empresa")
             session["es_demo"] = bool(user[5])
             if session["rol"] == "admin":
                 return redirect("/admin/dashboard")
@@ -61,7 +61,7 @@ def api_login():
     if not user or not verify_password(password, user[2]):
         return jsonify({"error": "Credenciales incorrectas"}), 401
 
-    rol = user[4] or ("admin" if user[3] == 1 else "empresa")
+    rol = "admin" if user[3] == 1 else (user[4] or "empresa")
     token, expires_in = create_api_token(user[0], user[1], user[3], email, rol=rol)
     return jsonify({
         "access_token": token,
