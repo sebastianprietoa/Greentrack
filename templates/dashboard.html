@@ -83,6 +83,10 @@
     .dashboard-visual .quick-actions > a[href="{{ url_for('exportar') }}"] i { color: #F07A3F !important; }
     .dashboard-visual .quick-actions > a[href="{{ url_for('configuracion') }}"] i { color: #E91E8F !important; }
     @media (max-width: 768px) {
+        .dashboard-visual .dashboard-charts-grid { grid-template-columns: minmax(0, 1fr) !important; }
+        .dashboard-visual .dashboard-charts-grid > div { min-width: 0; }
+        .dashboard-visual .dashboard-header > div { max-width: 100%; min-width: 0; }
+        .dashboard-visual .dashboard-header form { flex-wrap: wrap; }
         .dashboard-visual .stats-grid,
         .dashboard-visual .quick-actions { grid-template-columns: 1fr 1fr !important; }
     }
@@ -195,7 +199,7 @@
             <p style="margin: 0; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; color: #9CA3AF; letter-spacing: 0.05em;">Intensidad de Emisiones</p>
         </div>
         <div style="font-size: 1.45rem; font-weight: 700; color: #111827; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-            {{ '%.6f'|format(intensidad_emisiones or 0) }}
+            {{ '%.6f'|format(intensidad_emisiones) if intensidad_emisiones is not none else 'No disponible' }}
         </div>
         <p style="color: #6B7280; margin: 4px 0 0 0; font-size: 0.78rem;">
             kgCO2e / {{ intensidad_unidad or 'unidad' }}
@@ -214,10 +218,20 @@
             <i class="fas fa-water" style="color: #0EA5E9; font-size: 1rem;"></i>
             <p style="margin: 0; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; color: #9CA3AF; letter-spacing: 0.05em;">Huella H&iacute;drica Total</p>
         </div>
-        <div style="font-size: 1.45rem; font-weight: 700; color: #111827; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-            {{ (huella_hidrica_total or 0) | formato_entero_cl }} m&sup3;
+        <div style="font-size: 1.45rem; font-weight: 700; color: #111827; line-height: 1.2; white-space: {{ 'normal' if mensaje_medicion_agua else 'nowrap' }}; overflow: hidden; text-overflow: ellipsis;">
+            {% if huella_hidrica_total is none %}
+                Total no disponible
+            {% else %}
+                {{ (huella_hidrica_total or 0) | formato_entero_cl }} m&sup3;
+            {% endif %}
         </div>
-        <p style="color: #6B7280; margin: 4px 0 0 0; font-size: 0.78rem;">Azul + verde + suministro</p>
+        <p style="color: #6B7280; margin: 4px 0 0 0; font-size: 0.78rem;">
+            {% if huella_hidrica_total is none %}{% if huella_azul_directa is none %}Falta la huella azul; suministro calculado por separado.{% else %}Falta completar la huella de suministro.{% endif %}{% else %}Azul + verde + suministro{% endif %}
+        </p>
+        <p style="color: #6B7280; margin: 4px 0 0 0; font-size: 0.78rem;">Huella de suministro:
+            {% if suministro_disponible %}<strong>{{ huella_suministro_energetico | formato_entero_cl }} m&sup3;</strong>{% if not suministro_completo %} (estimación parcial){% endif %}{% elif consumos_energeticos %}No disponible{% else %}Sin consumos energéticos{% endif %}
+        </p>
+        {% if faltantes_suministro %}<p style="font-size:0.78rem;"><a href="{{ url_for('agua_dashboard', periodo=anio_seleccionado if anio_seleccionado != 'Todos' else '') }}">Ver consumos pendientes de cálculo de suministro ({{ faltantes_suministro | length }})</a></p>{% endif %}
     </div>
 
     <div class="stat-card" style="background: white; padding: 1.25rem 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); border-left: 5px solid #14B8A6;">
@@ -231,6 +245,12 @@
         <p style="color: #6B7280; margin: 4px 0 0 0; font-size: 0.78rem;">m&sup3;/unidad total</p>
     </div>
 </div>
+
+{% if mensaje_medicion_agua %}
+<div role="status" style="background: {% if estado_medicion_agua == 'sin_medicion' %}#FEF2F2{% else %}#FFFBEB{% endif %}; color: {% if estado_medicion_agua == 'sin_medicion' %}#991B1B{% else %}#92400E{% endif %}; border: 1px solid {% if estado_medicion_agua == 'sin_medicion' %}#FECACA{% else %}#FDE68A{% endif %}; border-radius: 10px; padding: 1rem 1.25rem; margin-bottom: 2rem; font-weight: 700;">
+    <i class="fas fa-droplet" style="margin-right: 8px;"></i>{{ mensaje_medicion_agua }}
+</div>
+{% endif %}
 
 <!-- Acciones rápidas -->
 <div class="quick-actions" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
@@ -254,7 +274,7 @@
         <h3 style="margin: 0 0 4px 0; font-size: 0.95rem;">Configuración</h3>
         <p style="color: #6B7280; margin: 0; font-size: 0.8rem;">Ajustes</p>
     </a>
-    <a href="/exportar_ghg?anio={{ anio_seleccionado if anio_seleccionado != 'Todos' else '' }}" class="action-card" style="background: #064E3B; padding: 1.25rem; border-radius: 12px; text-align: center; text-decoration: none; color: white; border: 2px solid #064E3B;">
+    <a href="/exportar_ghg?anio={{ anio_seleccionado }}" class="action-card" style="background: #064E3B; padding: 1.25rem; border-radius: 12px; text-align: center; text-decoration: none; color: white; border: 2px solid #064E3B;">
         <i class="fas fa-file-excel" style="font-size: 1.8rem; color: #6EE7B7; margin-bottom: 0.75rem; display: block;"></i>
         <h3 style="margin: 0 0 4px 0; font-size: 0.95rem;">GHG Protocol</h3>
         <p style="color: #A7F3D0; margin: 0; font-size: 0.8rem;">Reporte oficial</p>
@@ -263,7 +283,7 @@
 
 <!-- Gráficos principales: Tendencia mensual + Distribución por Alcance -->
 {% if tendencia_labels %}
-<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 2rem; margin-bottom: 2rem;">
+<div class="dashboard-charts-grid" style="display: grid; grid-template-columns: 2fr 1fr; gap: 2rem; margin-bottom: 2rem;">
 
     <!-- Tendencia mensual por Alcance -->
     <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.07);">
@@ -300,6 +320,7 @@
 {% endif %}
 
 <!-- Huella hidrica por tipo -->
+{% if huella_hidrica_total is not none %}
 <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); margin-bottom: 2rem;">
     <h3 style="margin: 0 0 1rem 0; color: #374151; font-size: 1rem; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #F3F4F6; padding-bottom: 0.75rem;">
         <i class="fas fa-water" style="color: #0EA5E9;"></i> Huella h&iacute;drica por tipo
@@ -326,8 +347,9 @@
 </div>
 
 <!-- Distribución por categoría con barras de progreso -->
+{% endif %}
 {% if categorias_data %}
-<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
+<div class="dashboard-charts-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
 
     <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.07);">
         <h3 style="margin: 0 0 1rem 0; color: #374151; font-size: 1rem; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #F3F4F6; padding-bottom: 0.75rem;">
@@ -387,7 +409,7 @@
             <i class="fas fa-car" style="color: #3B82F6;"></i> Emisiones por Vehículo
         </h3>
     </div>
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+    <div class="dashboard-charts-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
         <div style="overflow-x: auto;">
             <table style="width: 100%; border-collapse: collapse; font-size: 0.87rem;">
                 <thead>
@@ -405,7 +427,7 @@
                         <td style="padding: 8px 12px;"><span style="background: #E5E7EB; color: #6B7280; padding: 2px 8px; border-radius: 10px; font-size: 0.75rem;">{{ vehiculo.tipo }}</span></td>
                         <td style="padding: 8px 12px; text-align: right; color: #EF4444; font-weight: 600;">{{ vehiculo.total_emision | formato_cl }}</td>
                         <td style="padding: 8px 12px; text-align: right; color: #10B981; font-weight: 600;">
-                            {% if total_emision_combustible > 0 %}{{ "%.1f"|format(vehiculo.total_emision/total_emision_combustible*100) }}%{% else %}0%{% endif %}
+                            {% if total_emision_flota > 0 %}{{ "%.1f"|format(vehiculo.total_emision/total_emision_flota*100) }}%{% else %}0%{% endif %}
                         </td>
                     </tr>
                     {% endfor %}
@@ -426,7 +448,7 @@
         <h3 style="margin: 0; color: #374151; font-size: 1rem; display: flex; align-items: center; gap: 8px;">
             <i class="fas fa-history" style="color: #6366F1;"></i> Últimos Registros
         </h3>
-        <a href="/historial" style="color: #3B82F6; font-weight: 600; text-decoration: none; font-size: 0.85rem;">
+        <a href="{{ url_for('historial', anio=anio_seleccionado if anio_seleccionado != 'Todos' else '') }}" style="color: #3B82F6; font-weight: 600; text-decoration: none; font-size: 0.85rem;">
             Ver historial completo <i class="fas fa-arrow-right" style="font-size: 0.8em;"></i>
         </a>
     </div>

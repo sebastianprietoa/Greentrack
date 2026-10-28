@@ -3380,6 +3380,18 @@ def extract_sinader_data(pdf_path: str) -> "pd.DataFrame":
             "Tratamiento": "Tipo Tratamiento",
             "Cantidad (Kg)": "Cantidad (kg)",
         })
+        # Conservar la clasificación determinística por código para que el
+        # consumidor no tenga que volver a inferirla desde la descripción.
+        if "DEFRA_Residuo" not in df.columns:
+            df["DEFRA_Residuo"] = df.apply(
+                lambda row: clasificar_defra_residuo(
+                    row.get("Código principal", ""),
+                    row.get("Residuo", ""),
+                ),
+                axis=1,
+            )
+        if "DEFRA_Tratamiento" not in df.columns:
+            df["DEFRA_Tratamiento"] = df["Tipo Tratamiento"].apply(clasificar_defra_tratamiento)
         df["Periodo"] = meta.get("Periodo declarado", "")
         df["Establecimiento"] = meta.get("Establecimiento", "")
         return df

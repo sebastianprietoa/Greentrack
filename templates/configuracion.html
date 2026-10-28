@@ -127,15 +127,15 @@
                 <div style="display: grid; grid-template-columns: 140px 1.4fr 1fr; gap: 1rem; align-items: end;">
                     <div>
                         <label style="display: block; font-weight: 700; color: #374151; font-size: 0.8rem; margin-bottom: 6px;">Año</label>
-                        <input type="number" name="medida_anio" id="medida_anio" min="1900" max="2100" step="1" required
+                        <input type="number" name="medida_anio" id="medida_anio" min="1" max="9999" step="1" required
                                value="{{ anio_seleccionado }}"
                                placeholder="Ej: 2026"
                                style="width: 100%; padding: 10px 12px; border: 1px solid #D1D5DB; border-radius: 8px; font-size: 0.95rem; background: white; box-sizing: border-box;">
-                        <p style="margin: 6px 0 0 0; font-size: 0.78rem; color: #6B7280;">Puedes ingresar cualquier aÃ±o. Si ya existe, el sistema te pedirÃ¡ confirmaciÃ³n antes de reemplazarlo.</p>
+                        <p id="medida_estado" aria-live="polite" style="margin: 6px 0 0 0; font-size: 0.78rem; color: #6B7280;">Selecciona el año de la medida. Solo se pide confirmación si modificas un valor guardado.</p>
                     </div>
                     <div>
                         <label style="display: block; font-weight: 700; color: #374151; font-size: 0.8rem; margin-bottom: 6px;">Unidad de medida</label>
-                        <select name="medida_unidad" required style="width: 100%; padding: 10px 12px; border: 1px solid #D1D5DB; border-radius: 8px; font-size: 0.95rem; background: white;">
+                        <select name="medida_unidad" style="width: 100%; padding: 10px 12px; border: 1px solid #D1D5DB; border-radius: 8px; font-size: 0.95rem; background: white;">
                             <option value="">Selecciona una unidad</option>
                             {% for unidad in unidades_productivas %}
                             <option value="{{ unidad }}" {% if medida.unidad == unidad %}selected{% endif %}>{{ unidad }}</option>
@@ -144,17 +144,27 @@
                     </div>
                     <div>
                         <label style="display: block; font-weight: 700; color: #374151; font-size: 0.8rem; margin-bottom: 6px;">Valor de la medida</label>
-                        <input type="number" name="medida_valor" step="0.01" min="0" required
+                        <input type="number" name="medida_valor" step="0.01" min="0"
                                value="{{ medida.valor if medida else '' }}"
                                placeholder="Ej: 125.50"
                                style="width: 100%; padding: 10px 12px; border: 1px solid #D1D5DB; border-radius: 8px; font-size: 0.95rem; box-sizing: border-box;">
                     </div>
                 </div>
 
+                <input type="hidden" name="confirmar_medida" value="">
+                <input type="hidden" name="medida_anterior_unidad" value="">
+                <input type="hidden" name="medida_anterior_valor" value="">
+                <div id="confirmacion_medida" hidden role="region" aria-label="Confirmar reemplazo de medida productiva" style="margin-top:1rem; padding:1rem; background:#FFF7ED; border:1px solid #FED7AA; border-radius:10px;">
+                    <strong>Confirmar reemplazo de la medida productiva</strong>
+                    <p id="confirmacion_medida_detalle"></p>
+                    <button id="confirmar_reemplazo_medida" type="button" style="padding:8px 14px; background:#10B981; color:white; border:0; border-radius:6px; cursor:pointer;">Confirmar reemplazo</button>
+                    <button id="cancelar_reemplazo_medida" type="button" style="padding:8px 14px; border:1px solid #D1D5DB; border-radius:6px; cursor:pointer;">Cancelar</button>
+                </div>
+
                 <div style="margin-top: 1rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 1rem;">
                     <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 1rem;">
                         <p style="margin: 0 0 0.35rem 0; font-size: 0.72rem; color: #94A3B8; text-transform: uppercase; font-weight: 700;">Emisiones del año</p>
-                        <p style="margin: 0; font-size: 1.2rem; font-weight: 700; color: #111827;">
+                        <p id="medida_emisiones" style="margin: 0; font-size: 1.2rem; font-weight: 700; color: #111827;">
                             {% if medida and medida.emisiones_anio_tco2e is not none %}
                                 {{ '%.4f'|format(medida.emisiones_anio_tco2e) }} tCO2e
                             {% else %}
@@ -164,7 +174,7 @@
                     </div>
                     <div style="background: #ECFDF5; border: 1px solid #A7F3D0; border-radius: 10px; padding: 1rem;">
                         <p style="margin: 0 0 0.35rem 0; font-size: 0.72rem; color: #059669; text-transform: uppercase; font-weight: 700;">Intensidad resultante (kgCO2e/unidad)</p>
-                        <p style="margin: 0; font-size: 1.2rem; font-weight: 700; color: #065F46;">
+                        <p id="medida_intensidad" style="margin: 0; font-size: 1.2rem; font-weight: 700; color: #065F46;">
                             {% if medida and medida.intensidad_emisiones is not none %}
                                 {{ '%.6f'|format(medida.intensidad_emisiones) }} kgCO2e / unidad
                             {% else %}
@@ -174,7 +184,7 @@
                     </div>
                     <div style="background: #FFF7ED; border: 1px solid #FED7AA; border-radius: 10px; padding: 1rem;">
                         <p style="margin: 0 0 0.35rem 0; font-size: 0.72rem; color: #C2410C; text-transform: uppercase; font-weight: 700;">Última actualización</p>
-                        <p style="margin: 0; font-size: 1rem; font-weight: 700; color: #9A3412;">
+                        <p id="medida_actualizacion" style="margin: 0; font-size: 1rem; font-weight: 700; color: #9A3412;">
                             {% if medida and medida.fecha_actualizacion %}{{ medida.fecha_actualizacion }}{% else %}Sin registro{% endif %}
                         </p>
                     </div>
@@ -291,22 +301,61 @@
         });
     });
 
-    const medidasHistorialAnios = new Set(({{ medidas_historial | map(attribute='anio') | list | tojson }}) .map(String));
+    const medidasPorAnio = new Map({{ medidas_historial | tojson }}.map(medida => [String(medida.anio), medida]));
     const formConfiguracion = document.querySelector('form');
     const inputMedidaAnio = document.getElementById('medida_anio');
 
     if (formConfiguracion && inputMedidaAnio) {
+        const unidad = formConfiguracion.elements.medida_unidad;
+        const valor = formConfiguracion.elements.medida_valor;
+        const confirmado = formConfiguracion.elements.confirmar_medida;
+        const panel = document.getElementById('confirmacion_medida');
+        const detalle = document.getElementById('confirmacion_medida_detalle');
+        function cancelarConfirmacion() {
+            confirmado.value = '';
+            panel.hidden = true;
+            const tieneMedida = unidad.value !== '' || valor.value !== '';
+            unidad.required = tieneMedida;
+            valor.required = tieneMedida;
+        }
+        function cargarMedida() {
+            const anio = String(inputMedidaAnio.value || '').trim();
+            const medida = medidasPorAnio.get(anio);
+            unidad.value = medida ? medida.unidad : '';
+            valor.value = medida ? medida.valor : '';
+            cancelarConfirmacion();
+            formConfiguracion.elements.medida_anterior_unidad.value = medida ? medida.unidad : '';
+            formConfiguracion.elements.medida_anterior_valor.value = medida ? medida.valor : '';
+            document.getElementById('medida_estado').textContent = medida
+                ? `Medida guardada para ${anio}. Modificarla requiere confirmar el reemplazo.`
+                : `Sin medida guardada para ${anio}. Puedes registrar una nueva o guardar solo la configuración.`;
+            document.getElementById('medida_emisiones').textContent = medida && medida.emisiones_anio_tco2e != null
+                ? `${Number(medida.emisiones_anio_tco2e).toFixed(4)} tCO2e` : '—';
+            document.getElementById('medida_intensidad').textContent = medida && medida.intensidad_emisiones != null
+                ? `${Number(medida.intensidad_emisiones).toFixed(6)} kgCO2e / unidad` : '—';
+            document.getElementById('medida_actualizacion').textContent = medida ? medida.fecha_actualizacion : 'Sin registro';
+        }
+        inputMedidaAnio.addEventListener('change', cargarMedida);
+        inputMedidaAnio.addEventListener('input', cargarMedida);
+        [unidad, valor].forEach(input => input.addEventListener('input', cancelarConfirmacion));
+        cargarMedida();
         formConfiguracion.addEventListener('submit', function(event) {
             const anio = String(inputMedidaAnio.value || '').trim();
-            if (!anio) return;
-            if (medidasHistorialAnios.has(anio) && !this.dataset.confirmadoCambio) {
+            const anterior = medidasPorAnio.get(anio);
+            if (anterior && (unidad.value !== '' || valor.value !== '') && (unidad.value !== anterior.unidad || Number(valor.value) !== Number(anterior.valor)) && confirmado.value !== '1') {
                 event.preventDefault();
-                const confirma = confirm(`Ya existe una medida productiva para ${anio}. Si continúas, se reemplazará el valor anterior.`);
-                if (confirma) {
-                    this.dataset.confirmadoCambio = '1';
-                    this.submit();
-                }
+                detalle.textContent = `Año ${anio}. Valor guardado: ${anterior.valor} ${anterior.unidad}. Nuevo valor: ${valor.value} ${unidad.value}.`;
+                panel.hidden = false;
+                document.getElementById('confirmar_reemplazo_medida').focus();
             }
+        });
+        document.getElementById('confirmar_reemplazo_medida').addEventListener('click', function() {
+            confirmado.value = '1';
+            formConfiguracion.requestSubmit();
+        });
+        document.getElementById('cancelar_reemplazo_medida').addEventListener('click', function() {
+            cancelarConfirmacion();
+            valor.focus();
         });
     }
 
