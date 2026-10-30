@@ -175,7 +175,7 @@ def test_filtros_cobertura_y_diagnostico_en_resultados(water_pg):
     guardar(water_pg)
     guardar(water_pg,'retorno','20')
     cursor=water_pg.cursor()
-    cursor.execute("INSERT INTO medidas_productivas (empresa,anio,unidad,valor) VALUES ('AUDIT_A',2026,'Personas',10)")
+    cursor.execute("INSERT INTO medidas_productivas (empresa,anio,periodo,unidad,valor) VALUES ('AUDIT_A',2026,'2026','Personas',10)")
     water_pg.commit()
     data=crear_resumen_agua(water_pg,'AUDIT_A','2026-01')
     assert data['consumo']==80

@@ -9,9 +9,10 @@ def annual_pg(acceptance_pg):
     connection,_ = acceptance_pg
     cursor = connection.cursor()
     cursor.executemany('''INSERT INTO medidas_productivas
-        (empresa,anio,unidad,valor,fecha_actualizacion) VALUES (%s,%s,%s,%s,'2020-01-01 00:00')''', [
-        ('AUDIT_A',2025,'Personas',1200), ('AUDIT_A',2026,'Horas de trabajo',100),
-        ('AUDIT_B',2025,'Personas',99)])
+        (empresa,anio,periodo,unidad,valor,fecha_actualizacion)
+        VALUES (%s,%s,%s,%s,%s,'2020-01-01 00:00')''', [
+        ('AUDIT_A',2025,'2025','Personas',1200), ('AUDIT_A',2026,'2026','Horas de trabajo',100),
+        ('AUDIT_B',2025,'2025','Personas',99)])
     cursor.execute("INSERT INTO configuracion (empresa,vehiculos) VALUES ('AUDIT_A',0)")
     connection.commit()
     return connection

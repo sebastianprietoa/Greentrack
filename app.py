@@ -118,7 +118,49 @@ def get_db ():
         db_url =db_url .replace ("postgres://","postgresql://",1 )
 
         # 4. Conectamos forzando el modo seguro (SSL), que Railway a veces exige
-    return psycopg2 .connect (db_url ,sslmode =os.getenv('PGSSLMODE', 'require'))
+    conn = psycopg2 .connect (db_url ,sslmode =os.getenv('PGSSLMODE', 'require'))
+    try:
+        _ensure_productive_period_schema(conn)
+    except Exception:
+        conn.rollback()
+        conn.close()
+        raise
+    return conn
+
+
+def _ensure_productive_period_schema(conn):
+    """Compatibiliza bases existentes sin eliminar ni reemplazar registros."""
+    cursor = conn.cursor()
+    cursor.execute("SELECT pg_advisory_xact_lock(hashtext('greentrack:medidas_productivas:periodo'))")
+    cursor.execute(
+        "SELECT 1 FROM information_schema.tables "
+        "WHERE table_schema = 'public' AND table_name = 'medidas_productivas'"
+    )
+    if cursor.fetchone() is None:
+        conn.rollback()
+        return
+    cursor.execute(
+        "SELECT column_name, is_nullable FROM information_schema.columns "
+        "WHERE table_schema = 'public' AND table_name = 'medidas_productivas' "
+        "AND column_name = 'periodo'"
+    )
+    column = cursor.fetchone()
+    if column is None:
+        cursor.execute("ALTER TABLE medidas_productivas ADD COLUMN periodo TEXT")
+
+    cursor.execute(
+        "UPDATE medidas_productivas SET periodo = anio::text "
+        "WHERE periodo IS NULL OR periodo = ''"
+    )
+    cursor.execute("ALTER TABLE medidas_productivas ALTER COLUMN periodo SET NOT NULL")
+    cursor.execute(
+        "ALTER TABLE medidas_productivas DROP CONSTRAINT IF EXISTS medidas_productivas_empresa_anio_key"
+    )
+    cursor.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS medidas_productivas_empresa_periodo_key "
+        "ON medidas_productivas (empresa, periodo)"
+    )
+    conn.commit()
     # Filtro para números con puntos y comas
 @app .template_filter ('formato_cl')
 def formato_cl (value ):
@@ -4559,6 +4601,20 @@ def configuracion ():
                     cambios.append((periodo, unidad, valor, anterior))
             if cambios and any(anterior for _, _, _, anterior in cambios) and request.form.get('confirmar_medida') != '1':
                 raise ValueError('Confirma el valor anterior y el nuevo antes de reemplazar las medidas productivas.')
+            if cambios and any(anterior for _, _, _, anterior in cambios) and frecuencia == 'anual':
+                confirmado_unidad = request.form.get('medida_anterior_unidad', '').strip()
+                confirmado_valor_raw = request.form.get('medida_anterior_valor', '').strip()
+                try:
+                    confirmado_valor = float(confirmado_valor_raw)
+                except (TypeError, ValueError):
+                    confirmado_valor = None
+                for _, _, _, anterior in cambios:
+                    if (
+                        confirmado_valor is None
+                        or confirmado_unidad != str(anterior['unidad'] or '').strip()
+                        or confirmado_valor != float(anterior['valor'])
+                    ):
+                        raise ValueError('La confirmación no coincide con el valor actualmente guardado.')
             # Compatibilidad con clientes antiguos que aún envíen estas preguntas.
             if any(campo in request.form for campo in ('info_unidad', 'vehiculos', 'colaboradores', 'tarjeta', 'energeticos[]')):
                 info_por_unidad = 1 if request.form.get('info_unidad') else 0
