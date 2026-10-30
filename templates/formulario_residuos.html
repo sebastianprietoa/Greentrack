@@ -261,7 +261,7 @@
                         <thead>
                             <tr style="background: #E8F7EF; color: #12312B;">
                                 <th style="text-align: left; padding: 10px; border-bottom: 1px solid #A7F3D0;">Mes</th>
-                                <th style="text-align: left; padding: 10px; border-bottom: 1px solid #A7F3D0;">Cantidad</th>
+                                <th style="text-align: left; padding: 10px; border-bottom: 1px solid #A7F3D0;">Cantidad (kg)</th>
                                 <th style="text-align: left; padding: 10px; border-bottom: 1px solid #A7F3D0;">Acciones</th>
                             </tr>
                         </thead>
@@ -301,7 +301,7 @@
                         <thead>
                             <tr style="background: #10B981; color: white;">
                                 <th style="padding: 1rem; text-align: left; font-weight: 600;">Mes de Registro *</th>
-                                <th style="padding: 1rem; text-align: left; font-weight: 600;">CANTIDAD *</th>
+                                <th style="padding: 1rem; text-align: left; font-weight: 600;">CANTIDAD (kg) *</th>
                                 <th style="padding: 1rem; text-align: left; font-weight: 600;">Acciones</th>
                             </tr>
                         </thead>
@@ -335,7 +335,7 @@
                 </div>
                 
                 <div id="total_container" style="display: none; margin-bottom: 2rem; padding: 1rem; background: #E8F7EF; border-radius: 8px;">
-                    <h3 style="margin-bottom: 0.5rem; color: #12312B;">Suma Total (Referencial):</h3>
+                    <h3 style="margin-bottom: 0.5rem; color: #12312B;">Suma Total (Referencial, kg):</h3>
                     <div style="display: flex; align-items: baseline; gap: 10px;">
                         <span id="total_residuos" style="font-size: 1.5rem; font-weight: 700; color: #12312B;">0.00</span>
                     </div>
@@ -361,6 +361,16 @@
         const manual = document.getElementById('manual_section');
         const btnCert = document.getElementById('modo_certificados');
         const btnMan = document.getElementById('modo_manual');
+        const manualActivo = modo === 'manual';
+        const ingresoManual = document.querySelector('input[name="tipo_ingreso"][value="manual"]');
+        const ingresoSinader = document.querySelector('input[name="tipo_ingreso"][value="sinader"]');
+        if (manualActivo) ingresoManual.checked = true;
+        else if (ingresoManual.checked) ingresoSinader.checked = true;
+        const archivo = document.getElementById('archivo_pdf');
+        archivo.disabled = manualActivo;
+        archivo.required = !manualActivo;
+        document.getElementById('reporte_section').style.display = manualActivo ? 'none' : 'block';
+
 
         if (cert) cert.style.display = modo === 'certificados' ? 'block' : 'none';
         if (manual) manual.style.display = modo === 'manual' ? 'block' : 'none';
@@ -375,6 +385,7 @@
         document.querySelectorAll('#manual_section input, #manual_section select').forEach(el => {
             el.disabled = modo !== 'manual';
         });
+        if (manualActivo) establecerModoResiduos(modoResiduosActual);
     }
 
     function reordenarPanelesResiduos() {
@@ -429,9 +440,9 @@
                             <th style="padding: 10px; text-align: left; border-bottom: 1px solid #D8E1DC;">Mes</th>
                             <th style="padding: 10px; text-align: left; border-bottom: 1px solid #D8E1DC;">Tipo de residuo</th>
                             <th style="padding: 10px; text-align: left; border-bottom: 1px solid #D8E1DC;">Tratamiento</th>
-                            <th style="padding: 10px; text-align: right; border-bottom: 1px solid #D8E1DC;">Cantidad</th>
-                            <th style="padding: 10px; text-align: right; border-bottom: 1px solid #D8E1DC;">Factor</th>
-                            <th style="padding: 10px; text-align: right; border-bottom: 1px solid #D8E1DC;">Emisión</th>
+                            <th style="padding: 10px; text-align: right; border-bottom: 1px solid #D8E1DC;">Cantidad (kg)</th>
+                            <th style="padding: 10px; text-align: right; border-bottom: 1px solid #D8E1DC;">Factor (kg CO₂e/t)</th>
+                            <th style="padding: 10px; text-align: right; border-bottom: 1px solid #D8E1DC;">Emisión (kg CO₂e)</th>
                         </tr>
                     </thead>
                     <tbody id="preview_residuos_body">
@@ -455,6 +466,9 @@
         const btnIndividual = document.getElementById('modo_individual_res');
         const btnMultiple = document.getElementById('modo_multiple_res');
         if (panelBatch) panelBatch.style.display = modo === 'multiple' ? 'block' : 'none';
+        if (panelBatch) panelBatch.querySelectorAll('input, select, textarea, button').forEach(el => {
+            el.disabled = modo !== 'multiple';
+        });
         if (tablaSection) tablaSection.style.display = modo === 'multiple' ? 'none' : 'block';
         if (tablaSection) {
             tablaSection.querySelectorAll('input, select, textarea, button').forEach(el => {
@@ -511,21 +525,73 @@
     establecerModoResiduos('individual');
     cambiarModoResiduos('certificados');
 
+    const catalogoFactoresResiduos = {{ factores_catalogo | default([], true) | tojson }};
+
+    function normalizarTextoFactorResiduo(valor) {
+        return String(valor || '')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase()
+            .trim()
+            .replace(/\s+/g, ' ');
+    }
+
+    function normalizarTratamientoFactorResiduo(valor) {
+        const texto = normalizarTextoFactorResiduo(valor);
+        const alias = [
+            [['vertedero', 'relleno sanitario', 'disposicion final', 'monorelleno', 'landfill'], 'landfill'],
+            [['reciclaje', 'reciclado', 'open-loop', 'open loop'], 'open-loop'],
+            [['closed-loop', 'closed loop'], 'closed-loop'],
+            [['compostaje', 'composting', 'compost'], 'composting'],
+            [['degradacion anaerobica', 'digestion anaerobica', 'anaerobic digestion'], 'anaerobic digestion'],
+            [['combustion', 'incineracion'], 'combustion'],
+            [['reutilizacion', 're-use'], 're-use'],
+        ];
+        for (const [sinonimos, canonico] of alias) {
+            if (sinonimos.some(sinonimo => texto === sinonimo || texto.includes(sinonimo))) return canonico;
+        }
+        return texto;
+    }
+
+    function resolverFactorPreviewResiduo(categoria, tratamiento, periodo) {
+        const anio = parseInt(String(periodo || '').slice(0, 4), 10) || 0;
+        const categoriaNorm = normalizarTextoFactorResiduo(categoria);
+        const tratamientoNorm = normalizarTratamientoFactorResiduo(tratamiento);
+        const tratamientos = tratamientoNorm === 'open-loop'
+            ? ['open-loop', 'closed-loop']
+            : [tratamientoNorm];
+        for (const tratamientoAplicado of tratamientos) {
+            const candidatos = catalogoFactoresResiduos.filter(factor =>
+                normalizarTextoFactorResiduo(factor.categoria) === categoriaNorm &&
+                normalizarTratamientoFactorResiduo(factor.tratamiento) === tratamientoAplicado &&
+                normalizarTextoFactorResiduo(factor.unidad) === 'tonne' &&
+                Number(factor.factor) > 0
+            );
+            const especificos = candidatos.filter(factor => Number(factor.anio || 0) === anio && anio > 0);
+            const genericos = candidatos.filter(factor => Number(factor.anio || 0) === 0);
+            const elegibles = especificos.length ? especificos : genericos;
+            if (elegibles.length > 1) return 0;
+            if (elegibles.length === 1) return Number(elegibles[0].factor);
+        }
+        return 0;
+    }
+
     function aplicarConfiguracionGeneralResiduos() {
         const tipoSelect = document.getElementById('tipo_general_res');
         const tratSelect = document.getElementById('tratamiento_general_res');
         const tipoValor = tipoSelect ? tipoSelect.value : '';
         const tratValor = tratSelect ? tratSelect.value : '';
-        const tipoOpt = tipoSelect ? tipoSelect.options[tipoSelect.selectedIndex] : null;
-        const factorValor = tipoOpt && tipoOpt.dataset && tipoOpt.dataset.factor ? tipoOpt.dataset.factor : '0';
 
         document.querySelectorAll('#tabla_residuos tr, #batch_body_res tr').forEach(row => {
             const tipoHidden = row.querySelector('.tipo-residuo-hidden');
             const tratHidden = row.querySelector('.tratamiento-hidden');
             const factorHidden = row.querySelector('.factor-oculto');
+            const periodo = row.querySelector('input[name="periodo[]"]')?.value || '';
             if (tipoHidden) tipoHidden.value = tipoValor;
             if (tratHidden) tratHidden.value = tratValor;
-            if (factorHidden) factorHidden.value = factorValor;
+            if (factorHidden) {
+                factorHidden.value = resolverFactorPreviewResiduo(tipoValor, tratValor, periodo);
+            }
         });
     }
 
@@ -587,24 +653,7 @@
     }
 
     function toggleReporte(modo) {
-        const reporteSection = document.getElementById('reporte_section');
-        const tablaSection = document.getElementById('tabla_section');
-        
-        if (modo === 'auto') {
-            cambiarModoResiduos('certificados');
-            reporteSection.style.display = 'block';
-            tablaSection.style.display = 'none';
-            document.getElementById('archivo_pdf').required = true;
-            document.querySelectorAll('#manual_section input, #manual_section select').forEach(el => { el.disabled = true; });
-        } else {
-            cambiarModoResiduos('manual');
-            establecerModoResiduos('individual');
-            reporteSection.style.display = 'none';
-            tablaSection.style.display = 'block';
-            document.getElementById('archivo_pdf').required = false;
-            document.querySelectorAll('#manual_section input, #manual_section select').forEach(el => { el.disabled = false; });
-            aplicarConfiguracionGeneralResiduos();
-        }
+        cambiarModoResiduos(modo === 'auto' ? 'certificados' : 'manual');
     }
     
     establecerModoResiduos('individual');

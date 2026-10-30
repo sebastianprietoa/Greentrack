@@ -20,6 +20,20 @@
             Seleccione los vehículos para los cuales desea registrar consumo de combustible.
             El sistema creará una tabla por cada vehículo seleccionado.
         </p>
+
+        <div style="display: flex; gap: 0.75rem; margin-bottom: 1.25rem; flex-wrap: wrap;">
+            <button type="button" id="modoIndividualMovil" onclick="establecerModoCargaMovil('individual')"
+                    style="background: #10B981; color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                <i class="fas fa-user"></i> Carga individual
+            </button>
+            <button type="button" id="modoMultipleMovil" onclick="establecerModoCargaMovil('multiple')"
+                    style="background: #F3F4F6; color: #4B5563; border: none; padding: 10px 16px; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                <i class="fas fa-users"></i> Carga múltiple
+            </button>
+        </div>
+        <p id="descripcionModoMovil" style="color: #6B7280; margin-bottom: 1rem;">
+            Seleccione un vehículo para registrar un consumo.
+        </p>
         
         <div id="listaVehiculosSeleccion" style="margin-bottom: 1.5rem;">
             <!-- Los vehículos se cargarán aquí -->
@@ -29,7 +43,7 @@
         </div>
         
         <button id="btnCrearTablas" style="background: #10B981; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 10px; margin: 0 auto;">
-            <i class="fas fa-table"></i> Crear Tablas de Consumo
+            <i class="fas fa-table"></i> Crear Formulario de Consumo
         </button>
     </div>
 
@@ -47,6 +61,58 @@
 </div>
 
 <script>
+let modoCargaMovil = 'individual';
+
+function establecerModoCargaMovil(modo) {
+    modoCargaMovil = modo;
+    const esIndividual = modo === 'individual';
+    const btnIndividual = document.getElementById('modoIndividualMovil');
+    const btnMultiple = document.getElementById('modoMultipleMovil');
+    const descripcion = document.getElementById('descripcionModoMovil');
+
+    btnIndividual.style.background = esIndividual ? '#10B981' : '#F3F4F6';
+    btnIndividual.style.color = esIndividual ? 'white' : '#4B5563';
+    btnMultiple.style.background = esIndividual ? '#F3F4F6' : '#10B981';
+    btnMultiple.style.color = esIndividual ? '#4B5563' : 'white';
+    descripcion.textContent = esIndividual
+        ? 'Seleccione un vehículo para registrar un consumo.'
+        : 'Seleccione varios vehículos para registrar sus consumos en un solo lote.';
+    document.getElementById('tablasConsumo').style.display = 'none';
+    document.getElementById('tablasConsumo').innerHTML = '';
+    renderizarVehiculosMovil(window.vehiculosMovil || []);
+}
+
+function renderizarVehiculosMovil(vehiculos) {
+    const contenedor = document.getElementById('listaVehiculosSeleccion');
+    contenedor.innerHTML = '';
+    vehiculos.forEach(vehiculo => {
+        const div = document.createElement('div');
+        div.className = 'vehiculo-checkbox';
+        div.style.cssText = `
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            background: #F9FAFB;
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+        `;
+        const tipoControl = modoCargaMovil === 'individual' ? 'radio' : 'checkbox';
+        const nombreControl = modoCargaMovil === 'individual' ? 'vehiculo_seleccionado' : `vehiculo_${vehiculo.id}`;
+        div.innerHTML = `
+            <input type="${tipoControl}" name="${nombreControl}" id="vehiculo_${vehiculo.id}" value="${vehiculo.id}"
+                   style="width: 18px; height: 18px;">
+            <label for="vehiculo_${vehiculo.id}" style="flex: 1; font-weight: 600; color: #374151;">
+                ${vehiculo.patente} - ${vehiculo.tipo || 'Sin tipo'}
+            </label>
+            <span style="color: #6B7280; font-size: 0.9rem;">
+                ${vehiculo.marca || ''} ${vehiculo.modelo || ''}
+            </span>
+        `;
+        contenedor.appendChild(div);
+    });
+}
+
 // Cargar vehículos de la empresa
 async function cargarVehiculos() {
     try {
@@ -72,32 +138,8 @@ async function cargarVehiculos() {
             return;
         }
         
-        vehiculos.forEach(vehiculo => {
-            const div = document.createElement('div');
-            div.className = 'vehiculo-checkbox';
-            div.style.cssText = `
-                display: flex;
-                align-items: center;
-                gap: 1rem;
-                padding: 1rem;
-                background: #F9FAFB;
-                border-radius: 8px;
-                margin-bottom: 0.5rem;
-            `;
-            
-            div.innerHTML = `
-                <input type="checkbox" id="vehiculo_${vehiculo.id}" value="${vehiculo.id}" 
-                       style="width: 18px; height: 18px;">
-                <label for="vehiculo_${vehiculo.id}" style="flex: 1; font-weight: 600; color: #374151;">
-                    ${vehiculo.patente} - ${vehiculo.tipo || 'Sin tipo'}
-                </label>
-                <span style="color: #6B7280; font-size: 0.9rem;">
-                    ${vehiculo.marca || ''} ${vehiculo.modelo || ''}
-                </span>
-            `;
-            
-            contenedor.appendChild(div);
-        });
+        window.vehiculosMovil = vehiculos;
+        renderizarVehiculosMovil(vehiculos);
     } catch (error) {
         console.error('Error al cargar vehículos:', error);
     }
@@ -105,7 +147,10 @@ async function cargarVehiculos() {
 
 // Crear tablas para los vehículos seleccionados
 document.getElementById('btnCrearTablas').addEventListener('click', function() {
-    const vehiculosSeleccionados = Array.from(document.querySelectorAll('input[type="checkbox"]:checked'))
+    const selector = modoCargaMovil === 'individual'
+        ? 'input[name="vehiculo_seleccionado"]:checked'
+        : 'input[type="checkbox"]:checked';
+    const vehiculosSeleccionados = Array.from(document.querySelectorAll(selector))
         .map(checkbox => {
             const id = checkbox.value;
             const label = checkbox.nextElementSibling.textContent.trim();
@@ -113,7 +158,9 @@ document.getElementById('btnCrearTablas').addEventListener('click', function() {
         });
     
     if (vehiculosSeleccionados.length === 0) {
-        alert('Seleccione al menos un vehículo');
+        alert(modoCargaMovil === 'individual'
+            ? 'Seleccione un vehículo'
+            : 'Seleccione al menos un vehículo');
         return;
     }
     
@@ -138,58 +185,75 @@ document.getElementById('btnCrearTablas').addEventListener('click', function() {
                 <i class="fas fa-car"></i> ${vehiculo.label}
                 <input type="hidden" name="vehiculo_id[]" value="${vehiculo.id}">
             </h3>
-            
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
-                <div>
-                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #374151;">Tipo de Combustible</label>
-                    <select name="combustible_${vehiculo.id}" style="width: 100%; padding: 10px 14px; border: 2px solid #E5E7EB; border-radius: 8px; font-size: 1rem;">
-                        <option value="diesel">Diésel</option>
-                        <option value="bencina">Bencina</option>
-                        <option value="gas_natural">Gas Natural</option>
-                        <option value="glp">GLP</option>
-                        <option value="electricidad">Electricidad</option>
-                        <option value="otro">Otro</option>
-                    </select>
-                </div>
-                
-                <div>
-                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #374151;">Unidad de Medida</label>
-                    <select name="unidad_${vehiculo.id}" style="width: 100%; padding: 10px 14px; border: 2px solid #E5E7EB; border-radius: 8px; font-size: 1rem;">
-                        <option value="litros">Litros (L)</option>
-                        <option value="kg">Kilogramos (kg)</option>
-                        <option value="m3">Metros cúbicos (m³)</option>
-                        <option value="kwh">Kilovatios-hora (kWh)</option>
-                    </select>
-                </div>
-                
-                <div>
-                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #374151;">Cantidad</label>
-                    <input type="number" name="cantidad_${vehiculo.id}" step="0.01" min="0.01" 
-                           style="width: 100%; padding: 10px 14px; border: 2px solid #E5E7EB; border-radius: 8px; font-size: 1rem;" 
-                           placeholder="Ej: 150.5">
-                </div>
-                
-                <div>
-                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #374151;">Costo (opcional)</label>
-                    <input type="number" name="costo_${vehiculo.id}" step="0.01" min="0"
-                           style="width: 100%; padding: 10px 14px; border: 2px solid #E5E7EB; border-radius: 8px; font-size: 1rem;" 
-                           placeholder="Ej: 150000">
-                </div>
-            </div>
-            
-            <div>
-                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #374151;">Período (Mes/Año)</label>
-                <input type="month" name="periodo_${vehiculo.id}" 
-                       style="width: 100%; max-width: 300px; padding: 10px 14px; border: 2px solid #E5E7EB; border-radius: 8px; font-size: 1rem;">
-            </div>
+            <div class="consumos-vehiculo" data-vehiculo-id="${vehiculo.id}"></div>
         `;
         
         tablasContenedor.appendChild(tablaDiv);
+        renderizarFormularioConsumoMovil(tablaDiv, vehiculo.id);
     });
     
     // Desplazar hacia las tablas
     tablasContenedor.scrollIntoView({ behavior: 'smooth' });
 });
+
+function renderizarFormularioConsumoMovil(tablaDiv, vehiculoId) {
+    const contenedor = tablaDiv.querySelector('.consumos-vehiculo');
+    const opcionesCombustible = '<option value="diesel">Diésel</option><option value="bencina">Bencina</option><option value="gas_natural">Gas Natural</option><option value="glp">GLP</option><option value="electricidad">Electricidad</option><option value="otro">Otro</option>';
+    const opcionesUnidad = '<option value="litros">Litros (L)</option><option value="kg">Kilogramos (kg)</option><option value="m3">Metros cúbicos (m³)</option><option value="kwh">Kilovatios-hora (kWh)</option>';
+
+    if (modoCargaMovil === 'individual') {
+        contenedor.innerHTML = `
+            <div class="fila-consumo" data-indice="0" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem;">
+                <div><label style="display:block;margin-bottom:0.5rem;font-weight:600;color:#374151;">Tipo de Combustible</label><select name="combustible_${vehiculoId}_0" style="width:100%;padding:10px 14px;border:2px solid #E5E7EB;border-radius:8px;font-size:1rem;">${opcionesCombustible}</select></div>
+                <div><label style="display:block;margin-bottom:0.5rem;font-weight:600;color:#374151;">Unidad de Medida</label><select name="unidad_${vehiculoId}_0" style="width:100%;padding:10px 14px;border:2px solid #E5E7EB;border-radius:8px;font-size:1rem;">${opcionesUnidad}</select></div>
+                <div><label style="display:block;margin-bottom:0.5rem;font-weight:600;color:#374151;">Cantidad</label><input type="number" name="cantidad_${vehiculoId}_0" step="0.01" min="0.01" placeholder="Ej: 150.5" style="width:100%;padding:10px 14px;border:2px solid #E5E7EB;border-radius:8px;font-size:1rem;"></div>
+                <div><label style="display:block;margin-bottom:0.5rem;font-weight:600;color:#374151;">Costo (opcional)</label><input type="number" name="costo_${vehiculoId}_0" step="0.01" min="0" placeholder="Ej: 150000" style="width:100%;padding:10px 14px;border:2px solid #E5E7EB;border-radius:8px;font-size:1rem;"></div>
+                <div><label style="display:block;margin-bottom:0.5rem;font-weight:600;color:#374151;">Período (Mes/Año)</label><input type="month" name="periodo_${vehiculoId}_0" style="width:100%;padding:10px 14px;border:2px solid #E5E7EB;border-radius:8px;font-size:1rem;"></div>
+            </div>`;
+        return;
+    }
+
+    contenedor.innerHTML = `
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem;align-items:end;margin-bottom:1rem;">
+            <div><label style="display:block;margin-bottom:0.5rem;font-weight:600;color:#374151;">Tipo de Combustible</label><select name="combustible_${vehiculoId}" style="width:100%;padding:10px 14px;border:2px solid #E5E7EB;border-radius:8px;font-size:1rem;">${opcionesCombustible}</select></div>
+            <div><label style="display:block;margin-bottom:0.5rem;font-weight:600;color:#374151;">Unidad de Medida</label><select name="unidad_${vehiculoId}" style="width:100%;padding:10px 14px;border:2px solid #E5E7EB;border-radius:8px;font-size:1rem;">${opcionesUnidad}</select></div>
+            <div><label style="display:block;margin-bottom:0.5rem;font-weight:600;color:#374151;">Mes de inicio</label><input type="month" name="inicio_${vehiculoId}" style="width:100%;padding:10px 14px;border:2px solid #E5E7EB;border-radius:8px;font-size:1rem;"></div>
+            <div><label style="display:block;margin-bottom:0.5rem;font-weight:600;color:#374151;">Mes de final</label><input type="month" name="fin_${vehiculoId}" style="width:100%;padding:10px 14px;border:2px solid #E5E7EB;border-radius:8px;font-size:1rem;"></div>
+            <button type="button" onclick="generarTablaMensualMovil('${vehiculoId}')" style="background:#111827;color:white;border:none;padding:10px 16px;border-radius:8px;font-weight:600;cursor:pointer;height:42px;"><i class="fas fa-table"></i> Generar tabla</button>
+        </div>
+        <p class="resumen-meses-movil" style="margin:0 0 1rem;color:#6B7280;font-size:0.95rem;">Selecciona un rango de meses y genera la tabla.</p>
+        <div class="tabla-mensual-movil" style="overflow-x:auto;">
+            <table style="width:100%;border-collapse:collapse;background:#F9FAFB;border-radius:8px;overflow:hidden;">
+                <thead><tr style="background:#ECFDF5;color:#1F2937;"><th style="text-align:left;padding:10px;border-bottom:1px solid #E5E7EB;">Mes</th><th style="text-align:left;padding:10px;border-bottom:1px solid #E5E7EB;">Cantidad</th><th style="text-align:left;padding:10px;border-bottom:1px solid #E5E7EB;">Costo (opcional)</th></tr></thead>
+                <tbody><tr><td colspan="3" style="padding:12px;color:#6B7280;">Aún no se ha generado una tabla.</td></tr></tbody>
+            </table>
+        </div>`;
+}
+
+function generarTablaMensualMovil(vehiculoId) {
+    const tabla = document.querySelector(`.tabla-consumo[data-vehiculo-id="${vehiculoId}"]`);
+    const inicio = tabla.querySelector(`input[name="inicio_${vehiculoId}"]`).value;
+    const fin = tabla.querySelector(`input[name="fin_${vehiculoId}"]`).value;
+    const cuerpo = tabla.querySelector('.tabla-mensual-movil tbody');
+    const resumen = tabla.querySelector('.resumen-meses-movil');
+    if (!inicio || !fin) { resumen.style.color = '#B91C1C'; resumen.textContent = 'Selecciona el mes de inicio y el mes de final.'; return; }
+
+    const [anioInicio, mesInicio] = inicio.split('-').map(Number);
+    const [anioFin, mesFin] = fin.split('-').map(Number);
+    const cursor = new Date(anioInicio, mesInicio - 1, 1);
+    const limite = new Date(anioFin, mesFin - 1, 1);
+    if (cursor > limite) { resumen.style.color = '#B91C1C'; resumen.textContent = 'El mes de inicio no puede ser posterior al mes de final.'; return; }
+
+    const meses = [];
+    while (cursor <= limite) { meses.push(`${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}`); cursor.setMonth(cursor.getMonth() + 1); }
+    const nombres = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    cuerpo.innerHTML = meses.map((mes, indice) => {
+        const [anio, numero] = mes.split('-');
+        return `<tr class="fila-consumo" data-indice="${indice}" data-periodo="${mes}"><td style="padding:10px;border-bottom:1px solid #E5E7EB;">${nombres[Number(numero) - 1]} ${anio}<input type="hidden" name="periodo_${vehiculoId}_${indice}" value="${mes}"></td><td style="padding:10px;border-bottom:1px solid #E5E7EB;"><input type="number" name="cantidad_${vehiculoId}_${indice}" step="0.01" min="0.01" required placeholder="Cantidad" style="width:100%;padding:10px;border:1px solid #D1D5DB;border-radius:6px;box-sizing:border-box;"></td><td style="padding:10px;border-bottom:1px solid #E5E7EB;"><input type="number" name="costo_${vehiculoId}_${indice}" step="0.01" min="0" placeholder="Costo" style="width:100%;padding:10px;border:1px solid #D1D5DB;border-radius:6px;box-sizing:border-box;"></td></tr>`;
+    }).join('');
+    resumen.style.color = '#4B5563';
+    resumen.textContent = `Se generaron ${meses.length} filas entre ${nombres[mesInicio - 1]} ${anioInicio} y ${nombres[mesFin - 1]} ${anioFin}.`;
+}
 
 // Guardar todos los registros
 document.getElementById('btnGuardarTodo').addEventListener('click', async function() {
@@ -206,44 +270,43 @@ document.getElementById('btnGuardarTodo').addEventListener('click', async functi
 
     tablas.forEach(tabla => {
         const vehiculoId = tabla.dataset.vehiculoId;
-        const cantidadInput = tabla.querySelector(`input[name="cantidad_${vehiculoId}"]`);
-        const periodoInput = tabla.querySelector(`input[name="periodo_${vehiculoId}"]`);
-        const cantidad = parseFloat(cantidadInput.value) || 0;
-        const periodo = periodoInput.value;
+        tabla.querySelectorAll('.fila-consumo').forEach(fila => {
+            const indice = fila.dataset.indice;
+            const cantidadInput = fila.querySelector(`input[name="cantidad_${vehiculoId}_${indice}"]`);
+            const periodoInput = fila.querySelector(`input[name="periodo_${vehiculoId}_${indice}"]`);
+            const cantidad = parseFloat(cantidadInput.value) || 0;
+            const periodo = periodoInput ? periodoInput.value : fila.dataset.periodo;
 
-        // Validación visual
-        if (!periodo) {
-            periodoInput.style.border = '2px solid #EF4444';
-            const msg = document.createElement('p');
-            msg.className = 'msg-error-campo';
-            msg.style.cssText = 'color:#EF4444;font-size:0.8rem;margin:3px 0 0 0;';
-            msg.textContent = 'El período es obligatorio';
-            periodoInput.parentNode.appendChild(msg);
-            hayErrores = true;
-        }
-        if (cantidad <= 0) {
-            cantidadInput.style.border = '2px solid #EF4444';
-            const msg = document.createElement('p');
-            msg.className = 'msg-error-campo';
-            msg.style.cssText = 'color:#EF4444;font-size:0.8rem;margin:3px 0 0 0;';
-            msg.textContent = 'Ingresa una cantidad mayor a 0';
-            cantidadInput.parentNode.appendChild(msg);
-            hayErrores = true;
-        }
+            if (!periodo) {
+                periodoInput.style.border = '2px solid #EF4444';
+                const msg = document.createElement('p');
+                msg.className = 'msg-error-campo';
+                msg.style.cssText = 'color:#EF4444;font-size:0.8rem;margin:3px 0 0 0;';
+                msg.textContent = 'El período es obligatorio';
+                periodoInput.parentNode.appendChild(msg);
+                hayErrores = true;
+            }
+            if (cantidad <= 0) {
+                cantidadInput.style.border = '2px solid #EF4444';
+                const msg = document.createElement('p');
+                msg.className = 'msg-error-campo';
+                msg.style.cssText = 'color:#EF4444;font-size:0.8rem;margin:3px 0 0 0;';
+                msg.textContent = 'Ingresa una cantidad mayor a 0';
+                cantidadInput.parentNode.appendChild(msg);
+                hayErrores = true;
+            }
 
-        if (cantidad > 0 && periodo) {
-            const combustible = tabla.querySelector(`select[name="combustible_${vehiculoId}"]`).value;
-            const unidad = tabla.querySelector(`select[name="unidad_${vehiculoId}"]`).value;
-            const costo = parseFloat(tabla.querySelector(`input[name="costo_${vehiculoId}"]`).value) || 0;
-            registros.push({
-                vehiculo_id: parseInt(vehiculoId),
-                combustible,
-                unidad,
-                cantidad,
-                costo,
-                periodo
-            });
-        }
+            if (cantidad > 0 && periodo) {
+                registros.push({
+                    vehiculo_id: parseInt(vehiculoId),
+                    combustible: (fila.querySelector(`select[name="combustible_${vehiculoId}_${indice}"]`) || tabla.querySelector(`select[name="combustible_${vehiculoId}"]`)).value,
+                    unidad: (fila.querySelector(`select[name="unidad_${vehiculoId}_${indice}"]`) || tabla.querySelector(`select[name="unidad_${vehiculoId}"]`)).value,
+                    cantidad,
+                    costo: parseFloat(fila.querySelector(`input[name="costo_${vehiculoId}_${indice}"]`).value) || 0,
+                    periodo
+                });
+            }
+        });
     });
 
     if (hayErrores || registros.length === 0) {

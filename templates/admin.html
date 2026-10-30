@@ -11,10 +11,10 @@
         </div>
         <div>
             <div style="display: flex; align-items: center; gap: 8px;">
-                <h1 style="color: #111827; margin: 0; font-size: 1.4rem;">Panel Administrativo</h1>
-                <span style="background: #EEF2FF; color: #6366F1; font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.05em;">Admin</span>
+                <h1 style="color: #111827; margin: 0; font-size: 1.4rem;">{{ 'Panel de Empresas' if session.get('rol') == 'gestor_empresa' else 'Panel Administrativo' }}</h1>
+                <span style="background: #EEF2FF; color: #6366F1; font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.05em;">{{ 'Gestor de empresas' if session.get('rol') == 'gestor_empresa' else 'Admin' }}</span>
             </div>
-            <p style="color: #6B7280; margin: 2px 0 0 0; font-size: 0.85rem;">Gestión global de empresas, usuarios y factores de emisión.</p>
+            <p style="color: #6B7280; margin: 2px 0 0 0; font-size: 0.85rem;">Gestión de empresas, cuentas y datos demostrativos.</p>
         </div>
     </div>
     <button onclick="document.getElementById('modal_empresa').style.display='flex'"
@@ -58,8 +58,8 @@
             <i class="fas fa-water" style="color: #0EA5E9; font-size: 0.95rem;"></i>
             <p style="margin: 0; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: #9CA3AF; letter-spacing: 0.05em;">Huella H&iacute;drica Global</p>
         </div>
-        <div style="font-size: 1.6rem; font-weight: 700; color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ (total_huella_hidrica_global | default(0, true)) | formato_entero_cl }} m&sup3;</div>
-        <p style="margin: 2px 0 0 0; font-size: 0.75rem; color: #9CA3AF;">azul + verde + suministro</p>
+        <div style="font-size: 1.6rem; font-weight: 700; color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{% if total_huella_hidrica_global is defined and total_huella_hidrica_global is not none %}{{ total_huella_hidrica_global | formato_entero_cl }} m&sup3;{% else %}No disponible{% endif %}</div>
+        <p style="margin: 2px 0 0 0; font-size: 0.75rem; color: #9CA3AF;">Suma de empresas con medición disponible</p>
     </div>
 
     <div style="background: white; padding: 1.25rem 1.5rem; border-radius: 12px; border-left: 5px solid #14B8A6; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
@@ -67,11 +67,11 @@
             <i class="fas fa-gauge-high" style="color: #14B8A6; font-size: 0.95rem;"></i>
             <p style="margin: 0; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: #9CA3AF; letter-spacing: 0.05em;">Intensidad H&iacute;drica</p>
         </div>
-        <div style="font-size: 1.6rem; font-weight: 700; color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ (intensidad_huella_promedio | default(0, true)) | formato_cl }}</div>
+        <div style="font-size: 1.6rem; font-weight: 700; color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{% if intensidad_huella_promedio is defined and intensidad_huella_promedio is not none %}{{ intensidad_huella_promedio | formato_cl }}{% else %}No disponible{% endif %}</div>
         <p style="margin: 2px 0 0 0; font-size: 0.75rem; color: #9CA3AF;">m&sup3;/unidad promedio</p>
     </div>
 
-    <a href="/admin/pendientes" style="text-decoration: none;">
+    {% if session.get('rol') != 'gestor_empresa' %}<a href="/admin/pendientes" style="text-decoration: none;">
         <div style="background: white; padding: 1.25rem 1.5rem; border-radius: 12px; border-left: 5px solid {{ '#EF4444' if total_pendientes > 0 else '#E5E7EB' }}; box-shadow: 0 2px 8px rgba(0,0,0,0.06); cursor: pointer; transition: box-shadow 0.2s;" onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,0.1)'" onmouseout="this.style.boxShadow='0 2px 8px rgba(0,0,0,0.06)'">
             <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
                 <i class="fas fa-clock" style="color: {{ '#EF4444' if total_pendientes > 0 else '#9CA3AF' }}; font-size: 0.95rem;"></i>
@@ -86,12 +86,12 @@
 
 <!-- Tabs de navegación -->
 <div style="display: flex; gap: 4px; margin-bottom: 1.5rem; background: white; padding: 6px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); width: fit-content;">
-    <a href="/admin/dashboard"
+    {% if session.get('rol') != 'gestor_empresa' %}<a href="/admin/dashboard"
        style="padding: 8px 20px; border-radius: 7px; font-size: 0.88rem; font-weight: 600; text-decoration: none; display: flex; align-items: center; gap: 7px;
               background: {{ '#6366F1' if admin_section == 'dashboard' else 'transparent' }};
               color: {{ 'white' if admin_section == 'dashboard' else '#6B7280' }};">
         <i class="fas fa-chart-bar"></i> Dashboard
-    </a>
+    </a>{% endif %}
     <a href="/admin/empresas"
        style="padding: 8px 20px; border-radius: 7px; font-size: 0.88rem; font-weight: 600; text-decoration: none; display: flex; align-items: center; gap: 7px;
               background: {{ '#6366F1' if admin_section == 'empresas' else 'transparent' }};
@@ -99,12 +99,12 @@
         <i class="fas fa-building"></i> Empresas
         <span style="background: {{ 'rgba(255,255,255,0.25)' if admin_section == 'empresas' else '#EEF2FF' }}; color: {{ 'white' if admin_section == 'empresas' else '#6366F1' }}; font-size: 0.72rem; padding: 1px 7px; border-radius: 10px;">{{ total_empresas }}</span>
     </a>
-    <a href="/admin/factores"
+    {% if session.get('rol') != 'gestor_empresa' %}<a href="/admin/factores"
        style="padding: 8px 20px; border-radius: 7px; font-size: 0.88rem; font-weight: 600; text-decoration: none; display: flex; align-items: center; gap: 7px;
               background: {{ '#6366F1' if admin_section == 'factores' else 'transparent' }};
               color: {{ 'white' if admin_section == 'factores' else '#6B7280' }};">
         <i class="fas fa-atom"></i> Factores
-    </a>
+    </a>{% endif %}
     <a href="/admin/pendientes"
        style="padding: 8px 20px; border-radius: 7px; font-size: 0.88rem; font-weight: 600; text-decoration: none; display: flex; align-items: center; gap: 7px;
               background: {{ '#6366F1' if admin_section == 'pendientes' else 'transparent' }};
@@ -113,7 +113,7 @@
         {% if total_pendientes > 0 %}
         <span style="background: {{ 'rgba(255,255,255,0.25)' if admin_section == 'pendientes' else '#EF4444' }}; color: white; font-size: 0.68rem; font-weight: 700; padding: 1px 6px; border-radius: 10px;">{{ total_pendientes }}</span>
         {% endif %}
-    </a>
+    </a>{% endif %}
 </div>
 
 <!-- ===== MODALES ===== -->
@@ -568,10 +568,10 @@
                 <input type="text" id="buscadorEmpresas" placeholder="Buscar empresa, RUT, email…" oninput="filtrarEmpresas()"
                        style="padding: 7px 12px 7px 30px; border: 1px solid #D1D5DB; border-radius: 8px; font-size: 0.85rem; width: 220px; outline: none;">
             </div>
-            <button onclick="document.getElementById('modalExportarTodo').style.display='flex'"
+            {% if session.get('rol') != 'gestor_empresa' %}<button onclick="document.getElementById('modalExportarTodo').style.display='flex'"
                     style="background:#10B981; color:white; border:none; padding:7px 14px; border-radius:8px; font-size:0.82rem; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:6px;">
                 <i class="fas fa-file-excel"></i> Exportar Todo
-            </button>
+            </button>{% endif %}
         </div>
     </div>
     {% if empresas %}
@@ -599,7 +599,7 @@
                             <div style="width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, #EEF2FF, #E0E7FF); display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-weight: 700; color: #6366F1; font-size: 0.8rem;">
                                 {{ emp.empresa[0].upper() }}
                             </div>
-                            <span class="empresa-nombre">{{ emp.empresa }}</span>
+                            <span class="empresa-nombre">{{ emp.empresa }}{% if emp.es_demo %} <small style="color:#059669; font-weight:700;">· DEMO</small>{% endif %}</span>
                         </div>
                     </td>
                     <td style="padding: 10px 14px; color: #6B7280; font-size: 0.83rem;" class="empresa-rut">{{ emp.rut or '—' }}</td>
@@ -643,13 +643,13 @@
                                     style="background: #FFFBEB; color: #B45309; border: none; padding: 5px 9px; border-radius: 6px; font-size: 0.78rem; font-weight: 600; cursor: pointer;" title="Resetear contraseña">
                                 <i class="fas fa-key"></i>
                             </button>
-                            <form method="POST" action="/admin/eliminar_empresa/{{ emp.id }}" style="display:inline; margin:0;">
+                            {% if session.get('rol') != 'gestor_empresa' %}<form method="POST" action="/admin/eliminar_empresa/{{ emp.id }}" style="display:inline; margin:0;">
                                 <button type="submit"
                                     onclick="return confirm('¿Eliminar empresa {{ emp.empresa }} y TODOS sus datos? Esta acción no se puede deshacer.')"
                                     style="background: #FEE2E2; color: #991B1B; border: none; padding: 5px 9px; border-radius: 6px; font-size: 0.78rem; font-weight: 600; cursor: pointer;" title="Eliminar">
                                     <i class="fas fa-trash"></i>
                                 </button>
-                            </form>
+                            </form>{% endif %}
                         </div>
                     </td>
                 </tr>
@@ -722,10 +722,10 @@
                 <h4 style="margin: 0 0 3px 0; color: #92400E; display: flex; align-items: center; gap: 8px; font-size: 0.95rem;">
                     <i class="fas fa-bolt"></i> Factores Eléctricos (SEN / SEM / SEA)
                 </h4>
-                <p style="margin: 0; color: #6B7280; font-size: 0.85rem;">Sube el Excel con la hoja <strong>"Factores eléctricos"</strong>. Se mostrará una vista previa antes de confirmar.</p>
+                <p style="margin: 0; color: #6B7280; font-size: 0.85rem;">Sube el Excel con la hoja <strong>"Factores eléctricos"</strong> o un CSV con las columnas <strong>anio, mes, sistema, factor_emision_avg</strong>. Se mostrará una vista previa antes de confirmar.</p>
             </div>
             <form action="{{ url_for('preview_electricidad') }}" method="POST" enctype="multipart/form-data" style="display: flex; gap: 8px; align-items: center;">
-                <input type="file" name="archivo_electricidad" accept=".xlsx, .xls" required
+                <input type="file" name="archivo_electricidad" accept=".xlsx, .xls, .csv" required
                        style="font-size: 0.85rem; padding: 7px; border: 1px dashed #D1D5DB; border-radius: 6px; background: white; color: #374151;">
                 <button type="submit" style="background: #F59E0B; color: white; border: none; padding: 9px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.85rem; display: flex; align-items: center; gap: 6px;">
                     <i class="fas fa-eye"></i> Vista previa
@@ -1030,7 +1030,7 @@ if (document.getElementById('anio_chart')) {
 
 function updateAguaChart(anio) {
     const values = _chartAguaData[anio] || [];
-    const hasData = values.some(v => v > 0);
+    const hasData = values.some(v => v !== null && Number.isFinite(v));
     const noData = document.getElementById('chart_agua_no_data');
     const canvas = document.getElementById('chartAguaEmpresas');
     if (noData) noData.style.display = hasData ? 'none' : 'block';

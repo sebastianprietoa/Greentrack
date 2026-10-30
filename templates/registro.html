@@ -3,14 +3,24 @@
 {% block title %}Nuevo Registro - GreenTrack{% endblock %}
 
 {% block content %}
-<div style="max-width: 800px; margin: 0 auto; padding: 2rem;">
+<style>
+@media (max-width: 600px) {
+    .registro-actividad { padding: 0 !important; }
+    .registro-actividad .registro-tabs { flex-wrap: wrap; }
+    .registro-actividad #form_a1, .registro-actividad #form_a2,
+    .registro-actividad #form_a3, .registro-actividad #form_agua { padding: 1rem !important; }
+    .registro-actividad [style*="grid-template-columns"] { grid-template-columns: minmax(0, 1fr) !important; }
+    .registro-actividad input, .registro-actividad select { min-width: 0; max-width: 100%; }
+}
+</style>
+<div class="registro-actividad" style="max-width: 800px; margin: 0 auto; padding: 2rem;">
     
     <div style="margin-bottom: 2rem;">
         <h1 style="color: #111827; margin: 0;">Registrar Actividad</h1>
         <p style="color: #6B7280; margin-top: 5px;">Selecciona el alcance y tipo de emisión que deseas reportar.</p>
     </div>
 
-    <div style="display: flex; gap: 10px; margin-bottom: 2rem; border-bottom: 2px solid #E5E7EB; padding-bottom: 10px;">
+    <div class="registro-tabs" style="display: flex; gap: 10px; margin-bottom: 2rem; border-bottom: 2px solid #E5E7EB; padding-bottom: 10px;">
         <button onclick="cambiarPestana('a1')" id="btn_a1" style="background: #3B82F6; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.3s;">
             <i class="fas fa-fire"></i> Alcance 1
         </button>
@@ -227,6 +237,15 @@
                         <option value="">Seleccione primero el origen...</option>
                     </select>
                 </div>
+                <div>
+                    <label style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">Nivel de tensión</label>
+                    <select name="nivel_tension" id="nivel_tension_elec" required style="width: 100%; padding: 10px; border: 1px solid #D1D5DB; border-radius: 6px; box-sizing: border-box; background: #F9FAFB;">
+                        <option value="">Seleccione nivel...</option>
+                        <option value="alta">Alta tensión</option>
+                        <option value="media">Media tensión</option>
+                        <option value="baja">Baja tensión</option>
+                    </select>
+                </div>
             </div>
 
             <div id="div_irec" style="display: none; background: #F0FDF4; border: 1px solid #BBF7D0; padding: 15px; border-radius: 8px; margin-bottom: 1.5rem;">
@@ -288,7 +307,47 @@
             Registra captación, retornos y reúso interno para el inventario Water Footprint. La huella de escasez requiere un factor local válido y la intensidad hídrica requiere una medida productiva del período.
         </p>
 
-        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:1.5rem;">
+        <section id="agua_diagnostico" style="background:#F0F9FF; border:1px solid #BAE6FD; border-radius:12px; padding:1.25rem; margin-bottom:1.5rem;">
+            <div style="display:flex; align-items:flex-start; gap:12px;">
+                <i class="fas fa-clipboard-check" style="color:#0369A1; font-size:1.35rem; margin-top:3px;"></i>
+                <div>
+                    <h3 style="margin:0 0 6px 0; color:#0C4A6E;">Antes de registrar: revisemos tu medición de agua</h3>
+                    <p style="margin:0; color:#075985; font-size:0.92rem; line-height:1.45;">Esta revisión permite distinguir entre consumo de entrada y huella hídrica directa. El diagnóstico se guarda para la empresa y puedes modificarlo cuando cambie su capacidad de medición.</p>
+                </div>
+            </div>
+
+            <div id="agua_diagnostico_preguntas">
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:1rem; margin-top:1rem;">
+                <fieldset style="border:1px solid #BAE6FD; border-radius:9px; padding:1rem; background:white;">
+                    <legend style="padding:0 6px; font-weight:700; color:#0C4A6E;">Agua de entrada</legend>
+                    <label style="display:block; margin:8px 0; color:#374151;"><input type="radio" name="medicion_entrada_agua" value="caudalimetro" form="agua_formulario_datos" {% if medicion_entrada_agua == 'caudalimetro' %}checked{% endif %}> Caudalímetro propio</label>
+                    <label style="display:block; margin:8px 0; color:#374151;"><input type="radio" name="medicion_entrada_agua" value="boleta" form="agua_formulario_datos" {% if medicion_entrada_agua == 'boleta' %}checked{% endif %}> Boleta del proveedor</label>
+                    <label style="display:block; margin:8px 0; color:#374151;"><input type="radio" name="medicion_entrada_agua" value="no" form="agua_formulario_datos" {% if medicion_entrada_agua == 'no' %}checked{% endif %}> No disponible</label>
+                </fieldset>
+                <fieldset style="border:1px solid #BAE6FD; border-radius:9px; padding:1rem; background:white;">
+                    <legend style="padding:0 6px; font-weight:700; color:#0C4A6E;">Agua de salida</legend>
+                    <label style="display:block; margin:8px 0; color:#374151;"><input type="radio" name="medicion_salida_agua" value="caudalimetro" form="agua_formulario_datos" {% if medicion_salida_agua == 'caudalimetro' %}checked{% endif %}> Caudalímetro propio</label>
+                    <label style="display:block; margin:8px 0; color:#374151;"><input type="radio" name="medicion_salida_agua" value="descarga" form="agua_formulario_datos" {% if medicion_salida_agua == 'descarga' %}checked{% endif %}> Medición documentada de descarga</label>
+                    <label style="display:block; margin:8px 0; color:#374151;"><input type="radio" name="medicion_salida_agua" value="no" form="agua_formulario_datos" {% if medicion_salida_agua == 'no' %}checked{% endif %}> No disponible</label>
+                </fieldset>
+            </div>
+            <input type="hidden" name="estado_medicion_agua" id="estado_medicion_agua" value="" form="agua_formulario_datos">
+            <button type="button" onclick="evaluarDiagnosticoAgua(true)" style="margin-top:1rem; background:#0369A1; color:white; border:none; padding:11px 16px; border-radius:8px; font-weight:700; cursor:pointer;">
+                Continuar con el diagnóstico
+            </button>
+            </div>
+            <div id="agua_diagnostico_resultado" role="status" aria-live="polite" style="display:none; margin-top:1rem; padding:1rem; border-radius:9px; line-height:1.45;"></div>
+            <div id="agua_diagnostico_bloqueado" role="status" aria-live="polite" style="display:none; margin-top:1rem; padding:1rem; border-radius:9px; background:#FEF2F2; color:#991B1B; line-height:1.45;">
+                <strong>No se puede obtener la huella azul</strong><br>
+                Faltan mediciones de entrada y/o salida. La huella de suministro se calcula por separado con los consumos energéticos.
+                <br>
+                <button type="button" onclick="modificarDiagnosticoAgua()" style="margin-top:0.85rem; background:#991B1B; color:white; border:none; padding:9px 14px; border-radius:8px; font-weight:700; cursor:pointer;">
+                    Modificar diagnóstico
+                </button>
+            </div>
+        </section>
+
+        <div id="agua_modos_registro" style="display:none; gap:10px; flex-wrap:wrap; margin-bottom:1.5rem;">
             <button type="button" id="modo_individual_agua" onclick="establecerModoAgua('individual')" style="background:#4AA0E6; color:white; border:none; padding:10px 16px; border-radius:8px; font-weight:600; cursor:pointer;">
                 Registro individual
             </button>
@@ -297,9 +356,10 @@
             </button>
         </div>
 
-        <form action="/registro" method="POST">
+        <form id="agua_formulario_datos" action="/registro" method="POST" style="display:none;">
             <input type="hidden" name="alcance_oculto" value="Agua">
             <input type="hidden" name="modo_registro" id="modo_registro_agua" value="individual">
+            <input type="hidden" name="solo_diagnostico_agua" value="0">
             <input type="hidden" name="tipo_flujo" id="tipo_flujo_agua" value="captacion">
 
             <div style="margin-bottom:1.5rem;">
@@ -843,6 +903,12 @@
     const batchBodyAgua = document.getElementById('batch_body_agua');
     const batchSummaryAgua = document.getElementById('batch_summary_agua');
     const btnSubmitAgua = document.querySelector('#form_agua button[type="submit"]');
+    const aguaFormularioDatos = document.getElementById('agua_formulario_datos');
+    const aguaModosRegistro = document.getElementById('agua_modos_registro');
+    const estadoMedicionAgua = document.getElementById('estado_medicion_agua');
+    const resultadoDiagnosticoAgua = document.getElementById('agua_diagnostico_resultado');
+    const diagnosticoPreguntasAgua = document.getElementById('agua_diagnostico_preguntas');
+    const diagnosticoBloqueadoAgua = document.getElementById('agua_diagnostico_bloqueado');
     const periodoIndividualAgua = document.querySelector('#form_agua input[name="periodo"]');
     const volumenIndividualAgua = document.querySelector('#form_agua input[name="volumen_m3"]');
     const tipoFlujoAgua = document.getElementById('tipo_flujo_agua');
@@ -860,6 +926,109 @@
         document.querySelector('#form_agua [data-water-field="tratamiento"]') || (tratamientoAgua ? tratamientoAgua.parentElement : null)
     ].filter(Boolean);
     const botonesTipoFlujoAgua = Array.from(document.querySelectorAll('#form_agua .agua-flow-btn'));
+
+    function valorRadioAgua(nombre) {
+        const seleccionado = document.querySelector(`#form_agua input[name="${nombre}"]:checked`);
+        return seleccionado ? seleccionado.value : null;
+    }
+
+    async function persistirDiagnosticoAgua() {
+        const respuesta = await fetch('/registro', {
+            method: 'POST',
+            body: new FormData(aguaFormularioDatos),
+            headers: {'X-Requested-With': 'XMLHttpRequest'}
+        });
+        if (respuesta.status !== 204 || respuesta.redirected) throw new Error('No se pudo guardar el diagnóstico de agua.');
+    }
+
+    async function evaluarDiagnosticoAgua(guardar = false) {
+        const entrada = valorRadioAgua('medicion_entrada_agua');
+        const salida = valorRadioAgua('medicion_salida_agua');
+        if (!entrada || !salida) {
+            resultadoDiagnosticoAgua.style.display = 'block';
+            resultadoDiagnosticoAgua.style.background = '#FFF7ED';
+            resultadoDiagnosticoAgua.style.color = '#9A3412';
+            resultadoDiagnosticoAgua.textContent = 'Selecciona una opción para la medición de entrada y otra para la medición de salida.';
+            return;
+        }
+
+        const tieneEntrada = entrada !== 'no';
+        const tieneSalida = salida !== 'no';
+        const estado = tieneEntrada && tieneSalida
+            ? 'ambos'
+            : tieneEntrada
+                ? 'solo_entrada'
+                : 'sin_medicion';
+        estadoMedicionAgua.value = estado;
+        resultadoDiagnosticoAgua.style.display = 'block';
+        diagnosticoBloqueadoAgua.style.display = 'none';
+        diagnosticoPreguntasAgua.style.display = 'block';
+
+        if (estado === 'ambos') {
+            resultadoDiagnosticoAgua.style.background = '#ECFDF5';
+            resultadoDiagnosticoAgua.style.color = '#065F46';
+            resultadoDiagnosticoAgua.innerHTML = '<strong>Medición suficiente para continuar.</strong><br>Puedes registrar captación, retornos y reúso para calcular la huella azul directa.';
+        } else if (estado === 'solo_entrada') {
+            resultadoDiagnosticoAgua.style.background = '#FFFBEB';
+            resultadoDiagnosticoAgua.style.color = '#92400E';
+            resultadoDiagnosticoAgua.innerHTML = '<strong>No se puede obtener la huella azul: solo consumo de entrada.</strong><br>Falta medición de salida. Solo podrás registrar la captación de entrada. La huella de suministro se calcula por separado con los consumos energéticos.';
+        } else {
+            resultadoDiagnosticoAgua.style.background = '#FEF2F2';
+            resultadoDiagnosticoAgua.style.color = '#991B1B';
+            resultadoDiagnosticoAgua.innerHTML = '<strong>No se puede obtener la huella azul.</strong><br>Faltan mediciones de entrada y/o salida. La huella de suministro se calcula por separado con los consumos energéticos.';
+        }
+
+        if (estado === 'sin_medicion') {
+            resultadoDiagnosticoAgua.style.display = 'none';
+            diagnosticoPreguntasAgua.style.display = 'none';
+            diagnosticoBloqueadoAgua.style.display = 'block';
+        }
+
+        const habilitarFormulario = estado !== 'sin_medicion';
+        aguaFormularioDatos.style.display = habilitarFormulario ? 'block' : 'none';
+        aguaModosRegistro.style.display = habilitarFormulario ? 'flex' : 'none';
+        botonesTipoFlujoAgua.forEach(btn => {
+            const esCaptacion = btn.dataset.flow === 'captacion';
+            btn.style.display = estado === 'solo_entrada' && !esCaptacion ? 'none' : 'flex';
+        });
+        if (estado === 'solo_entrada') seleccionarTipoFlujoAgua('captacion');
+
+        if (guardar) {
+            aguaFormularioDatos.style.display = 'none';
+            aguaModosRegistro.style.display = 'none';
+            const continuar = diagnosticoPreguntasAgua.querySelector('button');
+            continuar.disabled = true;
+            try {
+                aguaFormularioDatos.querySelector('input[name="solo_diagnostico_agua"]').value = '1';
+                await persistirDiagnosticoAgua();
+                aguaFormularioDatos.style.display = habilitarFormulario ? 'block' : 'none';
+                aguaModosRegistro.style.display = habilitarFormulario ? 'flex' : 'none';
+            } catch (error) {
+                diagnosticoBloqueadoAgua.style.display = 'none';
+                diagnosticoPreguntasAgua.style.display = 'block';
+                resultadoDiagnosticoAgua.style.display = 'block';
+                resultadoDiagnosticoAgua.style.background = '#FFF7ED';
+                resultadoDiagnosticoAgua.style.color = '#9A3412';
+                resultadoDiagnosticoAgua.textContent = 'No se pudo guardar el diagnóstico. Inténtalo nuevamente.';
+            } finally {
+                continuar.disabled = false;
+                aguaFormularioDatos.querySelector('input[name="solo_diagnostico_agua"]').value = '0';
+            }
+        }
+    }
+
+    function modificarDiagnosticoAgua() {
+        diagnosticoBloqueadoAgua.style.display = 'none';
+        diagnosticoPreguntasAgua.style.display = 'block';
+        resultadoDiagnosticoAgua.style.display = 'none';
+        aguaFormularioDatos.style.display = 'none';
+        aguaModosRegistro.style.display = 'none';
+        estadoMedicionAgua.value = '';
+    }
+
+    if (valorRadioAgua('medicion_entrada_agua') && valorRadioAgua('medicion_salida_agua')) {
+        evaluarDiagnosticoAgua();
+    }
 
     if (tipoFlujoSelectAntiguoAgua) {
         tipoFlujoSelectAntiguoAgua.disabled = true;
@@ -912,8 +1081,20 @@
             volumenIndividualAgua.disabled = !esIndividual;
             volumenIndividualAgua.parentElement.style.display = esIndividual ? 'block' : 'none';
         }
-        if (fechaInicioAgua) fechaInicioAgua.required = !esIndividual;
-        if (fechaFinAgua) fechaFinAgua.required = !esIndividual;
+        if (fechaInicioAgua) {
+            fechaInicioAgua.required = !esIndividual;
+            fechaInicioAgua.disabled = esIndividual;
+        }
+        if (fechaFinAgua) {
+            fechaFinAgua.required = !esIndividual;
+            fechaFinAgua.disabled = esIndividual;
+        }
+        if (batchBodyAgua) {
+            batchBodyAgua.querySelectorAll('input[name="batch_cantidad[]"]').forEach(input => {
+                input.required = !esIndividual;
+                input.disabled = esIndividual;
+            });
+        }
         if (btnModoIndividualAgua) {
             btnModoIndividualAgua.style.background = esIndividual ? '#4AA0E6' : '#F3F4F6';
             btnModoIndividualAgua.style.color = esIndividual ? 'white' : '#4B5563';
@@ -1000,6 +1181,26 @@
     seleccionarTipoFlujoAgua(tipoFlujoAgua ? tipoFlujoAgua.value : 'captacion');
 
     establecerModoA2('individual');
+    // Cambiar el rango invalida las cantidades asociadas a los meses anteriores.
+    [
+        [fechaInicioA1,fechaFinA1,batchBodyA1,batchSummaryA1,modoRegistroA1,btnSubmitA1],
+        [fechaInicioA2,fechaFinA2,batchBodyA2,batchSummaryA2,modoRegistroA2,btnSubmitA2],
+        [fechaInicioAgua,fechaFinAgua,batchBodyAgua,batchSummaryAgua,modoRegistroAgua,btnSubmitAgua]
+    ].forEach(([inicio,fin,cuerpo,resumen,modo,boton]) => {
+        if (!inicio || !fin || !cuerpo || !boton) return;
+        const invalidarTabla = () => {
+            cuerpo.replaceChildren();
+            resumen.textContent = 'El rango cambió. Genera nuevamente la tabla antes de guardar.';
+        };
+        inicio.addEventListener('input',invalidarTabla);
+        fin.addEventListener('input',invalidarTabla);
+        boton.form.addEventListener('submit',event => {
+            if (modo.value === 'multiple' && !cuerpo.querySelector('input[name="batch_cantidad[]"]')) {
+                event.preventDefault();
+                resumen.textContent = 'Genera la tabla de meses y completa las cantidades antes de guardar.';
+            }
+        });
+    });
     const tabInicial = new URLSearchParams(window.location.search).get('tab');
     if (tabInicial === 'agua') {
         cambiarPestana('agua');

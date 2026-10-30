@@ -39,8 +39,10 @@
                 <i class="fas fa-cloud-upload-alt" id="dropIcon" style="font-size: 2.5rem; color: #9CA3AF; margin-bottom: 0.75rem; display: block; transition: color 0.2s;"></i>
                 <p style="margin: 0; color: #6B7280; font-size: 0.95rem;">Arrastra tu <strong>.xlsx</strong> aquí o <span style="color: #3B82F6; font-weight: 600;">haz clic para seleccionar</span></p>
                 <p id="fileName" style="margin: 8px 0 0 0; color: #10B981; font-weight: 600; font-size: 0.9rem; display: none;"></p>
-                <input type="file" name="archivo" id="archivoInput" accept=".xlsx,.xls" required style="display: none;">
+                <input type="file" name="archivo" id="archivoInput" accept=".xlsx" required aria-label="Archivo Excel" aria-describedby="archivoError" onclick="event.stopPropagation()" style="display:block; width:100%; margin-top:1rem;">
             </div>
+
+            <p id="archivoError" role="alert" hidden style="color:#991B1B; margin-bottom:1rem;"></p>
 
             <!-- Spinner (oculto por defecto) -->
             <div id="spinner" style="display: none; text-align: center; padding: 1rem 0 0.5rem;">
@@ -67,8 +69,27 @@
     const submitBtn = document.getElementById('submitBtn');
     const dropIcon  = document.getElementById('dropIcon');
 
+    const error = document.getElementById('archivoError');
+    function mostrarError(mensaje) {
+        error.textContent = mensaje;
+        error.hidden = false;
+        input.setAttribute('aria-invalid', 'true');
+    }
+    input.addEventListener('invalid', e => {
+        e.preventDefault();
+        mostrarError('Selecciona un archivo .xlsx antes de continuar.');
+        input.focus();
+    });
     function applyFile(file) {
+        error.hidden = true;
+        input.removeAttribute('aria-invalid');
+        fileLabel.style.display = 'none';
         if (!file) return;
+        if (!/\.xlsx$/i.test(file.name)) {
+            input.value = '';
+            mostrarError('Selecciona un archivo .xlsx. Guarda los archivos .xls como .xlsx antes de cargarlos.');
+            return;
+        }
         fileLabel.textContent = '📄 ' + file.name;
         fileLabel.style.display = 'block';
         dropZone.style.borderColor = '#10B981';
@@ -92,7 +113,7 @@
     dropZone.addEventListener('drop', e => {
         e.preventDefault();
         const file = e.dataTransfer.files[0];
-        if (file && (file.name.endsWith('.xlsx') || file.name.endsWith('.xls'))) {
+        if (file) {
             const dt = new DataTransfer();
             dt.items.add(file);
             input.files = dt.files;
@@ -100,7 +121,13 @@
         }
     });
 
-    form.addEventListener('submit', () => {
+    form.addEventListener('submit', e => {
+        if (!input.files[0] || !/\.xlsx$/i.test(input.files[0].name)) {
+            e.preventDefault();
+            mostrarError('Selecciona un archivo .xlsx antes de continuar.');
+            input.focus();
+            return;
+        }
         if (input.files[0]) {
             submitBtn.style.display = 'none';
             spinner.style.display = 'block';
