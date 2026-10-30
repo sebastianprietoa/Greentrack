@@ -5,7 +5,7 @@
 {% set huella_azul = consumo or 0 %}
 {% set huella_verde = 0 %}
 {% set huella_suministro = huella_suministro_total or 0 %}
-{% set huella_total = huella_hidrica_total %}
+{% set huella_total = huella_azul + huella_verde + huella_suministro %}
 {% set cobertura_pct = ((periodos_inventario_completo / periodos_con_datos * 100) if periodos_con_datos else 0) %}
 
 <link rel="stylesheet" href="{{ url_for('static', filename='agua_dashboard.css') }}">
@@ -33,25 +33,15 @@
                     </select>
                 </label>
             </form>
-            <a class="wf-action" href="{{ url_for('agua_resultados_descargar', periodo=periodo or '') }}"><i class="fa-solid fa-arrow-up-from-bracket"></i> Exportar</a>
+            <a class="wf-action" href="{{ url_for('exportar') }}"><i class="fa-solid fa-arrow-up-from-bracket"></i> Exportar</a>
         </div>
     </header>
 
-    {% if mensaje_medicion_agua %}
-    <div role="status" style="background:{% if estado_medicion_agua == 'sin_medicion' %}#FEF2F2{% else %}#FFFBEB{% endif %}; color:{% if estado_medicion_agua == 'sin_medicion' %}#991B1B{% else %}#92400E{% endif %}; border:1px solid {% if estado_medicion_agua == 'sin_medicion' %}#FECACA{% else %}#FDE68A{% endif %}; border-radius:10px; padding:1rem 1.25rem; margin-bottom:1rem; font-weight:700;">
-        <i class="fa-solid fa-droplet" style="margin-right:8px;"></i>{{ mensaje_medicion_agua }}
-    </div>
-    {% endif %}
-
-    {% for error in errores_balance %}
-    <p role="alert" style="color:#991B1B;">{{ error }}</p>
-    {% endfor %}
-
     <nav class="wf-tabs" aria-label="Navegacion Huella Hidrica">
-        <a class="wf-tab active" href="{{ url_for('agua_dashboard', periodo=periodo or '') }}">Resumen</a>
+        <a class="wf-tab active" href="{{ url_for('agua_dashboard') }}">Resumen</a>
         <a class="wf-tab" href="{{ url_for('registro', tab='agua') }}">Registrar datos</a>
         <a class="wf-tab" href="{{ url_for('agua_retorno_reuso') }}">Retornos y reuso</a>
-        <a class="wf-tab" href="{{ url_for('agua_resultados', periodo=periodo or '') }}">Registros</a>
+        <a class="wf-tab" href="{{ url_for('agua_resultados') }}">Registros</a>
         <a class="wf-tab" href="{{ url_for('agua_metodologia') }}">Metodologia</a>
     </nav>
 
@@ -92,10 +82,10 @@
             </div>
         </article>
         <article class="wf-card wf-kpi wf-accent-blue">
-            <div class="wf-kpi-icon"><i class="fa-solid fa-droplet"></i></div>
+            <div class="wf-kpi-icon"><i class="fa-regular fa-droplet"></i></div>
             <div class="wf-kpi-body">
                 <div class="wf-label">Huella azul directa</div>
-                <div class="wf-value">{% if consumo is not none %}{{ huella_azul | formato_entero_cl }} m&sup3;{% else %}No se puede obtener la huella azul{% endif %}</div>
+                <div class="wf-value">{{ huella_azul | formato_entero_cl }} m&sup3;</div>
                 <div class="wf-note">Captacion - retorno al mismo sistema</div>
             </div>
         </article>
@@ -110,20 +100,15 @@
             <div class="wf-kpi-icon"><i class="fa-solid fa-bolt"></i></div>
             <div class="wf-kpi-body">
                 <div class="wf-label">Suministro energetico</div>
-                <div class="wf-value">{% if suministro_disponible %}{{ huella_suministro | formato_entero_cl }} m&sup3;{% elif consumos_energeticos %}No disponible{% else %}Sin consumos energéticos{% endif %}</div>
-                <div class="wf-note">{% if suministro_disponible and not suministro_completo %}Estimación parcial: faltan consumos por calcular{% else %}Electricidad y combustibles registrados{% endif %}</div>
+                <div class="wf-value">{{ huella_suministro | formato_entero_cl }} m&sup3;</div>
+                <div class="wf-note">Electricidad y combustibles registrados</div>
             </div>
         </article>
         <article class="wf-card wf-kpi wf-accent-blue">
             <div class="wf-kpi-icon"><i class="fa-solid fa-water"></i></div>
             <div class="wf-kpi-body">
                 <div class="wf-label">Huella hidrica total</div>
-                    {% if huella_total is none %}
-                        <div class="wf-value" style="font-size:1rem; line-height:1.25;">Total no disponible</div>
-                        <div class="wf-note">{% if consumo is none %}Falta la huella azul. El suministro se muestra por separado.{% else %}Falta completar la huella de suministro.{% endif %}</div>
-                    {% else %}
-                        <div class="wf-value">{{ huella_total | formato_entero_cl }} m&sup3;</div>
-                    {% endif %}
+                <div class="wf-value">{{ huella_total | formato_entero_cl }} m&sup3;</div>
             </div>
         </article>
         <article class="wf-card wf-kpi wf-accent-orange">
@@ -159,7 +144,6 @@
             <h3>Captacion por fuente [m&sup3;]</h3>
             <div class="wf-chart-box"><canvas id="chartFuente"></canvas></div>
         </article>
-        {% if puede_medir_huella %}
         <article class="wf-card wf-panel wf-chart-composition">
             <h3>Composicion de huella hidrica [m&sup3;] <i class="fa-regular fa-circle-question wf-title-help"></i></h3>
             <div class="wf-composition">
@@ -171,14 +155,9 @@
                 </div>
             </div>
         </article>
-        {% endif %}
         <article class="wf-card wf-panel wf-chart-supply">
             <h3>Huella de suministro [m&sup3;]</h3>
-            {% if suministro_disponible %}<div class="wf-chart-box"><canvas id="chartSuministro"></canvas></div>{% elif consumos_energeticos %}<p class="wf-note">No hay resultados calculables para los consumos registrados.</p>{% else %}<p class="wf-note">Sin consumos energéticos registrados en este período.</p>{% endif %}
-            {% if faltantes_suministro %}
-            <p class="wf-note">Faltan resultados de suministro. {% if suministro_disponible %}La estimación mostrada es parcial.{% endif %}</p>
-            <ul class="wf-note">{% for registro in faltantes_suministro %}<li>{{ registro.fecha }} · {{ registro.fuente }} · {{ registro.categoria }} (registro {{ registro.id }}): {{ registro.motivo }}</li>{% endfor %}</ul>
-            {% endif %}
+            <div class="wf-chart-box"><canvas id="chartSuministro"></canvas></div>
         </article>
     </section>
 
@@ -190,7 +169,7 @@
             </div>
             <div class="wf-legend wf-coverage-copy">
                 <div><span class="wf-dot wf-dot-blue"></span><strong>{{ periodos_con_datos }}</strong> meses con datos<br><span class="wf-note">Contiene captacion, retorno o suministro</span></div>
-                <div><span class="wf-dot wf-dot-teal"></span><strong>{{ periodos_inventario_completo }}</strong> meses con captacion y retorno<br><span class="wf-note">Balance válido y destino del retorno documentado</span></div>
+                <div><span class="wf-dot wf-dot-teal"></span><strong>{{ periodos_inventario_completo }}</strong> meses con captacion y retorno<br><span class="wf-note">Contiene captacion y retorno al mismo sistema</span></div>
             </div>
             <i class="fa-regular fa-calendar-days wf-watermark-icon"></i>
         </article>
@@ -198,10 +177,10 @@
         <article class="wf-card wf-panel wf-history">
             <div class="wf-history-icon"><i class="fa-solid fa-clock-rotate-left"></i></div>
             <div class="wf-history-copy">
-                <h3>Registros de agua</h3>
-                <p class="wf-note">Consulta los balances mensuales y anuales y descarga los resultados del período seleccionado.</p>
+                <h3>Acceso historico</h3>
+                <p class="wf-note">El historico de agua sigue disponible como submodulo secundario para evaluacion de calidad de efluentes y trazabilidad historica.</p>
             </div>
-            <a class="wf-button" href="{{ url_for('agua_resultados', periodo=periodo or '') }}">Ver registros <i class="fa-solid fa-arrow-right"></i></a>
+            <a class="wf-button" href="{{ url_for('agua_registro') }}">Ir al historico <i class="fa-solid fa-arrow-right"></i></a>
         </article>
     </section>
 </div>
@@ -250,7 +229,7 @@ makeChart('chartTendencia', {
         labels: trendLabels.map(formatMonth),
         datasets: [
             {label: 'Captacion', data: trendLabels.map(k => tendencia[k].captacion || 0), borderColor:'#2487F3', backgroundColor:'#2487F3', tension:0.35, pointRadius:4},
-            {label: 'Huella azul directa', data: trendLabels.map(k => tendencia[k].consumo), borderColor:'#17C7C0', backgroundColor:'#17C7C0', tension:0.35, pointRadius:4},
+            {label: 'Huella azul directa', data: trendLabels.map(k => (tendencia[k].captacion || 0) - (tendencia[k].retorno || 0)), borderColor:'#17C7C0', backgroundColor:'#17C7C0', tension:0.35, pointRadius:4},
             {label: 'Retorno mismo sistema', data: trendLabels.map(k => tendencia[k].retorno || 0), borderColor:'#22C55E', backgroundColor:'#22C55E', tension:0.35, pointRadius:4}
         ]
     },

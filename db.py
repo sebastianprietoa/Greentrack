@@ -9,4 +9,4 @@ def get_db():
         raise ValueError("Error CRITICO: No se encontro la variable DATABASE_URL en el entorno.")
     if db_url.startswith("postgres://"):
         db_url = db_url.replace("postgres://", "postgresql://", 1)
-    return psycopg2.connect(db_url, sslmode=os.getenv("PGSSLMODE", "require"))
+    return psycopg2.connect(db_url, sslmode="require")

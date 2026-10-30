@@ -40,6 +40,3 @@ temp/
 
 # Brand/source assets
 assets/
-!assets/
-assets/*
-!assets/sinader_codigos_group21.xlsx

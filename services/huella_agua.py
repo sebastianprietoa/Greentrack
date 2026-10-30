@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date, datetime
-import calendar
 from decimal import Decimal, InvalidOperation
 from typing import Any, Iterable, Optional
 
@@ -28,8 +27,8 @@ def _to_decimal(value: Any, field_name: str) -> Decimal:
 
 
 def _ensure_non_negative(value: Decimal, field_name: str) -> Decimal:
-    if not value.is_finite() or value < 0:
-        raise HuellaAguaError(f"{field_name} debe ser finito y no negativo.")
+    if value < 0:
+        raise HuellaAguaError(f"{field_name} no puede ser negativo.")
     return value
 
 
@@ -131,7 +130,7 @@ def calcular_intensidad_hidrica_total(huella_total_m3: Any, medida_productiva: A
         medida = Decimal(str(medida_productiva))
     except (InvalidOperation, ValueError, TypeError):
         return None
-    if not medida.is_finite() or medida <= 0:
+    if medida <= 0:
         return None
     return huella_total / medida
 
@@ -162,10 +161,6 @@ def validar_factor_escasez(factor: dict[str, Any] | FactorEscasez) -> FactorEsca
 
     if factor_value <= 0:
         raise HuellaAguaError("El factor de escasez debe ser mayor que cero.")
-    inicio = _normalizar_fecha_periodo(data.get('periodo_inicio'))
-    fin = _normalizar_fecha_periodo(data.get('periodo_fin'))
-    if inicio is None or fin is None or inicio > fin:
-        raise HuellaAguaError('La vigencia del factor no es válida.')
     if not metodo or not version_metodo or not fuente:
         raise HuellaAguaError("El factor de escasez debe incluir metodologia, version y fuente.")
 
@@ -197,9 +192,6 @@ def buscar_factor_escasez_mas_especifico(
     pais = (sede.get("pais") or "Chile").strip()
     comuna = (sede.get("comuna") or "").strip()
     periodo_normalizado = _normalizar_fecha_periodo(periodo)
-    fin_mes = periodo_normalizado
-    if periodo_normalizado and len(str(periodo)) == 7:
-        fin_mes = periodo_normalizado.replace(day=calendar.monthrange(periodo_normalizado.year,periodo_normalizado.month)[1])
 
     for factor in factores:
         parsed = validar_factor_escasez(factor)
@@ -209,7 +201,7 @@ def buscar_factor_escasez_mas_especifico(
         periodo_fin = _normalizar_fecha_periodo(parsed.periodo_fin)
         if periodo_normalizado and periodo_inicio and periodo_normalizado < periodo_inicio:
             continue
-        if fin_mes and periodo_fin and fin_mes > periodo_fin:
+        if periodo_normalizado and periodo_fin and periodo_normalizado > periodo_fin:
             continue
         codigo = parsed.codigo_geografico.strip()
         if parsed.nivel_geografico == "cuenca" and codigo and codigo == codigo_cuenca:
@@ -223,8 +215,7 @@ def buscar_factor_escasez_mas_especifico(
     if not candidatos:
         return None
     candidatos.sort(key=lambda f: prioridad.get(f.nivel_geografico, 99))
-    mejores = [f for f in candidatos if prioridad.get(f.nivel_geografico,99) == prioridad.get(candidatos[0].nivel_geografico,99)]
-    return mejores[0] if len(mejores) == 1 else None
+    return candidatos[0]
 
 
 def seleccionar_factor_para_sede(
@@ -306,8 +297,6 @@ def consolidar_resultado_sede(
     retorno = calcular_retornos_totales(flujos_lista)
     retorno_mismo = calcular_retornos_mismo_sistema(flujos_lista)
     reuso = calcular_reuso_interno(flujos_lista)
-    if retorno > captacion:
-        raise HuellaAguaError('Los retornos totales no pueden superar la captación del mismo mes y sede.')
     consumo = calcular_consumo_operativo_estimado(captacion, retorno_mismo, reuso)
     factor = seleccionar_factor_para_sede(factores, sede, periodo)
     huella = calcular_huella_escasez(consumo, factor) if factor else None
@@ -342,64 +331,6 @@ def consolidar_resultado_sede(
     }
 
 
-def consolidar_grupo_seguro(flujos, sede, factores, periodo, medida=None):
-    """Mantiene inventario visible y distingue un balance inválido de un cero."""
-    base = {'captacion_m3':None,'retorno_m3':None,'retorno_mismo_sistema_m3':None,'reuso_m3':None}
-    try:
-        base.update(captacion_m3=calcular_captacion_total(flujos),retorno_m3=calcular_retornos_totales(flujos),
-                    retorno_mismo_sistema_m3=calcular_retornos_mismo_sistema(flujos),reuso_m3=calcular_reuso_interno(flujos))
-        resultado = consolidar_resultado_sede(flujos,sede,factores,periodo,medida)
-    except HuellaAguaError as exc:
-        return {**base,'consumo_operativo_m3':None,'huella_escasez_m3eq':None,'factor_escasez_aplicado':None,
-                'id_factor_escasez':None,'factor':None,'intensidad_hidrica':None,'intensidad_escasez':None,
-                'nivel_calculo':'Balance inválido','error_balance':str(exc),'medicion_completa':False}
-    completo = any(f.get('tipo_flujo')=='captacion' for f in flujos) and any(f.get('tipo_flujo')=='retorno' for f in flujos)
-    completo = completo and all(f.get('retorna_mismo_sistema_hidrico') in (True,False)
-                               for f in flujos if f.get('tipo_flujo')=='retorno')
-    resultado.update(error_balance=None,medicion_completa=completo)
-    if not completo:
-        resultado.update(consumo_operativo_m3=None,huella_escasez_m3eq=None,
-                         intensidad_hidrica=None,intensidad_escasez=None,nivel_calculo='Datos insuficientes')
-    return resultado
-
-
-def resultados_por_periodo(flujos,sedes,factores,medidas=None,vista='mensual'):
-    """Calcula por sede/mes; el anual suma resultados ya caracterizados."""
-    sedes_map = {s['id']:s for s in sedes}
-    grupos = {}
-    for flujo in flujos:
-        grupos.setdefault((flujo.get('sede_id'),str(flujo['periodo'])[:7]),[]).append(flujo)
-    mensuales = []
-    for (sede_id,mes),grupo in sorted(grupos.items(),key=lambda item:(str(item[0][0]),item[0][1])):
-        sede = sedes_map.get(sede_id,{'id':sede_id,'nombre_sede':'Empresa' if sede_id is None else f'Sede {sede_id}'})
-        # Una medida anual no se presenta como denominador mensual.
-        medida = None if isinstance(medidas,dict) else medidas
-        resultado = consolidar_grupo_seguro(grupo,sede,factores,mes,medida)
-        mensuales.append(dict(resultado,sede_id=sede_id,nombre_sede=sede.get('nombre_sede'),periodo=mes))
-    if vista != 'anual':
-        return mensuales
-    anuales = {}
-    for row in mensuales:
-        anuales.setdefault((row['sede_id'],row['periodo'][:4]),[]).append(row)
-    resultados = []
-    campos = ['captacion_m3','retorno_m3','retorno_mismo_sistema_m3','reuso_m3','consumo_operativo_m3','huella_escasez_m3eq']
-    for (sede_id,anio),rows in anuales.items():
-        resultado = {campo:sum(r[campo] for r in rows) if all(r[campo] is not None for r in rows) else None for campo in campos}
-        ids = {r['id_factor_escasez'] for r in rows}
-        factor = rows[0]['factor'] if len(ids)==1 and None not in ids else None
-        errores = [r['error_balance'] for r in rows if r.get('error_balance')]
-        completo = all(r['medicion_completa'] for r in rows)
-        medida = medidas.get(int(anio)) if isinstance(medidas,dict) else medidas
-        resultado.update(sede_id=sede_id,nombre_sede=rows[0]['nombre_sede'],periodo=anio,factor=factor,
-            factor_escasez_aplicado=factor.factor_m3eq_m3 if factor else None,id_factor_escasez=factor.id if factor else None,
-            medicion_completa=completo,error_balance='; '.join(errores) or None,
-            nivel_calculo='Balance inválido' if errores else 'Datos insuficientes' if not completo else 'Huella de escasez calculada' if resultado['huella_escasez_m3eq'] is not None else 'Solo inventario físico disponible',
-            intensidad_hidrica=calcular_intensidad_hidrica_total(resultado['consumo_operativo_m3'],medida) if resultado['consumo_operativo_m3'] is not None else None,
-            intensidad_escasez=calcular_intensidad_hidrica_total(resultado['huella_escasez_m3eq'],medida) if resultado['huella_escasez_m3eq'] is not None else None)
-        resultados.append(resultado)
-    return resultados
-
-
 def construir_reporte_huella(
     empresa: str,
     periodo: Any,
@@ -408,47 +339,45 @@ def construir_reporte_huella(
     factores: list[dict[str, Any] | FactorEscasez],
     medida_productiva: Any = None,
     vista: str = "mensual",
-    diagnostico=None,
-    suministro_m3=None,
-    suministro_completo=True,
-    suministro_disponible=False,
 ) -> dict[str, Any]:
+    sedes_map = {s["id"]: s for s in sedes}
+    grupos: dict[tuple[Any, Any], list[dict[str, Any]]] = {}
+    for flujo in flujos:
+        periodo_flujo = str(flujo.get("periodo"))[:7] if vista == "mensual" else str(flujo.get("periodo"))[:4]
+        grupos.setdefault((flujo.get("sede_id"), periodo_flujo), []).append(flujo)
+
     resultados = []
-    mensuales = resultados_por_periodo(flujos,sedes,factores,medida_productiva,'mensual')
-    for consolidado in resultados_por_periodo(flujos,sedes,factores,medida_productiva,vista):
-        if diagnostico is not None and diagnostico != 'ambos':
-            consolidado.update(consumo_operativo_m3=None,huella_escasez_m3eq=None,
-                intensidad_hidrica=None,intensidad_escasez=None,nivel_calculo='Datos insuficientes')
-        resultados.append({
-            "Empresa":empresa,"Sede":consolidado['nombre_sede'],"Período":consolidado['periodo'],
-            "Captación [m³]":consolidado['captacion_m3'],"Retorno [m³]":consolidado['retorno_m3'],
-            "Retorno mismo sistema [m³]":consolidado['retorno_mismo_sistema_m3'],"Reúso [m³]":consolidado['reuso_m3'],
-            "Consumo operativo [m³]":consolidado['consumo_operativo_m3'],
-            "Factor [m³-eq/m³]":consolidado['factor_escasez_aplicado'],"Huella [m³-eq]":consolidado['huella_escasez_m3eq'],
-            "Nivel":consolidado['nivel_calculo'],
-            "Intensidad hídrica [m³/unidad]":consolidado['intensidad_hidrica'] if consolidado['intensidad_hidrica'] is not None else "No disponible",
-            "Intensidad de escasez [m³-eq/unidad]":consolidado['intensidad_escasez'] if consolidado['intensidad_escasez'] is not None else "No disponible",
-        })
+    for (sede_id, periodo_sel), grupo in grupos.items():
+        sede = sedes_map.get(sede_id, {"id": sede_id, "nombre_sede": f"Sede {sede_id}"})
+        consolidado = consolidar_resultado_sede(grupo, sede, factores, periodo_sel, medida_productiva)
+        resultados.append(
+            {
+                "Empresa": empresa,
+                "Sede": sede.get("nombre_sede"),
+                "Período": periodo_sel,
+                "Captación [m³]": consolidado["captacion_m3"],
+                "Retorno [m³]": consolidado["retorno_m3"],
+                "Retorno mismo sistema [m³]": consolidado["retorno_mismo_sistema_m3"],
+                "Reúso [m³]": consolidado["reuso_m3"],
+                "Consumo operativo [m³]": consolidado["consumo_operativo_m3"],
+                "Factor [m³-eq/m³]": consolidado["factor_escasez_aplicado"],
+                "Huella [m³-eq]": consolidado["huella_escasez_m3eq"],
+                "Nivel": consolidado["nivel_calculo"],
+                "Intensidad hídrica [m³/unidad]": consolidado["intensidad_hidrica"] if consolidado["intensidad_hidrica"] is not None else "No disponible",
+                "Intensidad de escasez [m³-eq/unidad]": consolidado["intensidad_escasez"] if consolidado["intensidad_escasez"] is not None else "No disponible",
+            }
+        )
 
     resumen = [
         {"Indicador": "Captación [m³]", "Unidad": "m³", "Valor": sum(float(r["Captación [m³]"] or 0) for r in resultados)},
         {"Indicador": "Retorno [m³]", "Unidad": "m³", "Valor": sum(float(r["Retorno [m³]"] or 0) for r in resultados)},
         {"Indicador": "Reúso [m³]", "Unidad": "m³", "Valor": sum(float(r["Reúso [m³]"] or 0) for r in resultados)},
-        {"Indicador": "Consumo operativo estimado [m³]", "Unidad": "m³", "Valor": sum(float(r["Consumo operativo [m³]"]) for r in resultados) if resultados and all(r['Consumo operativo [m³]'] is not None for r in resultados) else 'No disponible'},
+        {"Indicador": "Consumo operativo estimado [m³]", "Unidad": "m³", "Valor": sum(float(r["Consumo operativo [m³]"] or 0) for r in resultados)},
     ]
-    resultados_con_consumo = resultados
+    resultados_con_consumo = [r for r in resultados if float(r["Consumo operativo [m³]"] or 0) > 0]
     huella_completa = bool(resultados_con_consumo) and all(
         r["Huella [m³-eq]"] not in (None, "No disponible") for r in resultados_con_consumo
     )
-    if suministro_m3 is not None:
-        consumo_total = resumen[-1]['Valor']
-        resumen.extend([
-            {'Indicador':'Huella de suministro [m³]','Unidad':'m³','Valor':suministro_m3 if suministro_completo or suministro_disponible else 'No disponible'},
-            {'Indicador':'Huella hídrica total [m³]','Unidad':'m³','Valor':consumo_total+float(suministro_m3) if isinstance(consumo_total,(float,int)) and suministro_completo else 'No disponible'},
-        ])
-        if not suministro_completo:
-            resumen.append({'Indicador':'Estado de la huella de suministro','Unidad':'',
-                'Valor':'Estimación parcial: faltan consumos por calcular' if suministro_disponible else 'No disponible: faltan factores o resultados'})
     resumen.append(
         {
             "Indicador": "Huella de escasez [m³-eq]",
@@ -458,11 +387,7 @@ def construir_reporte_huella(
     )
 
     factores_aplicados = []
-    ids_aplicados = {r['id_factor_escasez'] for r in mensuales if r.get('huella_escasez_m3eq') is not None} if diagnostico in (None,'ambos') else set()
     for f in factores:
-        factor_id = f.id if isinstance(f,FactorEscasez) else f.get('id')
-        if factor_id not in ids_aplicados:
-            continue
         parsed = validar_factor_escasez(f)
         factores_aplicados.append(
             {
@@ -483,9 +408,7 @@ def construir_reporte_huella(
     cobertura = []
     for sede in sedes:
         has_data = any(f.get("sede_id") == sede.get("id") for f in flujos)
-        grupos_sede = [r for r in mensuales if r['sede_id']==sede['id']]
-        factor = bool(grupos_sede) and all(r['factor'] is not None for r in grupos_sede)
-        caracterizada = factor and all(r['huella_escasez_m3eq'] is not None for r in grupos_sede) and diagnostico in (None,'ambos')
+        factor = seleccionar_factor_para_sede(factores, sede, periodo)
         cobertura.append(
             {
                 "Empresa": empresa,
@@ -497,7 +420,7 @@ def construir_reporte_huella(
                 else "Pendiente",
                 "Factor disponible": "Sí" if factor else "No",
                 "Resultado": "Huella de escasez calculada"
-                if caracterizada
+                if factor and has_data
                 else ("Solo inventario físico disponible" if has_data else "Datos insuficientes"),
                 "Calidad": generar_indicador_calidad_datos([f for f in flujos if f.get("sede_id") == sede.get("id")]) if has_data else "baja",
             }
@@ -513,7 +436,7 @@ def construir_reporte_huella(
             or "Sin fuentes",
         },
         {"Sección": "Supuestos", "Contenido": "La huella de escasez solo se calcula cuando existe un factor válido configurado."},
-        {"Sección": "Exclusiones", "Contenido": "Cadena de valor distinta del suministro energético informado y evaluación de calidad de agua." if suministro_m3 is not None else "Cadena de valor, agua indirecta y evaluación de calidad de agua."},
+        {"Sección": "Exclusiones", "Contenido": "Cadena de valor, agua indirecta y evaluación de calidad de agua."},
         {"Sección": "Calidad de datos", "Contenido": generar_indicador_calidad_datos(flujos) if flujos else "baja"},
         {"Sección": "Fecha de cálculo", "Contenido": "generada por el sistema"},
         {"Sección": "Versión del cálculo", "Contenido": SERVICE_VERSION},

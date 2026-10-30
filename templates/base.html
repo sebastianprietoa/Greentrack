@@ -420,18 +420,13 @@
                     <a href="{{ url_for('admin_huella_hidrica') }}" class="menu-link"><i class="fas fa-water" style="color: #4AA0E6;"></i> Huella Hidrica</a>
                     <a href="{{ url_for('admin_exportar_todo') }}" class="menu-link"><i class="fas fa-file-export" style="color: #2C90A2;"></i> Exportar Data</a>
                 {% else %}
-                    {% if session.get('rol') == 'gestor_empresa' %}
-                        <div class="menu-category">Gestión</div>
-                        <a href="{{ url_for('admin_empresas') }}" class="menu-link"><i class="fas fa-building" style="color: #4AA383;"></i> Panel de Empresas</a>
-                    {% endif %}
                     <div class="menu-category">Visualización</div>
-                    {% set anio_nav = anio_seleccionado if anio_seleccionado is defined else ((periodo[:4] if periodo else 'Todos') if periodo is defined else (filtro_anio or 'Todos') if filtro_anio is defined else request.args.get('anio')) %}
-                    <a href="{{ url_for('dashboard', anio=anio_nav) }}" class="menu-link"><i class="fas fa-chart-pie" style="color: #6E84C8;"></i> Resumen General</a>
-                    <a href="{{ url_for('combustion_dashboard', anio=anio_nav) }}" class="menu-link"><i class="fas fa-fire" style="color: #D96A63;"></i> Combustión</a>
-                    <a href="{{ url_for('electricidad_dashboard', anio=anio_nav) }}" class="menu-link"><i class="fas fa-bolt" style="color: #D9AA2D;"></i> Electricidad</a>
-                    <a href="{{ url_for('refrigerantes_dashboard', anio=anio_nav) }}" class="menu-link"><i class="fas fa-snowflake" style="color: #5FBCD3;"></i> Refrigerantes</a>
-                    <a href="{{ url_for('agua_dashboard', periodo=anio_nav if anio_nav and anio_nav != 'Todos' else '') }}" class="menu-link"><i class="fas fa-tint" style="color: #4AA0E6;"></i> Huella Hidrica</a>
-                    <a href="{{ url_for('residuos_dashboard', anio=anio_nav) }}" class="menu-link"><i class="fas fa-recycle" style="color: #4AA383;"></i> Residuos</a>
+                    <a href="{{ url_for('dashboard') }}" class="menu-link"><i class="fas fa-chart-pie" style="color: #6E84C8;"></i> Resumen General</a>
+                    <a href="{{ url_for('combustion_dashboard') }}" class="menu-link"><i class="fas fa-fire" style="color: #D96A63;"></i> Combustión</a>
+                    <a href="{{ url_for('electricidad_dashboard') }}" class="menu-link"><i class="fas fa-bolt" style="color: #D9AA2D;"></i> Electricidad</a>
+                    <a href="{{ url_for('refrigerantes_dashboard') }}" class="menu-link"><i class="fas fa-snowflake" style="color: #5FBCD3;"></i> Refrigerantes</a>
+                    <a href="{{ url_for('agua_dashboard') }}" class="menu-link"><i class="fas fa-tint" style="color: #4AA0E6;"></i> Huella Hidrica</a>
+                    <a href="{{ url_for('residuos_dashboard') }}" class="menu-link"><i class="fas fa-recycle" style="color: #4AA383;"></i> Residuos</a>
 
                     <div class="menu-category">Registro de Datos</div>
                     <a href="{{ url_for('registro') }}" class="menu-link"><i class="fas fa-plus-circle" style="color: #2C90A2;"></i> Nuevo Registro</a>
@@ -442,7 +437,7 @@
                     <div class="menu-category">Herramientas</div>
                     <a href="{{ url_for('mis_datos') }}" class="menu-link"><i class="fas fa-user-circle" style="color: #B9D0D8;"></i> Mis Datos</a>
                     <a href="{{ url_for('configuracion') }}" class="menu-link"><i class="fas fa-cog" style="color: #10B981;"></i> Configuración Empresa</a>
-                    <a href="{{ url_for('exportar', anio=anio_nav) }}" class="menu-link"><i class="fas fa-file-excel" style="color: #4AA383;"></i> Exportar Excel</a>
+                    <a href="{{ url_for('exportar') }}" class="menu-link"><i class="fas fa-file-excel" style="color: #4AA383;"></i> Exportar Excel</a>
                 {% endif %}
             </div>
 

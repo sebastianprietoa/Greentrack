@@ -31,37 +31,111 @@
             </div>
         </div>
 
-        <form method="POST" onsubmit="return validarAntesDeGuardar(event) && sincronizarFrecuenciaAntesDeEnviar();">
+        <form method="POST">
+            <div style="margin-bottom: 2.5rem;">
+                <h2 style="margin-bottom: 1.25rem; color: #374151; padding-bottom: 0.5rem; border-bottom: 2px solid #E5E7EB;">
+                    <i class="fas fa-bolt"></i> Energéticos Consumidos
+                </h2>
+                <p style="color: #6B7280; margin-bottom: 1.25rem;">Seleccione los energéticos que consume su empresa e indique el proveedor:</p>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1rem;">
+                    {% for e in ["GLP","Diésel","Bencina","Parafina","Petróleo Pesado","Carbón","Gas Natural","Otro"] %}
+                    <div style="background: #F9FAFB; padding: 1rem; border-radius: 10px; display: flex; align-items: center; gap: 1rem; border: 1px solid #E5E7EB;">
+                        <input type="checkbox" id="energetico_{{ loop.index }}" name="energeticos[]" value="{{ e }}"
+                               {% if e in energeticos_seleccionados %}checked{% endif %}
+                               style="width: 18px; height: 18px;">
+                        <label for="energetico_{{ loop.index }}" style="flex: 1; font-weight: 600; color: #374151; min-width: 0;">
+                            {{ e }}
+                        </label>
+                        <input type="text" name="proveedor_{{ e }}" placeholder="Proveedor"
+                               value="{{ proveedores_map.get(e, '') }}"
+                               style="flex: 2; padding: 8px 12px; border: 1px solid #D1D5DB; border-radius: 6px; font-size: 0.9rem;"
+                               {% if e not in energeticos_seleccionados %}disabled{% endif %}>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <hr style="border: none; border-top: 1px solid #E5E7EB; margin: 2rem 0;">
+
+            <div style="margin-bottom: 2.5rem;">
+                <label style="display: flex; align-items: center; gap: 1rem; cursor: pointer; padding: 1rem; background: #F0F9FF; border-radius: 10px; border: 1px solid #D6EAF8;">
+                    <input type="checkbox" name="info_unidad"
+                           {% if cfg.info_por_unidad %}checked{% endif %}
+                           style="width: 20px; height: 20px;">
+                    <div>
+                        <div style="font-weight: 600; color: #1E40AF; margin-bottom: 0.25rem;">
+                            ¿La empresa cuenta con información por unidad de consumo?
+                        </div>
+                        <div style="color: #6B7280; font-size: 0.9rem;">
+                            Marque esta opción si su empresa tiene datos desglosados por departamento o unidad de negocio
+                        </div>
+                    </div>
+                </label>
+            </div>
+
+            <hr style="border: none; border-top: 1px solid #E5E7EB; margin: 2rem 0;">
+
+            <div>
+                <h2 style="margin-bottom: 1.25rem; color: #374151;">
+                    <i class="fas fa-question-circle"></i> Preguntas de Configuración
+                </h2>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
+                    <div>
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #374151;">
+                            ¿La empresa cuenta con vehículos corporativos?
+                        </label>
+                        <select name="vehiculos" style="width: 100%; padding: 10px 14px; border: 2px solid #E5E7EB; border-radius: 8px; font-size: 1rem; background: white;">
+                            <option value="si" {% if cfg.vehiculos %}selected{% endif %}>Sí</option>
+                            <option value="no" {% if not cfg.vehiculos %}selected{% endif %}>No</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #374151;">
+                            ¿La empresa paga combustible de colaboradores?
+                        </label>
+                        <select name="colaboradores" style="width: 100%; padding: 10px 14px; border: 2px solid #E5E7EB; border-radius: 8px; font-size: 1rem; background: white;">
+                            <option value="si" {% if cfg.combustible_colaboradores %}selected{% endif %}>Sí</option>
+                            <option value="no" {% if not cfg.combustible_colaboradores %}selected{% endif %}>No</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #374151;">
+                            ¿Cuenta con tarjeta o convenio de carga?
+                        </label>
+                        <select name="tarjeta" style="width: 100%; padding: 10px 14px; border: 2px solid #E5E7EB; border-radius: 8px; font-size: 1rem; background: white;">
+                            <option value="si" {% if cfg.tarjeta_combustible %}selected{% endif %}>Sí</option>
+                            <option value="no" {% if not cfg.tarjeta_combustible %}selected{% endif %}>No</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <hr style="border: none; border-top: 1px solid #E5E7EB; margin: 2rem 0;">
+
             <div style="margin-bottom: 2.5rem;">
                 <h2 style="margin-bottom: 1rem; color: #374151; display: flex; align-items: center; gap: 10px;">
                     <i class="fas fa-chart-line" style="color: #10B981;"></i> Medida productiva e intensidad de emisiones
                 </h2>
                 <p style="color: #6B7280; margin-bottom: 1.25rem;">
-                    Registre una medida productiva mensual o anual. La intensidad se calculará usando las emisiones del mismo período.
+                    Registre la unidad productiva del año para calcular la intensidad de emisiones.
                 </p>
 
-                <div style="display:flex; gap:0.6rem; flex-wrap:wrap; margin-bottom:1.25rem;">
-                    <button type="button" id="vista_anual_btn" onclick="cambiarVistaMedida('anual')" style="padding:10px 16px; border:0; border-radius:8px; font-weight:700; cursor:pointer; background:{{ '#10B981' if (vista_inicial or 'anual') == 'anual' else '#F3F4F6' }}; color:{{ 'white' if (vista_inicial or 'anual') == 'anual' else '#4B5563' }};">Vista anual</button>
-                    <button type="button" id="vista_mensual_btn" onclick="cambiarVistaMedida('mensual')" style="padding:10px 16px; border:0; border-radius:8px; font-weight:700; cursor:pointer; background:{{ '#10B981' if vista_inicial == 'mensual' else '#F3F4F6' }}; color:{{ 'white' if vista_inicial == 'mensual' else '#4B5563' }};">Vista mensual</button>
-                </div>
-
-                <input type="hidden" name="medida_frecuencia" id="medida_frecuencia" value="{{ vista_inicial or 'anual' }}">
-                <input type="hidden" name="mensual_payload" id="mensual_payload" value="">
-                <div id="vista_anual" style="display:{{ 'none' if vista_inicial == 'mensual' else 'block' }};">
-
-                <div style="display: grid; grid-template-columns: 1.2fr 1.4fr 1fr; gap: 1rem; align-items: end;">
+                <div style="display: grid; grid-template-columns: 140px 1.4fr 1fr; gap: 1rem; align-items: end;">
                     <div>
-                        <label id="medida_periodo_label" style="display: block; font-weight: 700; color: #374151; font-size: 0.8rem; margin-bottom: 6px;">Año</label>
-                        <input type="number" name="medida_anio" id="medida_anio" min="1" max="9999" step="1" required
+                        <label style="display: block; font-weight: 700; color: #374151; font-size: 0.8rem; margin-bottom: 6px;">Año</label>
+                        <input type="number" name="medida_anio" id="medida_anio" min="1900" max="2100" step="1" required
                                value="{{ anio_seleccionado }}"
                                placeholder="Ej: 2026"
                                style="width: 100%; padding: 10px 12px; border: 1px solid #D1D5DB; border-radius: 8px; font-size: 0.95rem; background: white; box-sizing: border-box;">
-                        <input type="month" name="medida_periodo" id="medida_periodo" value="{{ periodo_seleccionado }}" style="display:none;width:100%;padding:10px 12px;border:1px solid #D1D5DB;border-radius:8px;font-size:0.95rem;background:white;box-sizing:border-box;">
-                        <p id="medida_estado" aria-live="polite" style="margin: 6px 0 0 0; font-size: 0.78rem; color: #6B7280;">Selecciona el año de la medida. Solo se pide confirmación si modificas un valor guardado.</p>
+                        <p style="margin: 6px 0 0 0; font-size: 0.78rem; color: #6B7280;">Puedes ingresar cualquier aÃ±o. Si ya existe, el sistema te pedirÃ¡ confirmaciÃ³n antes de reemplazarlo.</p>
                     </div>
                     <div>
                         <label style="display: block; font-weight: 700; color: #374151; font-size: 0.8rem; margin-bottom: 6px;">Unidad de medida</label>
-                        <select name="medida_unidad" style="width: 100%; padding: 10px 12px; border: 1px solid #D1D5DB; border-radius: 8px; font-size: 0.95rem; background: white;">
+                        <select name="medida_unidad" required style="width: 100%; padding: 10px 12px; border: 1px solid #D1D5DB; border-radius: 8px; font-size: 0.95rem; background: white;">
                             <option value="">Selecciona una unidad</option>
                             {% for unidad in unidades_productivas %}
                             <option value="{{ unidad }}" {% if medida.unidad == unidad %}selected{% endif %}>{{ unidad }}</option>
@@ -70,21 +144,17 @@
                     </div>
                     <div>
                         <label style="display: block; font-weight: 700; color: #374151; font-size: 0.8rem; margin-bottom: 6px;">Valor de la medida</label>
-                        <input type="number" name="medida_valor" step="0.01" min="0"
+                        <input type="number" name="medida_valor" step="0.01" min="0" required
                                value="{{ medida.valor if medida else '' }}"
                                placeholder="Ej: 125.50"
                                style="width: 100%; padding: 10px 12px; border: 1px solid #D1D5DB; border-radius: 8px; font-size: 0.95rem; box-sizing: border-box;">
                     </div>
                 </div>
 
-                <input type="hidden" name="confirmar_medida" value="">
-                <input type="hidden" name="medida_anterior_unidad" value="">
-                <input type="hidden" name="medida_anterior_valor" value="">
-
                 <div style="margin-top: 1rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 1rem;">
                     <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 1rem;">
-                        <p style="margin: 0 0 0.35rem 0; font-size: 0.72rem; color: #94A3B8; text-transform: uppercase; font-weight: 700;">Emisiones del período</p>
-                        <p id="medida_emisiones" style="margin: 0; font-size: 1.2rem; font-weight: 700; color: #111827;">
+                        <p style="margin: 0 0 0.35rem 0; font-size: 0.72rem; color: #94A3B8; text-transform: uppercase; font-weight: 700;">Emisiones del año</p>
+                        <p style="margin: 0; font-size: 1.2rem; font-weight: 700; color: #111827;">
                             {% if medida and medida.emisiones_anio_tco2e is not none %}
                                 {{ '%.4f'|format(medida.emisiones_anio_tco2e) }} tCO2e
                             {% else %}
@@ -94,7 +164,7 @@
                     </div>
                     <div style="background: #ECFDF5; border: 1px solid #A7F3D0; border-radius: 10px; padding: 1rem;">
                         <p style="margin: 0 0 0.35rem 0; font-size: 0.72rem; color: #059669; text-transform: uppercase; font-weight: 700;">Intensidad resultante (kgCO2e/unidad)</p>
-                        <p id="medida_intensidad" style="margin: 0; font-size: 1.2rem; font-weight: 700; color: #065F46;">
+                        <p style="margin: 0; font-size: 1.2rem; font-weight: 700; color: #065F46;">
                             {% if medida and medida.intensidad_emisiones is not none %}
                                 {{ '%.6f'|format(medida.intensidad_emisiones) }} kgCO2e / unidad
                             {% else %}
@@ -104,7 +174,7 @@
                     </div>
                     <div style="background: #FFF7ED; border: 1px solid #FED7AA; border-radius: 10px; padding: 1rem;">
                         <p style="margin: 0 0 0.35rem 0; font-size: 0.72rem; color: #C2410C; text-transform: uppercase; font-weight: 700;">Última actualización</p>
-                        <p id="medida_actualizacion" style="margin: 0; font-size: 1rem; font-weight: 700; color: #9A3412;">
+                        <p style="margin: 0; font-size: 1rem; font-weight: 700; color: #9A3412;">
                             {% if medida and medida.fecha_actualizacion %}{{ medida.fecha_actualizacion }}{% else %}Sin registro{% endif %}
                         </p>
                     </div>
@@ -114,7 +184,7 @@
                     <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
                         <thead style="background: #F8FAFC;">
                             <tr>
-                                <th style="padding: 10px 12px; text-align: left; color: #475569; font-size: 0.72rem; text-transform: uppercase;">Período</th>
+                                <th style="padding: 10px 12px; text-align: left; color: #475569; font-size: 0.72rem; text-transform: uppercase;">Año</th>
                                 <th style="padding: 10px 12px; text-align: left; color: #475569; font-size: 0.72rem; text-transform: uppercase;">Unidad</th>
                                 <th style="padding: 10px 12px; text-align: right; color: #475569; font-size: 0.72rem; text-transform: uppercase;">Valor</th>
                                 <th style="padding: 10px 12px; text-align: right; color: #475569; font-size: 0.72rem; text-transform: uppercase;">Emisiones (tCO2e)</th>
@@ -122,10 +192,10 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% if medidas_anuales %}
-                                {% for item in medidas_anuales %}
+                            {% if medidas_historial %}
+                                {% for item in medidas_historial %}
                                 <tr style="border-top: 1px solid #E5E7EB;">
-                                    <td style="padding: 10px 12px; color: #111827; font-weight: 600;">{{ item.periodo or item.anio }}</td>
+                                    <td style="padding: 10px 12px; color: #111827; font-weight: 600;">{{ item.anio }}</td>
                                     <td style="padding: 10px 12px; color: #334155;">{{ item.unidad }}</td>
                                     <td style="padding: 10px 12px; text-align: right; color: #334155;">{{ '%.2f'|format(item.valor or 0) }}</td>
                                     <td style="padding: 10px 12px; text-align: right; color: #334155;">{{ '%.4f'|format(item.emisiones_anio_tco2e or 0) }}</td>
@@ -146,73 +216,10 @@
                         </tbody>
                     </table>
                 </div>
-                </div>
-
-                <div id="confirmacion_medida" hidden role="region" aria-label="Confirmar reemplazo de medida productiva" style="margin-top:1rem; padding:1rem; background:#FFF7ED; border:1px solid #FED7AA; border-radius:10px;">
-                    <strong>Confirmar reemplazo de la medida productiva</strong>
-                    <p id="confirmacion_medida_detalle"></p>
-                    <button id="confirmar_reemplazo_medida" type="button" style="padding:8px 14px; background:#10B981; color:white; border:0; border-radius:6px; cursor:pointer;">Confirmar reemplazo</button>
-                    <button id="cancelar_reemplazo_medida" type="button" style="padding:8px 14px; border:1px solid #D1D5DB; border-radius:6px; cursor:pointer;">Cancelar</button>
-                </div>
-
-                <div id="vista_mensual" style="display:{{ 'block' if vista_inicial == 'mensual' else 'none' }};">
-                    <div style="margin-bottom:1.5rem;">
-                        <h3 style="margin:0 0 0.6rem 0; color:#374151;">Resultados mensuales ingresados</h3>
-                        <p style="color:#6B7280; margin:0 0 0.8rem 0;">Esta tabla muestra permanentemente todas las medidas mensuales guardadas y sus resultados calculados.</p>
-                        <div style="overflow-x:auto; border:1px solid #E5E7EB; border-radius:10px;">
-                            <table style="width:100%; min-width:850px; border-collapse:collapse; font-size:0.88rem;">
-                                <thead style="background:#ECFDF5;"><tr>
-                                    <th style="padding:10px 12px; text-align:left; color:#475569;">Mes</th>
-                                    <th style="padding:10px 12px; text-align:left; color:#475569;">Unidad</th>
-                                    <th style="padding:10px 12px; text-align:right; color:#475569;">Valor</th>
-                                    <th style="padding:10px 12px; text-align:right; color:#475569;">Emisiones (tCO2e)</th>
-                                    <th style="padding:10px 12px; text-align:right; color:#475569;">Intensidad (kgCO2e/unidad)</th>
-                                </tr></thead>
-                                <tbody id="mensual_resultados_body"><tr><td colspan="5" style="padding:1rem; color:#94A3B8; text-align:center;">No hay medidas mensuales guardadas.</td></tr></tbody>
-                            </table>
-                        </div>
-                    </div>
-                    <div style="display:flex; gap:0.6rem; flex-wrap:wrap; margin-bottom:1rem;">
-                        <button type="button" id="modo_mensual_individual" onclick="cambiarModoMensual('individual')" style="padding:9px 14px; border:0; border-radius:8px; font-weight:700; cursor:pointer;">Ingreso individual</button>
-                        <button type="button" id="modo_mensual_multiple" onclick="cambiarModoMensual('multiple')" style="padding:9px 14px; border:0; border-radius:8px; font-weight:700; cursor:pointer;">Ingreso múltiple</button>
-                    </div>
-                    <div id="mensual_individual_controles" style="display:grid; grid-template-columns:1fr auto; gap:1rem; align-items:end; margin-bottom:1rem;">
-                        <div>
-                            <label style="display:block; font-weight:700; color:#374151; font-size:0.8rem; margin-bottom:6px;">Mes</label>
-                            <input type="month" id="mensual_periodo_individual" value="{{ periodo_seleccionado if (periodo_seleccionado or '')|length == 7 else '' }}" style="width:100%; padding:10px 12px; border:1px solid #D1D5DB; border-radius:8px; box-sizing:border-box;">
-                        </div>
-                        <button type="button" onclick="generarTablaMensualIndividual()" style="padding:10px 16px; background:#10B981; color:white; border:0; border-radius:8px; font-weight:700; cursor:pointer;">Generar fila</button>
-                    </div>
-                    <div id="mensual_multiple_controles" style="display:none; grid-template-columns:1fr 1fr auto; gap:1rem; align-items:end; margin-bottom:1rem;">
-                        <div>
-                            <label style="display:block; font-weight:700; color:#374151; font-size:0.8rem; margin-bottom:6px;">Mes de inicio</label>
-                            <input type="month" id="mensual_inicio" style="width:100%; padding:10px 12px; border:1px solid #D1D5DB; border-radius:8px; box-sizing:border-box;">
-                        </div>
-                        <div>
-                            <label style="display:block; font-weight:700; color:#374151; font-size:0.8rem; margin-bottom:6px;">Mes de final</label>
-                            <input type="month" id="mensual_fin" style="width:100%; padding:10px 12px; border:1px solid #D1D5DB; border-radius:8px; box-sizing:border-box;">
-                        </div>
-                        <button type="button" onclick="generarTablaMensualMultiple()" style="padding:10px 16px; background:#10B981; color:white; border:0; border-radius:8px; font-weight:700; cursor:pointer;">Generar tabla</button>
-                    </div>
-                    <h3 style="margin:1.5rem 0 0.6rem 0; color:#374151;">Tabla de ingreso</h3>
-                    <p id="mensual_resumen" style="color:#6B7280; margin:0 0 1rem 0;">Selecciona un mes o un rango para generar la tabla de ingreso.</p>
-                    <div style="overflow-x:auto; border:1px solid #E5E7EB; border-radius:10px;">
-                        <table style="width:100%; min-width:850px; border-collapse:collapse; font-size:0.88rem;">
-                            <thead style="background:#F8FAFC;"><tr>
-                                <th style="padding:10px 12px; text-align:left; color:#475569;">Mes</th>
-                                <th style="padding:10px 12px; text-align:left; color:#475569;">Unidad</th>
-                                <th style="padding:10px 12px; text-align:right; color:#475569;">Valor</th>
-                                <th style="padding:10px 12px; text-align:right; color:#475569;">Emisiones (tCO2e)</th>
-                                <th style="padding:10px 12px; text-align:right; color:#475569;">Intensidad (kgCO2e/unidad)</th>
-                            </tr></thead>
-                            <tbody id="mensual_tabla_body"><tr><td colspan="5" style="padding:1rem; color:#94A3B8; text-align:center;">Aún no se ha generado una tabla mensual.</td></tr></tbody>
-                        </table>
-                    </div>
-                </div>
             </div>
 
             <div style="margin-top: 3rem; text-align: center;">
-                <button id="guardar_configuracion" type="submit" style="background: #10B981; color: white; border: none; padding: 14px 40px; border-radius: 8px; font-size: 1.1rem; font-weight: 600; cursor: pointer; transition: all 0.3s; display: inline-flex; align-items: center; gap: 10px;">
+                <button type="submit" style="background: #10B981; color: white; border: none; padding: 14px 40px; border-radius: 8px; font-size: 1.1rem; font-weight: 600; cursor: pointer; transition: all 0.3s; display: inline-flex; align-items: center; gap: 10px;">
                     <i class="fas fa-save"></i> Guardar Configuración
                 </button>
                 <p style="color: #6B7280; margin-top: 1rem; font-size: 0.9rem;">
@@ -244,47 +251,19 @@
 </div>
 
 <script>
-    function sincronizarFrecuenciaAntesDeEnviar() {
-        const vistaMensualVisible = document.getElementById('vista_mensual')?.style.display !== 'none';
-        const frecuencia = document.getElementById('medida_frecuencia');
-        if (frecuencia) frecuencia.value = vistaMensualVisible ? 'mensual' : 'anual';
-        if (vistaMensualVisible) {
-            const filas = Array.from(document.querySelectorAll('#mensual_tabla_body .mensual-fila-ingreso')).map(fila => ({
-                periodo: fila.dataset.periodo,
-                unidad: fila.querySelector('select')?.value || '',
-                valor: fila.querySelector('input[type="number"]')?.value || ''
-            }));
-            const payload = document.getElementById('mensual_payload');
-            if (payload) payload.value = JSON.stringify(filas);
-        }
-        return true;
-    }
+    document.querySelectorAll('input[type="checkbox"][name^="energeticos"]').forEach(checkbox => {
+        const energetico = checkbox.value;
+        const proveedorInput = document.querySelector(`input[name="proveedor_${energetico}"]`);
 
-    function validarAntesDeGuardar(event) {
-        const vistaMensualVisible = document.getElementById('vista_mensual')?.style.display !== 'none';
-        if (!vistaMensualVisible) return true;
-        const confirmado = document.querySelector('input[name="confirmar_medida"]');
-        const panel = document.getElementById('confirmacion_medida');
-        const detalle = document.getElementById('confirmacion_medida_detalle');
-        const cambios = Array.from(document.querySelectorAll('#mensual_tabla_body .mensual-fila-ingreso'))
-            .map(fila => {
-                const periodo = fila.dataset.periodo;
-                const guardado = typeof medidasMensuales !== 'undefined' ? medidasMensuales.get(periodo) : null;
-                const unidad = fila.querySelector('select')?.value || '';
-                const valor = Number(fila.querySelector('input[type="number"]')?.value || 0);
-                return guardado && (unidad !== guardado.unidad || valor !== Number(guardado.valor))
-                    ? `Período ${periodo}. Valor guardado: ${guardado.valor} ${guardado.unidad}. Nuevo valor: ${valor} ${unidad}.` : null;
-            })
-            .filter(Boolean);
-        if (cambios.length && confirmado?.value !== '1') {
-            event.preventDefault();
-            detalle.textContent = cambios.join(' ');
-            panel.hidden = false;
-            document.getElementById('confirmar_reemplazo_medida').focus();
-            return false;
-        }
-        return true;
-    }
+        checkbox.addEventListener('change', function() {
+            proveedorInput.disabled = !this.checked;
+            if (!this.checked) {
+                proveedorInput.value = '';
+            }
+        });
+
+        proveedorInput.disabled = !checkbox.checked;
+    });
 
     document.querySelectorAll('select').forEach(select => {
         select.addEventListener('focus', function() {
@@ -312,250 +291,23 @@
         });
     });
 
-    const medidasPorPeriodo = new Map({{ medidas_historial | tojson }}.map(medida => [String(medida.periodo || medida.anio), medida]));
+    const medidasHistorialAnios = new Set(({{ medidas_historial | map(attribute='anio') | list | tojson }}) .map(String));
     const formConfiguracion = document.querySelector('form');
     const inputMedidaAnio = document.getElementById('medida_anio');
-    const inputMedidaPeriodo = document.getElementById('medida_periodo');
-    const frecuenciaMedida = document.getElementById('medida_frecuencia');
-    const periodoLabel = document.getElementById('medida_periodo_label');
 
-    if (formConfiguracion && inputMedidaAnio && frecuenciaMedida) {
-        const unidad = formConfiguracion.elements.medida_unidad;
-        const valor = formConfiguracion.elements.medida_valor;
-        const confirmado = formConfiguracion.elements.confirmar_medida;
-        const panel = document.getElementById('confirmacion_medida');
-        const detalle = document.getElementById('confirmacion_medida_detalle');
-        function cancelarConfirmacion() {
-            confirmado.value = '';
-            panel.hidden = true;
-            const tieneMedida = unidad.value !== '' || valor.value !== '';
-            unidad.required = tieneMedida;
-            valor.required = tieneMedida;
-        }
-        function periodoSeleccionado() {
-            return frecuenciaMedida.value === 'mensual'
-                ? String(inputMedidaPeriodo.value || '').trim()
-                : String(inputMedidaAnio.value || '').trim();
-        }
-        function actualizarFrecuencia() {
-            const mensual = frecuenciaMedida.value === 'mensual';
-            inputMedidaAnio.style.display = mensual ? 'none' : 'block';
-            inputMedidaAnio.required = !mensual;
-            inputMedidaPeriodo.style.display = mensual ? 'block' : 'none';
-            inputMedidaPeriodo.required = mensual;
-            periodoLabel.textContent = mensual ? 'Mes' : 'Año';
-            document.getElementById('medida_estado').textContent = mensual
-                ? 'Selecciona el mes de la medida. La intensidad usará las emisiones de ese mes.'
-                : 'Selecciona el año de la medida. La intensidad usará las emisiones de ese año.';
-            cargarMedida();
-        }
-        function cargarMedida() {
-            const periodo = periodoSeleccionado();
-            const medida = medidasPorPeriodo.get(periodo);
-            unidad.value = medida ? medida.unidad : '';
-            valor.value = medida ? medida.valor : '';
-            cancelarConfirmacion();
-            formConfiguracion.elements.medida_anterior_unidad.value = medida ? medida.unidad : '';
-            formConfiguracion.elements.medida_anterior_valor.value = medida ? medida.valor : '';
-            document.getElementById('medida_estado').textContent = medida
-                ? `Medida guardada para ${periodo}. Modificarla requiere confirmar el reemplazo.`
-                : `Sin medida guardada para ${periodo}. Puedes registrar una nueva o guardar solo la configuración.`;
-            document.getElementById('medida_emisiones').textContent = medida && medida.emisiones_anio_tco2e != null
-                ? `${Number(medida.emisiones_anio_tco2e).toFixed(4)} tCO2e` : '—';
-            document.getElementById('medida_intensidad').textContent = medida && medida.intensidad_emisiones != null
-                ? `${Number(medida.intensidad_emisiones).toFixed(6)} kgCO2e / unidad` : '—';
-            document.getElementById('medida_actualizacion').textContent = medida ? medida.fecha_actualizacion : 'Sin registro';
-        }
-        frecuenciaMedida.addEventListener('change', actualizarFrecuencia);
-        inputMedidaAnio.addEventListener('change', cargarMedida);
-        inputMedidaAnio.addEventListener('input', cargarMedida);
-        inputMedidaPeriodo.addEventListener('change', cargarMedida);
-        [unidad, valor].forEach(input => input.addEventListener('input', cancelarConfirmacion));
-        actualizarFrecuencia();
-        cargarMedida();
+    if (formConfiguracion && inputMedidaAnio) {
         formConfiguracion.addEventListener('submit', function(event) {
-            // La vista visible es la fuente de verdad para evitar guardar la tabla mensual como anual.
-            if (vistaMensual && vistaMensual.style.display !== 'none') {
-                frecuenciaMedida.value = 'mensual';
-            }
-            if (frecuenciaMedida.value === 'mensual') {
-                const cambiosMensuales = Array.from(document.querySelectorAll('#mensual_tabla_body .mensual-fila-ingreso'))
-                    .map(fila => {
-                        const periodo = fila.dataset.periodo;
-                        const guardadoValor = fila.dataset.guardadoValor;
-                        const guardadoUnidad = fila.dataset.guardadoUnidad || '';
-                        const nuevaUnidad = fila.querySelector('select')?.value || '';
-                        const nuevoValor = Number(fila.querySelector('input[type="number"]')?.value || 0);
-                        return guardadoValor !== '' && (nuevaUnidad !== guardadoUnidad || nuevoValor !== Number(guardadoValor))
-                            ? { periodo, guardadoValor, guardadoUnidad, nuevaUnidad, nuevoValor } : null;
-                    })
-                    .filter(Boolean);
-                if (cambiosMensuales.length && confirmado.value !== '1') {
-                    event.preventDefault();
-                    detalle.textContent = cambiosMensuales.map(cambio =>
-                        `Período ${cambio.periodo}. Valor guardado: ${cambio.guardadoValor} ${cambio.guardadoUnidad}. Nuevo valor: ${cambio.nuevoValor} ${cambio.nuevaUnidad}.`
-                    ).join(' ');
-                    panel.hidden = false;
-                    document.getElementById('confirmar_reemplazo_medida').focus();
-                }
-                return;
-            }
-            const periodo = periodoSeleccionado();
-            const anterior = medidasPorPeriodo.get(periodo);
-            if (anterior && (unidad.value !== '' || valor.value !== '') && (unidad.value !== anterior.unidad || Number(valor.value) !== Number(anterior.valor)) && confirmado.value !== '1') {
+            const anio = String(inputMedidaAnio.value || '').trim();
+            if (!anio) return;
+            if (medidasHistorialAnios.has(anio) && !this.dataset.confirmadoCambio) {
                 event.preventDefault();
-                detalle.textContent = `Período ${periodo}. Valor guardado: ${anterior.valor} ${anterior.unidad}. Nuevo valor: ${valor.value} ${unidad.value}.`;
-                panel.hidden = false;
-                document.getElementById('confirmar_reemplazo_medida').focus();
+                const confirma = confirm(`Ya existe una medida productiva para ${anio}. Si continúas, se reemplazará el valor anterior.`);
+                if (confirma) {
+                    this.dataset.confirmadoCambio = '1';
+                    this.submit();
+                }
             }
         });
-        document.getElementById('confirmar_reemplazo_medida').addEventListener('click', function() {
-            confirmado.value = '1';
-            formConfiguracion.requestSubmit();
-        });
-        document.getElementById('cancelar_reemplazo_medida').addEventListener('click', function() {
-            cancelarConfirmacion();
-            valor.focus();
-        });
-    }
-
-    const vistaAnual = document.getElementById('vista_anual');
-    const vistaMensual = document.getElementById('vista_mensual');
-    const botonVistaAnual = document.getElementById('vista_anual_btn');
-    const botonVistaMensual = document.getElementById('vista_mensual_btn');
-    const mensualBody = document.getElementById('mensual_tabla_body');
-    const mensualResultadosBody = document.getElementById('mensual_resultados_body');
-    const medidasMensuales = new Map({{ medidas_historial | tojson }}.filter(medida => String(medida.periodo || '').length === 7).map(medida => [String(medida.periodo), medida]));
-    const emisionesMensuales = {{ emisiones_mensuales | default({}) | tojson }};
-    const unidadesMensuales = {{ unidades_productivas | tojson }};
-    let modoMensual = 'individual';
-
-    function renderizarResultadosMensuales() {
-        const resultados = Array.from(medidasMensuales.values()).sort((a, b) => String(a.periodo).localeCompare(String(b.periodo)));
-        if (!resultados.length) return;
-        mensualResultadosBody.innerHTML = resultados.map(medida => `
-            <tr style="border-top:1px solid #E5E7EB;">
-                <td style="padding:10px 12px; font-weight:600;">${escapeHtml(medida.periodo)}</td>
-                <td style="padding:10px 12px;">${escapeHtml(medida.unidad)}</td>
-                <td style="padding:10px 12px; text-align:right;">${Number(medida.valor || 0).toFixed(2)}</td>
-                <td style="padding:10px 12px; text-align:right;">${Number(medida.emisiones_anio_tco2e || 0).toFixed(4)}</td>
-                <td style="padding:10px 12px; text-align:right; color:#059669; font-weight:700;">${medida.intensidad_emisiones == null ? '—' : Number(medida.intensidad_emisiones).toFixed(6)}</td>
-            </tr>`).join('');
-    }
-
-    function escapeHtml(valor) {
-        return String(valor ?? '').replace(/[&<>'"]/g, caracter => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[caracter]));
-    }
-
-    renderizarResultadosMensuales();
-
-    function opcionesUnidades(valor) {
-        return '<option value="">Selecciona una unidad</option>' + unidadesMensuales.map(unidad =>
-            `<option value="${escapeHtml(unidad)}" ${unidad === valor ? 'selected' : ''}>${escapeHtml(unidad)}</option>`
-        ).join('');
-    }
-
-    function sumarMeses(periodo, cantidad) {
-        const [anio, mes] = periodo.split('-').map(Number);
-        const fecha = new Date(anio, mes - 1, 1);
-        fecha.setMonth(fecha.getMonth() + cantidad);
-        return `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}`;
-    }
-
-    function generarTablaMensual(periodos) {
-        if (!periodos.length) return;
-        mensualBody.innerHTML = periodos.map(periodo => {
-            const medidaMensual = medidasMensuales.get(periodo) || {};
-            const emisiones = medidaMensual.emisiones_anio_tco2e != null ? `${Number(medidaMensual.emisiones_anio_tco2e).toFixed(4)} tCO2e` : '—';
-            const intensidad = medidaMensual.intensidad_emisiones != null ? Number(medidaMensual.intensidad_emisiones).toFixed(6) : '—';
-            return `<tr class="mensual-fila-ingreso" data-periodo="${escapeHtml(periodo)}" data-guardado-unidad="${escapeHtml(medidaMensual.unidad || '')}" data-guardado-valor="${medidaMensual.valor ?? ''}" style="border-top:1px solid #E5E7EB;">
-                <td style="padding:10px 12px; font-weight:600;">${escapeHtml(periodo)}<input type="hidden" name="mensual_periodo[]" value="${escapeHtml(periodo)}"></td>
-                <td style="padding:10px 12px;"><select name="mensual_unidad[]" style="width:100%; padding:8px; border:1px solid #D1D5DB; border-radius:6px;">${opcionesUnidades(medidaMensual.unidad || '')}</select></td>
-                <td style="padding:10px 12px;"><input type="number" name="mensual_valor[]" step="0.01" min="0" value="${medidaMensual.valor ?? ''}" placeholder="Ej: 125.50" style="width:100%; padding:8px; border:1px solid #D1D5DB; border-radius:6px; box-sizing:border-box;"></td>
-                <td class="mensual-emisiones-preview" style="padding:10px 12px; text-align:right; color:#334155;">${emisiones}</td>
-                <td class="mensual-intensidad-preview" style="padding:10px 12px; text-align:right; color:#059669; font-weight:700;">${intensidad}</td>
-            </tr>`;
-        }).join('');
-        mensualBody.querySelectorAll('.mensual-fila-ingreso').forEach(fila => {
-            fila.querySelectorAll('select, input[type="number"]').forEach(control => {
-                control.addEventListener('input', actualizarVistaPreviaMensual);
-                control.addEventListener('change', actualizarVistaPreviaMensual);
-            });
-        });
-        actualizarVistaPreviaMensual();
-        document.getElementById('mensual_resumen').textContent = `Se generaron ${periodos.length} fila(s). Completa o revisa los valores y guarda la configuración.`;
-    }
-
-    function actualizarVistaPreviaMensual() {
-        mensualBody.querySelectorAll('.mensual-fila-ingreso').forEach(fila => {
-            const periodo = fila.dataset.periodo;
-            const unidad = fila.querySelector('select')?.value || '';
-            const valor = Number(fila.querySelector('input[type="number"]')?.value || 0);
-            const medidaGuardada = medidasMensuales.get(periodo) || {};
-            const emisionesGuardadasKg = medidaGuardada.intensidad_emisiones != null && Number(medidaGuardada.valor) > 0
-                ? Number(medidaGuardada.intensidad_emisiones) * Number(medidaGuardada.valor)
-                : Number(medidaGuardada.emisiones_anio_tco2e || 0) * 1000;
-            const emisionesKg = Number(emisionesMensuales[periodo] ?? emisionesGuardadasKg);
-            const emisionesCelda = fila.querySelector('.mensual-emisiones-preview');
-            const intensidadCelda = fila.querySelector('.mensual-intensidad-preview');
-            if (emisionesCelda) emisionesCelda.textContent = `${(emisionesKg / 1000).toFixed(4)} tCO2e`;
-            if (intensidadCelda) {
-                intensidadCelda.textContent = unidad && valor > 0 ? (emisionesKg / valor).toFixed(6) : '—';
-            }
-        });
-    }
-
-    function generarTablaMensualIndividual() {
-        const periodo = document.getElementById('mensual_periodo_individual').value;
-        if (!periodo) { alert('Selecciona un mes.'); return; }
-        generarTablaMensual([periodo]);
-    }
-
-    function generarTablaMensualMultiple() {
-        const inicio = document.getElementById('mensual_inicio').value;
-        const fin = document.getElementById('mensual_fin').value;
-        if (!inicio || !fin) { alert('Selecciona mes de inicio y mes de final.'); return; }
-        if (inicio > fin) { alert('El mes de inicio no puede ser mayor que el mes final.'); return; }
-        const periodos = [];
-        let actual = inicio;
-        while (actual <= fin) { periodos.push(actual); actual = sumarMeses(actual, 1); }
-        generarTablaMensual(periodos);
-    }
-
-    function cambiarModoMensual(modo) {
-        modoMensual = modo;
-        const individual = document.getElementById('mensual_individual_controles');
-        const multiple = document.getElementById('mensual_multiple_controles');
-        individual.style.display = modo === 'individual' ? 'grid' : 'none';
-        multiple.style.display = modo === 'multiple' ? 'grid' : 'none';
-        document.getElementById('modo_mensual_individual').style.background = modo === 'individual' ? '#10B981' : '#F3F4F6';
-        document.getElementById('modo_mensual_individual').style.color = modo === 'individual' ? 'white' : '#4B5563';
-        document.getElementById('modo_mensual_multiple').style.background = modo === 'multiple' ? '#10B981' : '#F3F4F6';
-        document.getElementById('modo_mensual_multiple').style.color = modo === 'multiple' ? 'white' : '#4B5563';
-    }
-
-    function cambiarVistaMedida(vista) {
-        frecuenciaMedida.value = vista;
-        vistaAnual.style.display = vista === 'anual' ? 'block' : 'none';
-        vistaMensual.style.display = vista === 'mensual' ? 'block' : 'none';
-        botonVistaAnual.style.background = vista === 'anual' ? '#10B981' : '#F3F4F6';
-        botonVistaAnual.style.color = vista === 'anual' ? 'white' : '#4B5563';
-        botonVistaMensual.style.background = vista === 'mensual' ? '#10B981' : '#F3F4F6';
-        botonVistaMensual.style.color = vista === 'mensual' ? 'white' : '#4B5563';
-        if (vista === 'anual') {
-            inputMedidaAnio.style.display = 'block';
-            inputMedidaAnio.required = true;
-            inputMedidaPeriodo.style.display = 'none';
-            inputMedidaPeriodo.required = false;
-            periodoLabel.textContent = 'Año';
-        } else if (inputMedidaPeriodo.value && document.getElementById('mensual_periodo_individual').value) {
-            generarTablaMensualIndividual();
-        }
-        cambiarModoMensual(modoMensual);
-    }
-
-    if (new URLSearchParams(window.location.search).get('vista') === 'mensual') {
-        cambiarVistaMedida('mensual');
     }
 
     const submitBtn = document.querySelector('button[type="submit"]');

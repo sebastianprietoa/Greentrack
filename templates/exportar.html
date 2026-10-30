@@ -11,7 +11,13 @@
         <p style="color: #6B7280; margin: 4px 0 0 0; font-size: 0.88rem;">Selecciona qué registros quieres descargar en Excel.</p>
     </div>
 
-
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+    <div style="background: #FEF3C7; border: 1px solid #FCD34D; color: #92400E; padding: 10px 16px; border-radius: 8px; margin-bottom: 1.5rem; font-size: 0.88rem;">
+        <i class="fas fa-exclamation-triangle"></i> {{ msg }}
+    </div>
+    {% endfor %}
+    {% endwith %}
 
     <form action="/exportar_avanzado" method="GET" id="formExportar">
 
@@ -26,22 +32,21 @@
                     <select name="anio" style="width: 100%; padding: 9px 12px; border: 1px solid #D1D5DB; border-radius: 7px; font-size: 0.9rem; background: white;">
                         <option value="">Todos los años</option>
                         {% for a in anios %}
-                        <option value="{{ a }}" {% if anio_seleccionado == a %}selected{% endif %}>{{ a }}</option>
+                        <option value="{{ a }}">{{ a }}</option>
                         {% endfor %}
                     </select>
                 </div>
                 <div>
-                    <label style="display: block; font-size: 0.78rem; font-weight: 700; color: #6B7280; text-transform: uppercase; margin-bottom: 5px;">Rango exacto (desde)</label>
-                    <input type="date" name="fecha_inicio" value="{{ request.args.get('fecha_inicio', '') }}" style="width: 100%; padding: 9px 12px; border: 1px solid #D1D5DB; border-radius: 7px; font-size: 0.9rem; box-sizing: border-box;">
+                    <label style="display: block; font-size: 0.78rem; font-weight: 700; color: #6B7280; text-transform: uppercase; margin-bottom: 5px;">O rango exacto (desde)</label>
+                    <input type="date" name="fecha_inicio" style="width: 100%; padding: 9px 12px; border: 1px solid #D1D5DB; border-radius: 7px; font-size: 0.9rem; box-sizing: border-box;">
                 </div>
                 <div style="grid-column: 2;">
                     <label style="display: block; font-size: 0.78rem; font-weight: 700; color: #6B7280; text-transform: uppercase; margin-bottom: 5px;">Hasta</label>
-                    <input type="date" name="fecha_fin" value="{{ request.args.get('fecha_fin', '') }}" style="width: 100%; padding: 9px 12px; border: 1px solid #D1D5DB; border-radius: 7px; font-size: 0.9rem; box-sizing: border-box;">
+                    <input type="date" name="fecha_fin" style="width: 100%; padding: 9px 12px; border: 1px solid #D1D5DB; border-radius: 7px; font-size: 0.9rem; box-sizing: border-box;">
                 </div>
             </div>
         </div>
 
-        <p style="color:#6B7280; font-size:0.88rem;">El año, el rango de fechas y los demás filtros se combinan. El Reporte Oficial incluye el año completo seleccionado.</p>
         <!-- Alcance -->
         {% if alcances %}
         <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-bottom: 1.25rem; border-left: 4px solid #EF4444;">
@@ -53,7 +58,7 @@
                 {% set colores_alc = {'Alcance 1': '#EF4444', 'Alcance 2': '#F59E0B', 'Alcance 3': '#10B981'} %}
                 {% for alc in alcances %}
                 <label style="display: flex; align-items: center; gap: 8px; padding: 8px 14px; border: 2px solid #E5E7EB; border-radius: 8px; cursor: pointer; transition: all 0.15s; user-select: none;" class="check-label">
-                    <input type="checkbox" name="alcance" value="{{ alc }}" {% if alc in request.args.getlist('alcance') %}checked{% endif %} style="width: 15px; height: 15px; accent-color: {{ colores_alc.get(alc, '#6366F1') }};">
+                    <input type="checkbox" name="alcance" value="{{ alc }}" style="width: 15px; height: 15px; accent-color: {{ colores_alc.get(alc, '#6366F1') }};">
                     <span style="font-size: 0.88rem; font-weight: 600; color: #374151;">{{ alc }}</span>
                 </label>
                 {% endfor %}
@@ -71,7 +76,7 @@
             <div style="display: flex; flex-wrap: wrap; gap: 8px;" id="contenedorFuentes">
                 {% for f in fuentes %}
                 <label style="display: flex; align-items: center; gap: 7px; padding: 6px 12px; border: 1px solid #E5E7EB; border-radius: 20px; cursor: pointer; font-size: 0.82rem; font-weight: 600; color: #374151; background: #F9FAFB; transition: all 0.15s; user-select: none;" class="check-label-pill">
-                    <input type="checkbox" name="fuente" value="{{ f }}" {% if f in request.args.getlist('fuente') %}checked{% endif %} style="width: 13px; height: 13px; accent-color: #8B5CF6;">
+                    <input type="checkbox" name="fuente" value="{{ f }}" style="width: 13px; height: 13px; accent-color: #8B5CF6;">
                     {{ f }}
                 </label>
                 {% endfor %}
@@ -84,14 +89,6 @@
         </div>
         {% endif %}
 
-        <div style="background: white; padding: 1.25rem 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-bottom: 1.25rem; border-left: 4px solid #0EA5E9;">
-            <label style="display:flex;align-items:center;gap:10px;color:#374151;font-weight:700;cursor:pointer;">
-                <input type="checkbox" name="incluir_huella_hidrica" id="incluirHuellaHidrica" value="1" {% if request.args.get('incluir_huella_hidrica') %}checked{% endif %} style="width:17px;height:17px;accent-color:#0EA5E9;">
-                Incluir Huella Hídrica
-            </label>
-            <p style="margin:7px 0 0 27px;color:#6B7280;font-size:0.85rem;">Agrega resumen, evolución mensual y flujos de agua al Excel y al Reporte Oficial.</p>
-        </div>
-
         <!-- Botones -->
         <div style="display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap;">
             <a href="/dashboard" style="padding: 12px 20px; border: 1px solid #D1D5DB; border-radius: 8px; color: #374151; text-decoration: none; font-weight: 600; font-size: 0.9rem; background: white;">
@@ -100,8 +97,8 @@
             <button type="submit" style="padding: 12px 28px; background: #F59E0B; color: white; border: none; border-radius: 8px; font-weight: 700; font-size: 0.95rem; cursor: pointer; display: flex; align-items: center; gap: 8px;">
                 <i class="fas fa-download"></i> Descargar Excel
             </button>
-            <a href="{{ url_for('exportar_ghg', anio=anio_seleccionado) }}" id="exportar-ghg" style="padding: 12px 20px; background: #064E3B; color: white; border-radius: 8px; font-weight: 700; font-size: 0.9rem; text-decoration: none; display: flex; align-items: center; gap: 8px;">
-                <i class="fas fa-file-excel"></i> Reporte Oficial
+            <a href="/exportar_ghg" style="padding: 12px 20px; background: #064E3B; color: white; border-radius: 8px; font-weight: 700; font-size: 0.9rem; text-decoration: none; display: flex; align-items: center; gap: 8px;">
+                <i class="fas fa-file-excel"></i> GHG Protocol
             </a>
         </div>
 
@@ -145,17 +142,5 @@ function marcarTodos(estado) {
         }
     });
 }
-</script>
-<script>
-function actualizarEnlaceReporteOficial() {
-    const anio = document.querySelector('select[name="anio"]').value || 'Todos';
-    const incluir = document.getElementById('incluirHuellaHidrica').checked;
-    const params = new URLSearchParams({ anio });
-    if (incluir) params.set('incluir_huella_hidrica', '1');
-    document.getElementById('exportar-ghg').href = {{ url_for('exportar_ghg') | tojson }} + '?' + params.toString();
-}
-document.querySelector('select[name="anio"]').addEventListener('change', actualizarEnlaceReporteOficial);
-document.getElementById('incluirHuellaHidrica').addEventListener('change', actualizarEnlaceReporteOficial);
-actualizarEnlaceReporteOficial();
 </script>
 {% endblock %}

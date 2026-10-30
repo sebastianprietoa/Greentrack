@@ -11,10 +11,10 @@
         <p style="color: #6B7280; margin: 3px 0 0 0; font-size: 0.88rem;">{{ empresa }} — {{ total | formato_cl }} registro(s) encontrado(s)</p>
     </div>
     <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-        <a href="{{ url_for('exportar_ghg', anio=filtro_anio or 'Todos') }}" style="background: #064E3B; color: white; padding: 9px 16px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 0.88rem; display: flex; align-items: center; gap: 7px;">
-            <i class="fas fa-file-excel"></i> GHG completo del período
+        <a href="/exportar_ghg" style="background: #064E3B; color: white; padding: 9px 16px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 0.88rem; display: flex; align-items: center; gap: 7px;">
+            <i class="fas fa-file-excel"></i> Descargar GHG Protocol
         </a>
-        <a href="{{ url_for('dashboard', anio=filtro_anio or 'Todos') }}" style="background: white; border: 1px solid #D1D5DB; padding: 9px 16px; border-radius: 8px; color: #374151; text-decoration: none; font-weight: 600; font-size: 0.88rem;">
+        <a href="/dashboard" style="background: white; border: 1px solid #D1D5DB; padding: 9px 16px; border-radius: 8px; color: #374151; text-decoration: none; font-weight: 600; font-size: 0.88rem;">
             <i class="fas fa-arrow-left"></i> Dashboard
         </a>
     </div>

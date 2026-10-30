@@ -124,20 +124,19 @@
 </div>
 
 <script>
-let vehiculoEditandoId = null;
-
 // Pregunta inicial
 document.getElementById('btnSiVehiculos').addEventListener('click', function() {
     document.getElementById('gestionVehiculos').style.display = 'block';
     document.getElementById('preguntaInicial').style.display = 'none';
-    cargarVehiculos();
+    // Guardar configuración en la base de datos
+    guardarConfiguracionVehiculos(true);
 });
 
 document.getElementById('btnNoVehiculos').addEventListener('click', function() {
     document.getElementById('infoNoVehiculos').style.display = 'block';
     // Redirigir a combustibles fijos después de 3 segundos
     setTimeout(() => {
-        window.location.href = "{{ url_for('combustible_fijo') }}";
+        window.location.href = "{{ url_for('combustible_movil') }}";
     }, 3000);
 });
 
@@ -149,7 +148,6 @@ document.getElementById('btnAgregarVehiculo').addEventListener('click', function
 document.getElementById('btnCancelarVehiculo').addEventListener('click', function() {
     document.getElementById('formVehiculo').style.display = 'none';
     document.getElementById('formVehiculo').reset();
-    vehiculoEditandoId = null;
 });
 
 // Guardar vehículo
@@ -168,12 +166,9 @@ document.getElementById('formVehiculo').addEventListener('submit', function(e) {
         return;
     }
     
-    const url = vehiculoEditandoId ? `/api/vehiculos/${vehiculoEditandoId}` : '/api/vehiculos';
-    const method = vehiculoEditandoId ? 'PUT' : 'POST';
-
     // Enviar datos al servidor
-    fetch(url, {
-        method,
+    fetch('/api/vehiculos', {
+        method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
@@ -188,8 +183,8 @@ document.getElementById('formVehiculo').addEventListener('submit', function(e) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            vehiculoEditandoId = null;
-            cargarVehiculos();
+            // Agregar vehículo a la lista
+            agregarVehiculoALista(data.vehiculo);
             // Limpiar formulario
             document.getElementById('formVehiculo').reset();
             document.getElementById('formVehiculo').style.display = 'none';
@@ -222,7 +217,6 @@ function agregarVehiculoALista(vehiculo) {
         align-items: center;
     `;
     
-    vehiculoDiv.dataset.vehiculoId = vehiculo.id;
     vehiculoDiv.innerHTML = `
         <div>
             <h4 style="margin: 0 0 0.25rem 0; color: #374151;">
@@ -244,58 +238,24 @@ function agregarVehiculoALista(vehiculo) {
     `;
     
     lista.appendChild(vehiculoDiv);
-    vehiculoDiv.querySelector('.btn-editar').addEventListener('click', () => editarVehiculo(vehiculo));
-    vehiculoDiv.querySelector('.btn-eliminar').addEventListener('click', () => eliminarVehiculo(vehiculo.id, vehiculo.patente));
 }
 
-function editarVehiculo(vehiculo) {
-    vehiculoEditandoId = vehiculo.id;
-    document.getElementById('patente').value = vehiculo.patente || '';
-    document.getElementById('tipo').value = vehiculo.tipo || '';
-    document.getElementById('marca').value = vehiculo.marca || '';
-    document.getElementById('modelo').value = vehiculo.modelo || '';
-    document.getElementById('anio').value = vehiculo.anio || '';
-    document.getElementById('formVehiculo').style.display = 'block';
-    document.getElementById('formVehiculo').scrollIntoView({ behavior: 'smooth' });
-}
-
-async function cargarVehiculos() {
+async function guardarConfiguracionVehiculos(tieneVehiculos) {
     try {
-        const response = await fetch('/api/vehiculos');
-        if (!response.ok) throw new Error('No se pudieron cargar los vehículos');
-
-        const vehiculos = await response.json();
-        const lista = document.getElementById('listaVehiculos');
-        lista.innerHTML = '';
-
-        if (vehiculos.length === 0) {
-            lista.innerHTML = '<p style="color: #6B7280; text-align: center; padding: 2rem;" id="mensajeSinVehiculos">No hay vehículos registrados. Haga clic en "Agregar Vehículo" para comenzar.</p>';
-            return;
-        }
-
-        document.getElementById('preguntaInicial').style.display = 'none';
-        document.getElementById('gestionVehiculos').style.display = 'block';
-        vehiculos.forEach(agregarVehiculoALista);
+        const response = await fetch('/api/configuracion/vehiculos', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                tiene_vehiculos: tieneVehiculos
+            })
+        });
+        return await response.json();
     } catch (error) {
         console.error('Error:', error);
-        document.getElementById('listaVehiculos').innerHTML = '<p style="color: #B91C1C; text-align: center; padding: 2rem;">No se pudieron cargar los vehículos. Intente nuevamente.</p>';
     }
 }
-
-async function eliminarVehiculo(id, patente) {
-    if (!confirm(`¿Seguro que deseas eliminar el vehículo ${patente}? Sus consumos históricos se conservarán.`)) return;
-
-    try {
-        const response = await fetch(`/vehiculos/eliminar/${id}`, { method: 'POST' });
-        if (!response.ok) throw new Error('No se pudo eliminar el vehículo');
-        await cargarVehiculos();
-    } catch (error) {
-        console.error('Error:', error);
-        alert('No se pudo eliminar el vehículo. Inténtalo nuevamente.');
-    }
-}
-
-document.addEventListener('DOMContentLoaded', cargarVehiculos);
 </script>
 
 <style>

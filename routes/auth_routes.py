@@ -11,18 +11,14 @@ auth_bp = Blueprint("auth", __name__)
 @auth_bp.route("/", methods=["GET", "POST"])
 def inicio():
     if "user_id" in session:
-        if session.get("rol") == "admin" or session.get("es_admin") == 1:
-            return redirect("/admin/dashboard")
-        if session.get("rol") == "gestor_empresa":
-            return redirect("/admin/empresas")
-        return redirect("/dashboard")
+        return redirect("/admin/dashboard" if session.get("es_admin") == 1 else "/dashboard")
 
     if request.method == "POST":
         email = request.form.get("email")
         password = request.form.get("password")
         conn = get_db()
         cursor = conn.cursor()
-        cursor.execute("SELECT id, empresa, password, es_admin, rol, es_demo FROM usuarios WHERE email = %s", (email,))
+        cursor.execute("SELECT id, empresa, password, es_admin FROM usuarios WHERE email = %s", (email,))
         user = cursor.fetchone()
         conn.close()
 
@@ -30,13 +26,7 @@ def inicio():
             session["user_id"] = user[0]
             session["empresa"] = user[1]
             session["es_admin"] = user[3]
-            session["rol"] = "admin" if user[3] == 1 else (user[4] or "empresa")
-            session["es_demo"] = bool(user[5])
-            if session["rol"] == "admin":
-                return redirect("/admin/dashboard")
-            if session["rol"] == "gestor_empresa":
-                return redirect("/admin/empresas")
-            return redirect("/dashboard")
+            return redirect("/admin/dashboard" if user[3] == 1 else "/dashboard")
 
         flash("Credenciales incorrectas", "error")
 
@@ -54,15 +44,14 @@ def api_login():
 
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT id, empresa, password, es_admin, rol, es_demo FROM usuarios WHERE email = %s", (email,))
+    cursor.execute("SELECT id, empresa, password, es_admin FROM usuarios WHERE email = %s", (email,))
     user = cursor.fetchone()
     conn.close()
 
     if not user or not verify_password(password, user[2]):
         return jsonify({"error": "Credenciales incorrectas"}), 401
 
-    rol = "admin" if user[3] == 1 else (user[4] or "empresa")
-    token, expires_in = create_api_token(user[0], user[1], user[3], email, rol=rol)
+    token, expires_in = create_api_token(user[0], user[1], user[3], email)
     return jsonify({
         "access_token": token,
         "token_type": "Bearer",
@@ -72,8 +61,6 @@ def api_login():
             "empresa": user[1],
             "email": email,
             "es_admin": int(user[3] or 0),
-            "rol": rol,
-            "es_demo": bool(user[5]),
         },
     })
 
