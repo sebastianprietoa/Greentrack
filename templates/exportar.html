@@ -41,7 +41,7 @@
             </div>
         </div>
 
-        <p style="color:#6B7280; font-size:0.88rem;">El año, el rango de fechas y los demás filtros se combinan. El reporte GHG incluye el año completo seleccionado.</p>
+        <p style="color:#6B7280; font-size:0.88rem;">El año, el rango de fechas y los demás filtros se combinan. El Reporte Oficial incluye el año completo seleccionado.</p>
         <!-- Alcance -->
         {% if alcances %}
         <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-bottom: 1.25rem; border-left: 4px solid #EF4444;">
@@ -84,6 +84,14 @@
         </div>
         {% endif %}
 
+        <div style="background: white; padding: 1.25rem 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-bottom: 1.25rem; border-left: 4px solid #0EA5E9;">
+            <label style="display:flex;align-items:center;gap:10px;color:#374151;font-weight:700;cursor:pointer;">
+                <input type="checkbox" name="incluir_huella_hidrica" id="incluirHuellaHidrica" value="1" {% if request.args.get('incluir_huella_hidrica') %}checked{% endif %} style="width:17px;height:17px;accent-color:#0EA5E9;">
+                Incluir Huella Hídrica
+            </label>
+            <p style="margin:7px 0 0 27px;color:#6B7280;font-size:0.85rem;">Agrega resumen, evolución mensual y flujos de agua al Excel y al Reporte Oficial.</p>
+        </div>
+
         <!-- Botones -->
         <div style="display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap;">
             <a href="/dashboard" style="padding: 12px 20px; border: 1px solid #D1D5DB; border-radius: 8px; color: #374151; text-decoration: none; font-weight: 600; font-size: 0.9rem; background: white;">
@@ -93,7 +101,7 @@
                 <i class="fas fa-download"></i> Descargar Excel
             </button>
             <a href="{{ url_for('exportar_ghg', anio=anio_seleccionado) }}" id="exportar-ghg" style="padding: 12px 20px; background: #064E3B; color: white; border-radius: 8px; font-weight: 700; font-size: 0.9rem; text-decoration: none; display: flex; align-items: center; gap: 8px;">
-                <i class="fas fa-file-excel"></i> GHG Protocol
+                <i class="fas fa-file-excel"></i> Reporte Oficial
             </a>
         </div>
 
@@ -139,8 +147,15 @@ function marcarTodos(estado) {
 }
 </script>
 <script>
-document.querySelector('select[name="anio"]').addEventListener('change', function () {
-    document.getElementById('exportar-ghg').href = {{ url_for('exportar_ghg') | tojson }} + '?anio=' + encodeURIComponent(this.value || 'Todos');
-});
+function actualizarEnlaceReporteOficial() {
+    const anio = document.querySelector('select[name="anio"]').value || 'Todos';
+    const incluir = document.getElementById('incluirHuellaHidrica').checked;
+    const params = new URLSearchParams({ anio });
+    if (incluir) params.set('incluir_huella_hidrica', '1');
+    document.getElementById('exportar-ghg').href = {{ url_for('exportar_ghg') | tojson }} + '?' + params.toString();
+}
+document.querySelector('select[name="anio"]').addEventListener('change', actualizarEnlaceReporteOficial);
+document.getElementById('incluirHuellaHidrica').addEventListener('change', actualizarEnlaceReporteOficial);
+actualizarEnlaceReporteOficial();
 </script>
 {% endblock %}

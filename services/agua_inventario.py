@@ -87,7 +87,7 @@ def crear_resumen_agua(connection,empresa,periodo=None):
             factores.append(dict(row))
         except HuellaAguaError:
             continue
-    cursor.execute('SELECT anio,unidad,valor FROM medidas_productivas WHERE empresa=%s',(empresa,))
+    cursor.execute('SELECT anio,unidad,valor FROM medidas_productivas WHERE empresa=%s AND periodo=anio::text',(empresa,))
     medidas = {int(r[0]):{'unidad':r[1],'valor':float(r[2] or 0)} for r in cursor.fetchall()}
     params_suministro = [empresa,'%combusti%']
     filtro_suministro = ''

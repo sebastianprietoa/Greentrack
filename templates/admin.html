@@ -722,10 +722,10 @@
                 <h4 style="margin: 0 0 3px 0; color: #92400E; display: flex; align-items: center; gap: 8px; font-size: 0.95rem;">
                     <i class="fas fa-bolt"></i> Factores Eléctricos (SEN / SEM / SEA)
                 </h4>
-                <p style="margin: 0; color: #6B7280; font-size: 0.85rem;">Sube el Excel con la hoja <strong>"Factores eléctricos"</strong>. Se mostrará una vista previa antes de confirmar.</p>
+                <p style="margin: 0; color: #6B7280; font-size: 0.85rem;">Sube el Excel con la hoja <strong>"Factores eléctricos"</strong> o un CSV con las columnas <strong>anio, mes, sistema, factor_emision_avg</strong>. Se mostrará una vista previa antes de confirmar.</p>
             </div>
             <form action="{{ url_for('preview_electricidad') }}" method="POST" enctype="multipart/form-data" style="display: flex; gap: 8px; align-items: center;">
-                <input type="file" name="archivo_electricidad" accept=".xlsx, .xls" required
+                <input type="file" name="archivo_electricidad" accept=".xlsx, .xls, .csv" required
                        style="font-size: 0.85rem; padding: 7px; border: 1px dashed #D1D5DB; border-radius: 6px; background: white; color: #374151;">
                 <button type="submit" style="background: #F59E0B; color: white; border: none; padding: 9px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.85rem; display: flex; align-items: center; gap: 6px;">
                     <i class="fas fa-eye"></i> Vista previa

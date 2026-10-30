@@ -11,6 +11,7 @@ import hashlib
 import os 
 import io 
 import json 
+import math
 import re 
 import tempfile 
 from decimal import Decimal 
@@ -205,7 +206,7 @@ SECTORES_EMPRESA ={
 "Finanzas":["Bancos","Aseguradoras","Fintech","Corredoras","Servicios financieros"],
 }
 
-def calcular_intensidad_emisiones (conn ,empresa ,anio ,valor_medida ):
+def calcular_intensidad_emisiones (conn ,empresa ,periodo ,valor_medida ):
     try :
         valor =float (valor_medida )
     except Exception :
@@ -213,9 +214,11 @@ def calcular_intensidad_emisiones (conn ,empresa ,anio ,valor_medida ):
     if valor <=0 :
         return 0.0 ,None 
     cur =conn .cursor ()
+    periodo = str(periodo or '')
+    filtro = "TO_CHAR(fecha::date, 'YYYY-MM') = %s" if len(periodo) == 7 else "EXTRACT(YEAR FROM fecha::date)::text = %s"
     cur .execute (
-    "SELECT COALESCE(SUM(emision), 0) FROM registros WHERE empresa = %s AND SUBSTRING(fecha::text, 1, 4) = %s",
-    (empresa ,str (anio ))
+    f"SELECT COALESCE(SUM(emision), 0) FROM registros WHERE empresa = %s AND {filtro}",
+    (empresa ,periodo)
     )
     total_kg =float (cur .fetchone ()[0 ]or 0 )
     total_t =round (total_kg /1000.0 ,4 )
@@ -225,14 +228,14 @@ def calcular_intensidad_emisiones (conn ,empresa ,anio ,valor_medida ):
 def obtener_medidas_productivas (conn ,empresa ):
     cursor =conn .cursor (cursor_factory =psycopg2 .extras .DictCursor )
     cursor .execute ("""
-        SELECT anio, unidad, valor, fecha_actualizacion
+        SELECT anio, periodo, unidad, valor, fecha_actualizacion
         FROM medidas_productivas
         WHERE empresa = %s
         ORDER BY anio DESC, id DESC
     """,(empresa ,))
     medidas =[dict (row )for row in cursor .fetchall ()]
     for medida in medidas :
-        total_t ,intensidad =calcular_intensidad_emisiones (conn ,empresa ,medida ['anio'],medida ['valor'])
+        total_t ,intensidad =calcular_intensidad_emisiones (conn ,empresa ,medida.get('periodo') or medida['anio'],medida ['valor'])
         medida ['emisiones_anio_tco2e']=total_t 
         medida ['intensidad_emisiones']=intensidad 
     return medidas 
@@ -240,7 +243,7 @@ def obtener_medidas_productivas (conn ,empresa ):
 def obtener_medidas_empresas (conn ):
     cursor =conn .cursor (cursor_factory =psycopg2 .extras .DictCursor )
     cursor .execute ("""
-        SELECT empresa, anio, unidad, valor, fecha_actualizacion
+        SELECT empresa, anio, periodo, unidad, valor, fecha_actualizacion
         FROM medidas_productivas
         ORDER BY empresa, anio DESC, id DESC
     """)
@@ -250,25 +253,29 @@ def obtener_medidas_empresas (conn ):
         if emp and emp not in medidas :
             medidas [emp ]=dict (row )
     for emp ,medida in medidas .items ():
-        total_t ,intensidad =calcular_intensidad_emisiones (conn ,emp ,medida ['anio'],medida ['valor'])
+        total_t ,intensidad =calcular_intensidad_emisiones (conn ,emp ,medida.get('periodo') or medida['anio'],medida ['valor'])
         medida ['emisiones_anio_tco2e']=total_t 
         medida ['intensidad_emisiones']=intensidad 
     return medidas 
 
-def guardar_medida_productiva (cursor ,empresa ,anio ,unidad ,valor ):
+def guardar_medida_productiva (cursor ,empresa ,periodo ,unidad ,valor ):
     if not unidad or not str(unidad).strip():
         raise ValueError('Selecciona una unidad para la medida productiva.')
-    if not 1 <= int(anio) <= 9999:
-        raise ValueError('El año de la medida productiva no es válido.')
+    periodo = str(periodo or '').strip()
+    if not re.fullmatch(r'\d{4}(?:-\d{2})?', periodo):
+        raise ValueError('El período de la medida productiva no es válido.')
+    anio = int(periodo[:4])
+    if not 1 <= anio <= 9999 or (len(periodo) == 7 and not 1 <= int(periodo[5:]) <= 12):
+        raise ValueError('El período de la medida productiva no es válido.')
     valor=numero_finito(valor,'La medida productiva',positivo=True)
     cursor .execute ("""
-        INSERT INTO medidas_productivas (empresa, anio, unidad, valor, fecha_actualizacion)
-        VALUES (%s, %s, %s, %s, %s)
-        ON CONFLICT (empresa, anio) DO UPDATE SET
+        INSERT INTO medidas_productivas (empresa, anio, periodo, unidad, valor, fecha_actualizacion)
+        VALUES (%s, %s, %s, %s, %s, %s)
+        ON CONFLICT (empresa, periodo) DO UPDATE SET
             unidad = EXCLUDED.unidad,
             valor = EXCLUDED.valor,
             fecha_actualizacion = EXCLUDED.fecha_actualizacion
-    """,(empresa ,int (anio ),unidad ,float (valor ),datetime .now ().strftime ("%Y-%m-%d %H:%M")))
+    """,(empresa ,anio ,periodo ,unidad ,float (valor ),datetime .now ().strftime ("%Y-%m-%d %H:%M")))
 
 def _normalizar_texto_suministro (valor ):
     return (str (valor or '').strip ().lower ()
@@ -634,9 +641,9 @@ def _seed_demo_account(cursor):
            datetime.now().strftime("%Y-%m-%d %H:%M"), DEMO_COMPANY, vehicle_id, "2025-02"))
 
     cursor.execute("""
-        INSERT INTO medidas_productivas (empresa, anio, unidad, valor, fecha_actualizacion)
-        VALUES (%s, 2025, %s, %s, %s)
-        ON CONFLICT (empresa, anio) DO UPDATE SET unidad = EXCLUDED.unidad, valor = EXCLUDED.valor
+        INSERT INTO medidas_productivas (empresa, anio, periodo, unidad, valor, fecha_actualizacion)
+        VALUES (%s, 2025, '2025', %s, %s, %s)
+        ON CONFLICT (empresa, periodo) DO UPDATE SET unidad = EXCLUDED.unidad, valor = EXCLUDED.valor
     """, (DEMO_COMPANY, "servicios prestados", 10000, datetime.now().strftime("%Y-%m-%d %H:%M")))
     cursor.execute("""
         INSERT INTO configuracion (empresa, info_por_unidad, vehiculos, combustible_colaboradores, tarjeta_combustible)
@@ -745,6 +752,7 @@ def init_db ():
         id SERIAL PRIMARY KEY,
         empresa TEXT NOT NULL,
         anio INTEGER NOT NULL,
+        periodo TEXT,
         unidad TEXT NOT NULL,
         valor REAL NOT NULL DEFAULT 0,
         fecha_actualizacion TEXT,
@@ -752,6 +760,11 @@ def init_db ():
         FOREIGN KEY (empresa) REFERENCES usuarios(empresa)
     )
     """)
+    cursor.execute("ALTER TABLE IF EXISTS medidas_productivas ADD COLUMN IF NOT EXISTS periodo TEXT")
+    cursor.execute("UPDATE medidas_productivas SET periodo = anio::text WHERE periodo IS NULL OR periodo = ''")
+    cursor.execute("ALTER TABLE IF EXISTS medidas_productivas ALTER COLUMN periodo SET NOT NULL")
+    cursor.execute("ALTER TABLE IF EXISTS medidas_productivas DROP CONSTRAINT IF EXISTS medidas_productivas_empresa_anio_key")
+    cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS medidas_productivas_empresa_periodo_key ON medidas_productivas (empresa, periodo)")
     cursor .execute ("""
     CREATE TABLE IF NOT EXISTS energeticos_empresa (
         id SERIAL PRIMARY KEY,
@@ -1192,9 +1205,9 @@ def dashboard ():
     ]
 
     cursor .execute ("""
-        SELECT anio, unidad, valor, fecha_actualizacion
+        SELECT anio, periodo, unidad, valor, fecha_actualizacion
         FROM medidas_productivas
-        WHERE empresa = %s
+        WHERE empresa = %s AND periodo = anio::text
         ORDER BY anio DESC, id DESC
     """,(empresa ,))
     medidas_productivas =[dict (row )for row in cursor .fetchall ()]
@@ -2120,9 +2133,18 @@ def _calcular_factores_electricos (cursor ,empresa ,sistema ,anio_reg ,mes_reg ,
         raise ValueError('El origen de energía o la declaración IREC no son válidos.')
     if tiene_irec == 'Si' and origen != 'ERNC':
         raise ValueError('La declaración IREC requiere un origen ERNC.')
+    # Usa el último factor disponible anterior o igual al período informado.
+    # Esto permite registrar períodos recientes mientras se publica el factor del año actual.
     cursor .execute (
-    "SELECT factor_emision_avg FROM factores_electricos WHERE sistema = %s AND anio = %s AND mes <= %s ORDER BY mes DESC LIMIT 1",
-    (sistema ,anio_reg ,mes_reg )
+    """
+        SELECT factor_emision_avg
+        FROM factores_electricos
+        WHERE sistema = %s
+          AND (anio < %s OR (anio = %s AND mes <= %s))
+        ORDER BY anio DESC, mes DESC
+        LIMIT 1
+    """,
+    (sistema ,anio_reg ,anio_reg ,mes_reg )
     )
     res_ub =cursor .fetchone ()
     if not res_ub or res_ub[0] is None:
@@ -2135,8 +2157,15 @@ def _calcular_factores_electricos (cursor ,empresa ,sistema ,anio_reg ,mes_reg ,
         factor_mercado =0.0 
     elif mezcla_electrica :
         cursor .execute (
-        "SELECT factor_emision_avg FROM factores_electricos WHERE LOWER(sistema) = 'residual' AND anio = %s AND mes <= %s ORDER BY mes DESC LIMIT 1",
-        (anio_reg ,mes_reg )
+        """
+            SELECT factor_emision_avg
+            FROM factores_electricos
+            WHERE LOWER(sistema) = 'residual'
+              AND (anio < %s OR (anio = %s AND mes <= %s))
+            ORDER BY anio DESC, mes DESC
+            LIMIT 1
+        """,
+        (anio_reg ,anio_reg ,mes_reg )
         )
         res_merc =cursor .fetchone ()
         if not res_merc or res_merc[0] is None:
@@ -2146,6 +2175,55 @@ def _calcular_factores_electricos (cursor ,empresa ,sistema ,anio_reg ,mes_reg ,
         factor_mercado =factor_ubicacion 
 
     return factor_ubicacion ,factor_mercado 
+
+
+def _leer_factores_electricos(archivo):
+    """Lee y valida factores eléctricos desde el Excel oficial o su CSV equivalente."""
+    nombre = str(getattr(archivo, 'filename', '') or getattr(archivo, 'name', '') or '').lower()
+    if nombre.endswith('.csv'):
+        df = pd.read_csv(archivo, sep=None, engine='python', encoding='utf-8-sig')
+        requeridas = {'anio', 'mes', 'sistema', 'factor_emision_avg'}
+        faltantes = requeridas.difference({str(c).strip().lower() for c in df.columns})
+        if faltantes:
+            raise ValueError(f"El CSV no contiene las columnas requeridas: {', '.join(sorted(faltantes))}.")
+        renombres = {c: str(c).strip().lower() for c in df.columns}
+        df = df.rename(columns=renombres)
+    else:
+        df = pd.read_excel(archivo, sheet_name='Factores eléctricos', header=0, engine='openpyxl')
+
+    filas = []
+    errores = []
+    claves = set()
+    for idx, row in df.iterrows():
+        valores = [row.get(c) for c in ('anio', 'mes', 'sistema', 'factor_emision_avg')]
+        if all(pd.isna(v) or str(v).strip() == '' for v in valores):
+            continue
+        try:
+            anio = int(float(row['anio']))
+            mes = int(float(row['mes']))
+            sistema = str(row['sistema']).strip()
+            factor_raw = str(row['factor_emision_avg']).strip().replace(',', '.')
+            factor = float(factor_raw)
+            if not 1900 <= anio <= 2100:
+                raise ValueError('año fuera de rango')
+            if not 1 <= mes <= 12:
+                raise ValueError('mes fuera de rango')
+            if not sistema:
+                raise ValueError('sistema vacío')
+            if not math.isfinite(factor) or factor < 0:
+                raise ValueError('factor no finito o negativo')
+            clave = (anio, mes, sistema.casefold())
+            if clave in claves:
+                raise ValueError('clave año/mes/sistema duplicada')
+            claves.add(clave)
+            filas.append({'anio': anio, 'mes': mes, 'sistema': sistema, 'factor': factor})
+        except (KeyError, TypeError, ValueError) as exc:
+            errores.append(f"Fila {idx + 2}: {exc}")
+    if errores:
+        raise ValueError('Archivo de factores eléctricos inválido. ' + ' | '.join(errores[:5]))
+    if not filas:
+        raise ValueError('El archivo no contiene factores eléctricos válidos.')
+    return filas
 
 
 @app .route ('/registro',methods =['GET','POST'])
@@ -2956,6 +3034,47 @@ def _etiquetar_unidad_factor(df):
     ]
 
 
+def _datos_huella_hidrica_exportacion(conn, empresa, anio=''):
+    """Construye hojas exportables sin mezclar unidades hídricas con emisiones."""
+    periodo = '' if anio in (None, '', 'Todos') else anio
+    resumen = crear_resumen_agua(conn, empresa, periodo or None)
+    def valor(campo):
+        dato = resumen.get(campo)
+        return round(float(dato), 6) if dato is not None else None
+
+    df_resumen = pd.DataFrame([
+        {'Indicador': 'Captación total', 'Valor': valor('captacion_total'), 'Unidad': 'm³', 'Estado': resumen.get('nivel')},
+        {'Indicador': 'Retorno total', 'Valor': valor('retornos_totales'), 'Unidad': 'm³', 'Estado': resumen.get('nivel')},
+        {'Indicador': 'Reúso total', 'Valor': valor('reuso'), 'Unidad': 'm³', 'Estado': resumen.get('nivel')},
+        {'Indicador': 'Consumo operativo', 'Valor': valor('consumo'), 'Unidad': 'm³', 'Estado': resumen.get('nivel')},
+        {'Indicador': 'Huella hídrica de suministro energético', 'Valor': valor('huella_suministro_total'), 'Unidad': 'm³', 'Estado': 'Completa' if resumen.get('suministro_completo') else 'Parcial'},
+        {'Indicador': 'Huella hídrica total', 'Valor': valor('huella_hidrica_total'), 'Unidad': 'm³', 'Estado': resumen.get('nivel')},
+        {'Indicador': 'Huella de escasez', 'Valor': valor('huella'), 'Unidad': 'm³-eq', 'Estado': resumen.get('nivel')},
+        {'Indicador': 'Calidad de datos', 'Valor': resumen.get('calidad'), 'Unidad': '', 'Estado': resumen.get('mensaje_medicion_agua') or 'Sin observaciones'},
+    ])
+
+    filas_mensuales = []
+    for periodo, datos in sorted(resumen.get('tendencia', {}).items()):
+        filas_mensuales.append({
+            'Período': periodo,
+            'Captación (m³)': datos.get('captacion'),
+            'Retorno (m³)': datos.get('retorno'),
+            'Reúso (m³)': datos.get('reuso'),
+            'Consumo operativo (m³)': datos.get('consumo'),
+        })
+    df_mensual = pd.DataFrame(filas_mensuales)
+
+    df_flujos = pd.DataFrame(resumen.get('flujos', []))
+    if not df_flujos.empty:
+        columnas = [c for c in ('periodo', 'sede_id', 'tipo_flujo', 'fuente_agua', 'destino_agua', 'volumen_m3', 'retorna_mismo_sistema_hidrico') if c in df_flujos.columns]
+        df_flujos = df_flujos[columnas].rename(columns={
+            'periodo': 'Período', 'sede_id': 'Sede', 'tipo_flujo': 'Tipo de flujo',
+            'fuente_agua': 'Fuente de agua', 'destino_agua': 'Destino de agua',
+            'volumen_m3': 'Volumen (m³)', 'retorna_mismo_sistema_hidrico': 'Retorna al mismo sistema hídrico'
+        })
+    return df_resumen, df_mensual, df_flujos
+
+
 @app .route ("/exportar",methods =["GET"])
 def exportar ():
     if 'user_id'not in session :return redirect ("/")
@@ -2989,10 +3108,12 @@ def exportar_avanzado ():
     fuentes_sel =request .args .getlist ('fuente')
     fecha_inicio =request .args .get ('fecha_inicio','').strip ()
     fecha_fin =request .args .get ('fecha_fin','').strip ()
+    incluir_huella_hidrica = request.args.get('incluir_huella_hidrica') in ('1', 'true', 'on', 'si')
 
     anio = '' if anio == 'Todos' else anio
     regreso = url_for('exportar', anio=anio, fecha_inicio=fecha_inicio,
-                      fecha_fin=fecha_fin, alcance=alcances_sel, fuente=fuentes_sel)
+                      fecha_fin=fecha_fin, alcance=alcances_sel, fuente=fuentes_sel,
+                      incluir_huella_hidrica='1' if incluir_huella_hidrica else None)
     try:
         if anio and (not re.fullmatch(r'\d{4}', anio) or int(anio) < 1):
             raise ValueError('Selecciona un año válido para exportar.')
@@ -3030,34 +3151,40 @@ def exportar_avanzado ():
     f"SELECT fecha, area, alcance, fuente, categoria, actividad, unidad, cantidad, factor, emision "
     f"FROM registros WHERE {where_sql } ORDER BY fecha DESC, id DESC",
     conn ,params =tuple (params ))
+    hojas_agua = _datos_huella_hidrica_exportacion(conn, empresa, anio) if incluir_huella_hidrica else None
     conn .close ()
 
-    if df .empty :
+    if df .empty and not incluir_huella_hidrica:
         flash ("No hay registros que coincidan con los filtros seleccionados.","warning")
         return redirect(regreso)
 
-    _etiquetar_unidad_factor(df)
-    df .rename (columns ={
+    if not df.empty:
+        _etiquetar_unidad_factor(df)
+        df .rename (columns ={
     'fecha':'Fecha','area':'Área / Instalación','alcance':'Alcance',
     'fuente':'Fuente','categoria':'Categoría','actividad':'Actividad',
     'unidad':'Unidad','cantidad':'Cantidad','factor':'Factor de emisión',
-    'emision':'Emisión (kg CO₂e)'
-    },inplace =True )
+        'emision':'Emisión (kg CO₂e)'
+        },inplace =True )
 
     from openpyxl .styles import Font ,PatternFill ,Alignment 
     output =io .BytesIO ()
     with pd .ExcelWriter (output ,engine ='openpyxl')as writer :
-        df .to_excel (writer ,sheet_name ='Registros',index =False )
-        ws =writer .sheets ['Registros']
-        header_fill =PatternFill ("solid",fgColor ="1E40AF")
-        header_font =Font (bold =True ,color ="FFFFFF")
-        for cell in ws [1 ]:
-            cell .fill =header_fill 
-            cell .font =header_font 
-            cell .alignment =Alignment (horizontal ='center')
-        for col in ws .columns :
-            ws .column_dimensions [col [0 ].column_letter ].width =20 
-
+        if not df.empty:
+            df .to_excel (writer ,sheet_name ='Registros',index =False )
+        if hojas_agua:
+            hojas_agua[0].to_excel(writer, sheet_name='Huella Hídrica Resumen', index=False)
+            if not hojas_agua[1].empty:
+                hojas_agua[1].to_excel(writer, sheet_name='Huella Hídrica Mensual', index=False)
+            if not hojas_agua[2].empty:
+                hojas_agua[2].to_excel(writer, sheet_name='Huella Hídrica Flujos', index=False)
+        for ws in writer.sheets.values():
+            for cell in ws[1]:
+                cell.fill = PatternFill("solid", fgColor="1E40AF")
+                cell.font = Font(bold=True, color="FFFFFF")
+                cell.alignment = Alignment(horizontal='center')
+            for col in ws.columns:
+                ws.column_dimensions[col[0].column_letter].width = 22
     output .seek (0 )
     sufijo =f"_{anio }"if anio else "_completo"
     nombre =f"Datos_GreenTrack_{empresa .replace (' ','_')}{sufijo }_{datetime .now ().strftime ('%Y%m%d')}.xlsx"
@@ -3144,8 +3271,9 @@ def admin_dashboard ():
 
     medidas_empresas =obtener_medidas_empresas (conn )
     cursor .execute ("""
-        SELECT empresa, anio, unidad, valor
+        SELECT empresa, anio, periodo, unidad, valor
         FROM medidas_productivas
+        WHERE periodo = anio::text
         ORDER BY empresa, anio DESC, id DESC
     """)
     medidas_todas =[dict (row )for row in cursor .fetchall ()]
@@ -3847,20 +3975,8 @@ def preview_electricidad ():
         flash ("No se seleccionó ningún archivo.","danger")
         return redirect (url_for ('admin_factores'))
     try :
-        df =pd .read_excel (archivo ,sheet_name ='Factores eléctricos')
-        filas =[]
+        filas = _leer_factores_electricos(archivo)
         errores =[]
-        for idx ,row in df .iterrows ():
-            if pd .notna (row .iloc [0 ])and pd .notna (row .iloc [3 ]):
-                try :
-                    filas .append ({
-                    'anio':int (row .iloc [0 ]),
-                    'mes':int (row .iloc [1 ]),
-                    'sistema':str (row .iloc [2 ]).strip (),
-                    'factor':float (row .iloc [3 ])
-                    })
-                except (ValueError ,TypeError ):
-                    errores .append (f"Fila {idx +2 }: valor inválido — {list (row [:4 ])}")
         sistemas =sorted (set (f ['sistema']for f in filas ))
         anios =sorted (set (f ['anio']for f in filas ))
         return render_template ("admin_preview_electricidad.html",
@@ -3868,7 +3984,7 @@ def preview_electricidad ():
         sistemas =sistemas ,anios =anios ,
         datos_json =json .dumps (filas ))
     except Exception as e :
-        flash (f"Error al leer el Excel: {str (e )}","danger")
+        flash (f"Error al leer el Excel/CSV: {str (e )}","danger")
         return redirect (url_for ('admin_factores'))
 
 @app .route ("/admin/cargar_electricidad",methods =["POST"])
@@ -3882,24 +3998,19 @@ def cargar_electricidad ():
             flash ("No se seleccionó ningún archivo.","danger")
             return redirect (request .referrer )
         try :
-            df =pd .read_excel (archivo ,sheet_name ='Factores eléctricos')
-            filas =[]
-            for _ ,row in df .iterrows ():
-                if pd .notna (row .iloc [0 ])and pd .notna (row .iloc [3 ]):
-                    try :
-                        filas .append ({'anio':int (row .iloc [0 ]),'mes':int (row .iloc [1 ]),
-                        'sistema':str (row .iloc [2 ]).strip (),'factor':float (row .iloc [3 ])})
-                    except (ValueError ,TypeError ):continue 
+            filas = _leer_factores_electricos(archivo)
             datos_json =json .dumps (filas )
         except Exception as e :
-            flash (f"Error al leer el Excel: {str (e )}","danger")
+            flash (f"Error al leer el Excel/CSV: {str (e )}","danger")
             return redirect (request .referrer )
     try :
         filas =json .loads (datos_json )
         conn =get_db ()
         cursor =conn .cursor ()
-        cursor .execute ("DELETE FROM factores_electricos")
         for f in filas :
+            cursor .execute (
+            "DELETE FROM factores_electricos WHERE anio = %s AND mes = %s AND sistema = %s",
+            (f ['anio'],f ['mes'],f ['sistema']))
             cursor .execute (
             "INSERT INTO factores_electricos (anio, mes, sistema, factor_emision_avg) VALUES (%s, %s, %s, %s)",
             (f ['anio'],f ['mes'],f ['sistema'],f ['factor'])
@@ -4069,6 +4180,27 @@ def vehiculos ():
     conn .close ()
     return render_template ("vehiculos.html",vehiculos_data =vehiculos_data )
 
+def _validar_datos_vehiculo(data):
+    if not isinstance(data, dict):
+        raise ValueError("El cuerpo de la solicitud debe ser JSON.")
+
+    patente =str(data.get('patente') or '').strip().upper()
+    if not patente:
+        raise ValueError("Patente obligatoria")
+    if len(patente) > 20 or any(ord(char) < 32 for char in patente):
+        raise ValueError("La patente no puede superar 20 caracteres.")
+
+    anio_raw =data.get('anio')
+    anio =None
+    if anio_raw not in (None, ''):
+        anio_text =str(anio_raw).strip()
+        if not anio_text.isdigit():
+            raise ValueError("El año debe ser un número entero.")
+        anio =int(anio_text)
+        if not 1900 <= anio <= datetime.now().year:
+            raise ValueError(f"El año debe estar entre 1900 y {datetime.now().year}.")
+    return patente, anio
+
 @app .route ("/api/vehiculos",methods =["GET","POST"])
 def api_vehiculos ():
     if 'user_id'not in session :return jsonify ({"success":False ,"message":"No autorizado"}),401 
@@ -4081,24 +4213,60 @@ def api_vehiculos ():
         conn .close ()
         return jsonify ([{"id":v [0 ],"patente":v [1 ],"tipo":v [2 ],"marca":v [3 ],"modelo":v [4 ],"anio":v [5 ]}for v in vehiculos ])
     elif request .method =="POST":
-        data =request .get_json ()
-        if not data .get ('patente'):return jsonify ({"success":False ,"message":"Patente obligatoria"}),400 
+        data =request .get_json (silent=True)
+        try:
+            patente, anio = _validar_datos_vehiculo(data)
+        except ValueError as exc:
+            return jsonify ({"success":False ,"message":str(exc)}),400
+
         conn =get_db ()
         cursor =conn .cursor ()
-        cursor .execute ("SELECT id FROM vehiculos WHERE empresa = %s AND patente = %s",(empresa ,data ['patente'].upper ()))
+        cursor .execute ("SELECT id FROM vehiculos WHERE empresa = %s AND patente = %s",(empresa ,patente))
         if cursor .fetchone ():
             conn .close ()
             return jsonify ({"success":False ,"message":"Patente ya registrada"}),400 
         cursor .execute ("""
             INSERT INTO vehiculos (empresa, patente, tipo, marca, modelo, anio, fecha_registro)
             VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id;
-        """,(empresa ,data ['patente'].upper (),data .get ('tipo'),data .get ('marca'),data .get ('modelo'),data .get ('anio'),datetime .now ().strftime ("%Y-%m-%d %H:%M")))
+        """,(empresa ,patente,data .get ('tipo'),data .get ('marca'),data .get ('modelo'),anio,datetime .now ().strftime ("%Y-%m-%d %H:%M")))
         vehiculo_id =cursor .fetchone ()[0 ]
         conn .commit ()
         conn .close ()
-        return jsonify ({"success":True ,"message":"Vehículo guardado","vehiculo":{"id":vehiculo_id ,"patente":data ['patente'].upper ()}})
+        return jsonify ({"success":True ,"message":"Vehículo guardado","vehiculo":{"id":vehiculo_id ,"patente":patente}})
 
-@app .route ("/vehiculos/eliminar/<int:id>")
+@app .route ("/api/vehiculos/<int:id>", methods=["PUT"])
+def api_editar_vehiculo (id):
+    if 'user_id'not in session:return jsonify ({"success":False ,"message":"No autorizado"}),401
+    try:
+        patente, anio = _validar_datos_vehiculo(request.get_json(silent=True))
+    except ValueError as exc:
+        return jsonify ({"success":False ,"message":str(exc)}),400
+
+    empresa =session.get('empresa')
+    conn =get_db()
+    cursor =conn.cursor()
+    try:
+        cursor.execute("SELECT id FROM vehiculos WHERE empresa = %s AND patente = %s AND id <> %s", (empresa, patente, id))
+        if cursor.fetchone():
+            return jsonify ({"success":False ,"message":"Patente ya registrada"}),400
+        cursor.execute("""
+            UPDATE vehiculos
+            SET patente = %s, tipo = %s, marca = %s, modelo = %s, anio = %s
+            WHERE id = %s AND empresa = %s
+        """, (patente, request.json.get('tipo'), request.json.get('marca'), request.json.get('modelo'), anio, id, empresa))
+        if cursor.rowcount == 0:
+            conn.rollback()
+            return jsonify ({"success":False ,"message":"No se encontró el vehículo."}),404
+        conn.commit()
+        return jsonify ({"success":True ,"message":"Vehículo actualizado","vehiculo":{"id":id,"patente":patente}})
+    except Exception:
+        conn.rollback()
+        app.logger.exception('Error al actualizar el vehículo %s', id)
+        return jsonify ({"success":False ,"message":"No se pudo actualizar el vehículo."}),500
+    finally:
+        conn.close()
+
+@app .route ("/vehiculos/eliminar/<int:id>", methods=["POST"])
 def eliminar_vehiculo (id ):
     if 'user_id'not in session :return redirect ("/")
     conn =get_db ()
@@ -4332,53 +4500,91 @@ def configuracion ():
     cursor =conn .cursor (cursor_factory =psycopg2 .extras .DictCursor )
 
     if request .method =="POST":
-        anio_sel =request .form .get ("medida_anio",str (current_year )).strip ()or str (current_year )
+        frecuencia = request.form.get('medida_frecuencia', 'anual').strip()
+        mensual_payload = request.form.get('mensual_payload', '').strip()
+        if mensual_payload:
+            try:
+                payload_rows = json.loads(mensual_payload)
+            except (TypeError, ValueError):
+                raise ValueError('La tabla mensual no tiene un formato válido.')
+            if not isinstance(payload_rows, list):
+                raise ValueError('La tabla mensual no tiene un formato válido.')
+            frecuencia = 'mensual'
+        else:
+            payload_rows = []
+        # Las filas mensuales son la fuente de verdad aunque un cliente antiguo
+        # envíe el campo oculto con frecuencia anual.
+        if request.form.getlist('mensual_periodo[]'):
+            frecuencia = 'mensual'
+        periodo_medida = (request.form.get('medida_periodo') or '').strip()
+        if not periodo_medida:
+            periodo_medida = (request.form.get("medida_anio", str(current_year))).strip() or str(current_year)
+        if frecuencia == 'anual' and '-' in periodo_medida:
+            periodo_medida = periodo_medida[:4]
+        anio_sel = periodo_medida[:4]
         try :
-            unidad_medida =request .form .get ("medida_unidad","").strip ()
-            valor_raw=(request.form.get('medida_valor') or '').strip()
-            valor_medida=numero_finito(valor_raw,'La medida productiva',positivo=True) if valor_raw or unidad_medida else None
-            medida_cambiada = False
-            if valor_medida is not None:
-                anio_medida = int(anio_sel)
+            if frecuencia == 'mensual':
+                periodos = [str(row.get('periodo') or '').strip() for row in payload_rows] if payload_rows else [p.strip() for p in request.form.getlist('mensual_periodo[]') if p.strip()]
+                unidades = [str(row.get('unidad') or '') for row in payload_rows] if payload_rows else request.form.getlist('mensual_unidad[]')
+                valores = [str(row.get('valor') or '') for row in payload_rows] if payload_rows else request.form.getlist('mensual_valor[]')
+                if not periodos:
+                    raise ValueError('Genera al menos una fila mensual antes de guardar.')
+                if not (len(periodos) == len(unidades) == len(valores)):
+                    raise ValueError('La tabla mensual no coincide con los períodos seleccionados.')
+                filas_medida = []
+                for periodo, unidad, valor_raw in zip(periodos, unidades, valores):
+                    if not re.fullmatch(r'\d{4}-\d{2}', periodo):
+                        raise ValueError('Cada mes debe tener formato año-mes.')
+                    valor = numero_finito(valor_raw, 'La medida productiva', positivo=True)
+                    if not unidad.strip():
+                        raise ValueError('Selecciona una unidad para cada mes.')
+                    filas_medida.append((periodo, unidad.strip(), valor))
+            else:
+                unidad_medida = request.form.get("medida_unidad", "").strip()
+                valor_raw = (request.form.get('medida_valor') or '').strip()
+                valor_medida = numero_finito(valor_raw, 'La medida productiva', positivo=True) if valor_raw or unidad_medida else None
+                filas_medida = [(periodo_medida, unidad_medida, valor_medida)] if valor_medida is not None else []
+
+            cambios = []
+            for periodo, unidad, valor in filas_medida:
+                anio_medida = int(periodo[:4])
                 if not 1 <= anio_medida <= 9999:
                     raise ValueError('El año de la medida productiva no es válido.')
-                cursor.execute('SELECT pg_advisory_xact_lock(hashtext(%s))', (f'medida:{empresa}:{anio_medida}',))
-                cursor.execute('SELECT unidad, valor FROM medidas_productivas WHERE empresa=%s AND anio=%s FOR UPDATE',
-                    (empresa, anio_medida))
+                cursor.execute('SELECT pg_advisory_xact_lock(hashtext(%s))', (f'medida:{empresa}:{periodo}',))
+                cursor.execute('SELECT unidad, valor FROM medidas_productivas WHERE empresa=%s AND periodo=%s FOR UPDATE',
+                    (empresa, periodo))
                 anterior = cursor.fetchone()
-                medida_cambiada = not anterior or anterior['unidad'] != unidad_medida or float(anterior['valor']) != valor_medida
-                if anterior and medida_cambiada:
-                    if request.form.get('confirmar_medida') != '1':
-                        raise ValueError('Confirma el valor anterior y el nuevo antes de reemplazar la medida productiva.')
-                    valor_anterior = numero_finito(request.form.get('medida_anterior_valor'), 'La medida anterior', positivo=True)
-                    if request.form.get('medida_anterior_unidad') != anterior['unidad'] or valor_anterior != float(anterior['valor']):
-                        raise ValueError('La medida productiva cambió desde que abriste el formulario. Recarga la configuración antes de reemplazarla.')
-            info_por_unidad =1 if request .form .get ("info_unidad")else 0 
-            vehiculos =1 if request .form .get ("vehiculos","no")=="si"else 0 
-            combustible_colaboradores =1 if request .form .get ("colaboradores","no")=="si"else 0 
-            tarjeta_combustible =1 if request .form .get ("tarjeta","no")=="si"else 0 
-            energeticos_sel =request .form .getlist ("energeticos[]")
+                cambio = not anterior or anterior['unidad'] != unidad or float(anterior['valor']) != valor
+                if cambio:
+                    cambios.append((periodo, unidad, valor, anterior))
+            if cambios and any(anterior for _, _, _, anterior in cambios) and request.form.get('confirmar_medida') != '1':
+                raise ValueError('Confirma el valor anterior y el nuevo antes de reemplazar las medidas productivas.')
+            # Compatibilidad con clientes antiguos que aún envíen estas preguntas.
+            if any(campo in request.form for campo in ('info_unidad', 'vehiculos', 'colaboradores', 'tarjeta', 'energeticos[]')):
+                info_por_unidad = 1 if request.form.get('info_unidad') else 0
+                vehiculos = 1 if request.form.get('vehiculos', 'no') == 'si' else 0
+                combustible_colaboradores = 1 if request.form.get('colaboradores', 'no') == 'si' else 0
+                tarjeta_combustible = 1 if request.form.get('tarjeta', 'no') == 'si' else 0
+                energeticos_sel = request.form.getlist('energeticos[]')
+                cursor.execute("""
+                    INSERT INTO configuracion (empresa, info_por_unidad, vehiculos, combustible_colaboradores, tarjeta_combustible)
+                    VALUES (%s, %s, %s, %s, %s)
+                    ON CONFLICT (empresa) DO UPDATE SET
+                        info_por_unidad = EXCLUDED.info_por_unidad,
+                        vehiculos = EXCLUDED.vehiculos,
+                        combustible_colaboradores = EXCLUDED.combustible_colaboradores,
+                        tarjeta_combustible = EXCLUDED.tarjeta_combustible
+                """, (empresa, info_por_unidad, vehiculos, combustible_colaboradores, tarjeta_combustible))
+                cursor.execute('DELETE FROM energeticos_empresa WHERE empresa = %s', (empresa,))
+                for energetico in energeticos_sel:
+                    proveedor = request.form.get(f'proveedor_{energetico}', '').strip()
+                    cursor.execute("""
+                        INSERT INTO energeticos_empresa (empresa, energetico, proveedor, documento)
+                        VALUES (%s, %s, %s, %s)
+                    """, (empresa, energetico, proveedor, None))
 
-            cursor .execute ("""
-                INSERT INTO configuracion (empresa, info_por_unidad, vehiculos, combustible_colaboradores, tarjeta_combustible)
-                VALUES (%s, %s, %s, %s, %s)
-                ON CONFLICT (empresa) DO UPDATE SET
-                    info_por_unidad = EXCLUDED.info_por_unidad,
-                    vehiculos = EXCLUDED.vehiculos,
-                    combustible_colaboradores = EXCLUDED.combustible_colaboradores,
-                    tarjeta_combustible = EXCLUDED.tarjeta_combustible
-            """,(empresa ,info_por_unidad ,vehiculos ,combustible_colaboradores ,tarjeta_combustible ))
-
-            cursor .execute ("DELETE FROM energeticos_empresa WHERE empresa = %s",(empresa ,))
-            for energetico in energeticos_sel :
-                proveedor =request .form .get (f"proveedor_{energetico }","").strip ()
-                cursor .execute ("""
-                    INSERT INTO energeticos_empresa (empresa, energetico, proveedor, documento)
-                    VALUES (%s, %s, %s, %s)
-                """,(empresa ,energetico ,proveedor ,None ))
-
-            if medida_cambiada:
-                guardar_medida_productiva (cursor ,empresa ,int (anio_sel ),unidad_medida ,valor_medida )
+            for periodo, unidad, valor, _ in cambios:
+                guardar_medida_productiva(cursor, empresa, periodo, unidad, valor)
             conn .commit ()
             flash ("Configuración guardada correctamente.","success")
         except Exception as e :
@@ -4386,7 +4592,10 @@ def configuracion ():
             flash (f"No se pudo guardar la configuración: {e }","error")
         finally :
             conn .close ()
-        return redirect (url_for ('configuracion',anio =anio_sel ))
+        periodo_redireccion = filas_medida[0][0] if frecuencia == 'mensual' and filas_medida else periodo_medida
+        return redirect(url_for('configuracion', anio=anio_sel,
+                                periodo=periodo_redireccion if frecuencia == 'mensual' else None,
+                                vista=frecuencia))
 
     cursor .execute ("SELECT * FROM configuracion WHERE empresa = %s",(empresa ,))
     configuracion_row =cursor .fetchone ()
@@ -4405,16 +4614,37 @@ def configuracion ():
         cursor .execute ("SELECT anio FROM medidas_productivas WHERE empresa = %s ORDER BY anio DESC, id DESC LIMIT 1",(empresa ,))
         row_anio =cursor .fetchone ()
         anio_sel =int (row_anio [0 ])if row_anio else current_year 
-    cursor .execute ("SELECT anio, unidad, valor, fecha_actualizacion FROM medidas_productivas WHERE empresa = %s AND anio = %s",(empresa ,anio_sel ))
+    periodo_sel = request.args.get('periodo', '').strip() or str(anio_sel)
+    vista_inicial = request.args.get('vista', 'anual').strip()
+    if vista_inicial not in ('anual', 'mensual'):
+        vista_inicial = 'anual'
+    if len(periodo_sel) == 7:
+        vista_inicial = 'mensual'
+    cursor .execute ("SELECT anio, periodo, unidad, valor, fecha_actualizacion FROM medidas_productivas WHERE empresa = %s AND periodo = %s",(empresa ,periodo_sel ))
     medida_actual =cursor .fetchone ()
     if medida_actual :
         medida_actual =dict (medida_actual )
-        total_t ,intensidad =calcular_intensidad_emisiones (conn ,empresa ,anio_sel ,medida_actual .get ('valor',0 ))
+        total_t ,intensidad =calcular_intensidad_emisiones (conn ,empresa ,medida_actual.get('periodo') or anio_sel ,medida_actual .get ('valor',0 ))
         medida_actual ['emisiones_anio_tco2e']=total_t 
         medida_actual ['intensidad_emisiones']=intensidad 
     medidas_historial =obtener_medidas_productivas (conn ,empresa )
+    medidas_anuales = [m for m in medidas_historial if len(str(m.get('periodo') or m.get('anio') or '')) == 4]
     cursor .execute ("SELECT sector_empresa, tipo_empresa FROM usuarios WHERE empresa = %s",(empresa ,))
     perfil_empresa =cursor .fetchone ()
+    cursor.execute("""
+        SELECT TO_CHAR(fecha::date, 'YYYY-MM') AS periodo,
+               SUBSTRING(fecha::text, 1, 7) AS periodo_texto,
+               COALESCE(SUM(emision), 0) AS emisiones_kg
+        FROM registros
+        WHERE empresa = %s AND fecha IS NOT NULL
+        GROUP BY TO_CHAR(fecha::date, 'YYYY-MM'), SUBSTRING(fecha::text, 1, 7)
+    """, (empresa,))
+    emisiones_mensuales = {}
+    for row in cursor.fetchall():
+        emisiones = float(row['emisiones_kg'] or 0)
+        for clave in (row['periodo'], row['periodo_texto']):
+            if clave:
+                emisiones_mensuales[str(clave)] = emisiones
     conn .close ()
 
     energeticos_seleccionados =[r ['energetico']for r in energeticos_guardados ]
@@ -4428,8 +4658,12 @@ def configuracion ():
     proveedores_map =proveedores_map ,
     medida_actual =medida_actual ,
     medidas_historial =medidas_historial ,
+    medidas_anuales =medidas_anuales ,
     anios_medidas =sorted (set (anios_medidas ),reverse =True ),
     anio_seleccionado =anio_sel ,
+    periodo_seleccionado = periodo_sel,
+    vista_inicial = vista_inicial,
+    emisiones_mensuales = emisiones_mensuales,
     perfil_empresa =perfil_empresa ,
     unidades_productivas =UNIDADES_PRODUCTIVAS 
     )
@@ -4937,9 +5171,9 @@ def api_admin_emisiones_por_empresa ():
 
             cursor .execute (
             """
-                    SELECT empresa, anio, unidad, valor, fecha_actualizacion
+                    SELECT empresa, anio, periodo, unidad, valor, fecha_actualizacion
                     FROM medidas_productivas
-                    WHERE empresa = ANY(%s)
+                    WHERE empresa = ANY(%s) AND periodo = anio::text
                     ORDER BY empresa, anio DESC, id DESC
                 """,
             (empresas_respuesta ,)
@@ -5101,12 +5335,14 @@ def exportar_ghg ():
     if 'user_id'not in session :return redirect ("/")
     empresa =session .get ('empresa')
     anio =request.args.get('anio')
+    incluir_huella_hidrica = request.args.get('incluir_huella_hidrica') in ('1', 'true', 'on', 'si')
     if anio is not None and anio != '' and anio != 'Todos' and (not re.fullmatch(r'\d{4}',anio) or int(anio)<1):
         flash('Selecciona un año válido para exportar el reporte GHG.','error')
         return redirect(url_for('exportar'))
 
     conn =get_db ()
-    anio = _anio_panel(conn.cursor())
+    if anio in (None, ''):
+        anio = _anio_panel(conn.cursor())
 
     filtro =" AND SUBSTRING(fecha::text,1,4) = %s"if anio !='Todos'else ""
     p1 =(empresa ,anio )if anio !='Todos'else (empresa ,)
@@ -5135,6 +5371,7 @@ def exportar_ghg ():
     f"FROM registros WHERE empresa=%s AND ({_case_alcance })='Alcance 3'{filtro } ORDER BY fecha",
     conn ,params =p1 )
 
+    hojas_agua = _datos_huella_hidrica_exportacion(conn, empresa, anio) if incluir_huella_hidrica else None
     conn .close ()
 
     total_a1 =float (df_a1 ['emision'].sum ())if not df_a1 .empty else 0.0 
@@ -5170,6 +5407,12 @@ def exportar_ghg ():
             df_a2 .to_excel (writer ,sheet_name ='Alcance 2 Electricidad',index =False )
         if not df_a3 .empty :
             df_a3 .to_excel (writer ,sheet_name ='Alcance 3',index =False )
+        if hojas_agua:
+            hojas_agua[0].to_excel(writer, sheet_name='Huella Hídrica', index=False)
+            if not hojas_agua[1].empty:
+                hojas_agua[1].to_excel(writer, sheet_name='Huella Hídrica Mensual', index=False)
+            if not hojas_agua[2].empty:
+                hojas_agua[2].to_excel(writer, sheet_name='Huella Hídrica Flujos', index=False)
 
         from openpyxl .styles import Font ,PatternFill ,Alignment 
         header_fill =PatternFill ("solid",fgColor ="064E3B")
@@ -5191,7 +5434,7 @@ def exportar_ghg ():
                     cell .font =total_font 
 
     output .seek (0 )
-    nombre =f"GHG_Protocol_{empresa .replace (' ','_')}_{anio }_{datetime .now ().strftime ('%Y%m%d')}.xlsx"
+    nombre =f"Reporte_Oficial_{empresa .replace (' ','_')}_{anio }_{datetime .now ().strftime ('%Y%m%d')}.xlsx"
     return send_file (output ,download_name =nombre ,as_attachment =True )
 
 

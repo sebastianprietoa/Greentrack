@@ -65,7 +65,7 @@ def run_delete(connection, path):
     with client.session_transaction() as session:
         session.update(user_id=1,empresa='AUDIT_A',es_admin=0,rol='empresa')
     with patch.object(module, 'get_db', return_value=SharedConnection(connection)):
-        response = client.get(path)
+        response = client.post(path) if path.startswith('/vehiculos/eliminar/') else client.get(path)
     assert response.status_code == 302
     return client
 
@@ -127,6 +127,57 @@ def test_vehicle_deletion_preserves_consumption_history(pg):
     assert cursor.fetchone()[0] is None
     cursor.execute('SELECT COUNT(*) FROM vehiculos WHERE id=401')
     assert cursor.fetchone()[0] == 0
+
+
+def test_vehicle_deletion_requires_post(pg):
+    import app as module
+    module.app.config.update(TESTING=True)
+    client = module.app.test_client()
+    with client.session_transaction() as session:
+        session.update(user_id=1,empresa='AUDIT_A',es_admin=0,rol='empresa')
+    response = client.get('/vehiculos/eliminar/401')
+    assert response.status_code == 405
+    cursor = pg.cursor()
+    cursor.execute("SELECT COUNT(*) FROM vehiculos WHERE id=401")
+    assert cursor.fetchone()[0] == 1
+
+
+def test_vehicle_deletion_cannot_cross_company(pg):
+    run_delete(pg,'/vehiculos/eliminar/402')
+    cursor = pg.cursor()
+    cursor.execute("SELECT COUNT(*) FROM vehiculos WHERE id=402 AND empresa='AUDIT_B'")
+    assert cursor.fetchone()[0] == 1
+    assert counts(pg,'AUDIT_A') == [1,1,1]
+    assert counts(pg,'AUDIT_B') == [1,1,1]
+
+
+@pytest.mark.parametrize('payload', [
+    {},
+    {'patente': '   '},
+    {'patente': 'A' * 21},
+    {'patente': 'TEST01', 'anio': '20XX'},
+    {'patente': 'TEST01', 'anio': 2100},
+])
+def test_vehicle_api_rejects_invalid_payload_before_database(payload):
+    import app as module
+    module.app.config.update(TESTING=True)
+    client = module.app.test_client()
+    with client.session_transaction() as session:
+        session.update(user_id=1,empresa='AUDIT_A',es_admin=0,rol='empresa')
+    with patch.object(module, 'get_db', side_effect=AssertionError('No debe consultar la base de datos')):
+        response = client.post('/api/vehiculos', json=payload)
+    assert response.status_code == 400
+
+
+def test_vehicle_api_rejects_non_json_payload_before_database():
+    import app as module
+    module.app.config.update(TESTING=True)
+    client = module.app.test_client()
+    with client.session_transaction() as session:
+        session.update(user_id=1,empresa='AUDIT_A',es_admin=0,rol='empresa')
+    with patch.object(module, 'get_db', side_effect=AssertionError('No debe consultar la base de datos')):
+        response = client.post('/api/vehiculos', data='no-json', content_type='text/plain')
+    assert response.status_code == 400
 
 
 def test_missing_mobile_master_does_not_delete_another_company(pg):
