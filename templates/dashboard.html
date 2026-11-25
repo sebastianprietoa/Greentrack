@@ -319,6 +319,29 @@
 </div>
 {% endif %}
 
+<!-- Intensidad de emisiones por período -->
+<div class="dashboard-charts-grid" style="display: grid; grid-template-columns: minmax(0, 1fr); gap: 2rem; margin-bottom: 2rem;">
+    <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.07);">
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; border-bottom: 1px solid #F3F4F6; padding-bottom: 0.75rem; margin-bottom: 1rem;">
+            <h3 style="margin: 0; color: #374151; font-size: 1rem; display: flex; align-items: center; gap: 8px;">
+                <i class="fas fa-gauge-high" style="color: #8B5CF6;"></i> Intensidades de emisiones
+            </h3>
+            <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
+                <div style="display: flex; gap: 0.35rem;">
+                    <button type="button" id="intensidad_anual_btn" style="padding: 7px 12px; border: 0; border-radius: 7px; font-weight: 700; cursor: pointer;">Anual</button>
+                    <button type="button" id="intensidad_mensual_btn" style="padding: 7px 12px; border: 0; border-radius: 7px; font-weight: 700; cursor: pointer;">Mensual</button>
+                </div>
+                <label for="intensidad_anio" style="font-size: 0.78rem; font-weight: 700; color: #475569;">Año</label>
+                <select id="intensidad_anio" style="padding: 7px 10px; border: 1px solid #D1D5DB; border-radius: 7px; font-weight: 600; color: #334155; background: white;"></select>
+            </div>
+        </div>
+        <p id="intensidad_estado" style="margin: -0.25rem 0 0.8rem; color: #6B7280; font-size: 0.8rem;"></p>
+        <div style="position: relative; height: 280px;">
+            <canvas id="chartIntensidadEmisiones"></canvas>
+        </div>
+    </div>
+</div>
+
 <!-- Huella hidrica por tipo -->
 {% if huella_hidrica_total is not none %}
 <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); margin-bottom: 2rem;">
@@ -656,6 +679,80 @@ document.querySelectorAll('.stat-card').forEach(card => {
     });
 })();
 {% endif %}
+
+// Gráfico de intensidades de emisiones (anual/mensual)
+(function() {
+    const anual = {{ intensidad_chart_anual | default([]) | tojson }};
+    const mensual = {{ intensidad_chart_mensual | default({}) | tojson }};
+    const canvas = document.getElementById('chartIntensidadEmisiones');
+    const selector = document.getElementById('intensidad_anio');
+    const anualBtn = document.getElementById('intensidad_anual_btn');
+    const mensualBtn = document.getElementById('intensidad_mensual_btn');
+    const estado = document.getElementById('intensidad_estado');
+    if (!canvas || !selector || !anualBtn || !mensualBtn || !estado) return;
+
+    const years = [...new Set([
+        ...anual.map(item => String(item.periodo).slice(0, 4)),
+        ...Object.keys(mensual)
+    ])].sort().reverse();
+    selector.innerHTML = '<option value="Todos">Todos los años</option>'
+        + years.map(year => `<option value="${year}">${year}</option>`).join('');
+
+    const chart = new Chart(canvas, {
+        type: 'line',
+        data: { labels: [], datasets: [{
+            label: 'Intensidad (kgCO₂e/unidad)',
+            data: [],
+            borderColor: '#8B5CF6',
+            backgroundColor: 'rgba(139,92,246,0.14)',
+            pointBackgroundColor: '#8B5CF6',
+            pointRadius: 4,
+            pointHoverRadius: 6,
+            borderWidth: 2.5,
+            fill: true,
+            tension: 0.28
+        }]},
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: { callbacks: { label: ctx => ` ${Number(ctx.parsed.y).toFixed(6)} kgCO₂e/unidad` } }
+            },
+            scales: {
+                x: { grid: { display: false } },
+                y: { beginAtZero: true, grid: { color: '#E5E7EB' }, ticks: { callback: value => Number(value).toFixed(2) } }
+            }
+        }
+    });
+
+    let modo = 'anual';
+    function actualizarBotones() {
+        anualBtn.style.background = modo === 'anual' ? '#8B5CF6' : '#F3F4F6';
+        anualBtn.style.color = modo === 'anual' ? 'white' : '#4B5563';
+        mensualBtn.style.background = modo === 'mensual' ? '#8B5CF6' : '#F3F4F6';
+        mensualBtn.style.color = modo === 'mensual' ? 'white' : '#4B5563';
+    }
+    function renderizar() {
+        const year = selector.value;
+        const filas = modo === 'anual'
+            ? anual.filter(item => year === 'Todos' || String(item.periodo).slice(0, 4) === year)
+            : (year === 'Todos'
+                ? Object.values(mensual).flat().sort((a, b) => String(a.periodo).localeCompare(String(b.periodo)))
+                : (mensual[year] || []));
+        chart.data.labels = filas.map(item => modo === 'anual' ? item.periodo : item.periodo.slice(5));
+        chart.data.datasets[0].data = filas.map(item => Number(item.intensidad));
+        chart.update();
+        actualizarBotones();
+        estado.textContent = filas.length
+            ? `${modo === 'anual' ? 'Vista anual' : 'Vista mensual'} · ${year === 'Todos' ? 'todos los años' : year} · ${filas[0].unidad || 'unidad'}`
+            : 'No hay medidas productivas con intensidad calculada para el filtro seleccionado.';
+    }
+    anualBtn.addEventListener('click', () => { modo = 'anual'; renderizar(); });
+    mensualBtn.addEventListener('click', () => { modo = 'mensual'; renderizar(); });
+    selector.addEventListener('change', renderizar);
+    renderizar();
+})();
 
 // Gráfico categorías (doughnut)
 {% if categorias_data %}

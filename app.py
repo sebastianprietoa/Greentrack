@@ -1253,6 +1253,30 @@ def dashboard ():
         ORDER BY anio DESC, id DESC
     """,(empresa ,))
     medidas_productivas =[dict (row )for row in cursor .fetchall ()]
+    medidas_intensidad = obtener_medidas_productivas (conn, empresa)
+    intensidad_chart_anual = [
+        {
+            'periodo': str(medida.get('periodo') or medida.get('anio')),
+            'unidad': medida.get('unidad'),
+            'intensidad': medida.get('intensidad_emisiones'),
+        }
+        for medida in medidas_intensidad
+        if len(str(medida.get('periodo') or medida.get('anio') or '')) == 4
+        and medida.get('intensidad_emisiones') is not None
+    ]
+    intensidad_chart_anual.sort(key=lambda item: item['periodo'])
+    intensidad_chart_mensual = {}
+    for medida in medidas_intensidad:
+        periodo = str(medida.get('periodo') or '')
+        if len(periodo) != 7 or medida.get('intensidad_emisiones') is None:
+            continue
+        intensidad_chart_mensual.setdefault(periodo[:4], []).append({
+            'periodo': periodo,
+            'unidad': medida.get('unidad'),
+            'intensidad': medida.get('intensidad_emisiones'),
+        })
+    for valores in intensidad_chart_mensual.values():
+        valores.sort(key=lambda item: item['periodo'])
     intensidad_anio =None 
     intensidad_unidad =None 
     intensidad_emisiones =None
@@ -1319,6 +1343,8 @@ def dashboard ():
     tendencia_a2 =tendencia_a2 ,tendencia_a3 =tendencia_a3 ,
     alcances_data =alcances_data ,variacion_pct =variacion_pct ,anio_prev =anio_prev ,
     intensidad_emisiones =intensidad_emisiones ,intensidad_unidad =intensidad_unidad ,
+    intensidad_chart_anual = intensidad_chart_anual,
+    intensidad_chart_mensual = intensidad_chart_mensual,
     huella_hidrica_total =huella_hidrica_total ,huella_azul_directa =huella_azul_directa ,
     huella_verde_directa =huella_verde_directa ,huella_suministro_energetico =huella_suministro_energetico ,
     huella_hidrica_tipos =huella_hidrica_tipos ,
